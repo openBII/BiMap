@@ -1,0 +1,142 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+    
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Launch Code Generator",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/code_generator",
+            "args": [
+                "-i",
+                "${workspaceFolder}/test/unit_tests/cases/lenet/lenet.map.txt",
+                "-c",
+                "lenet",
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build code generator"
+        },
+        {
+            "name": "Launch Behavior Simulator",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/behavior_simulator",
+            "args": [
+                "-i",
+                "temp/as1_multicast/as1_multicast.asm.txt",
+                "-c",
+                "as1_multicast",
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build behavior simulator"
+        },
+        {
+            "name": "Launch Clock Simulator",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/clock_simulator",
+            "args": [
+                "-i",
+                "temp/lenet/lenet.code",
+                "-c",
+                "lenet",
+                "-m",
+                "proto",
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build clock simulator"
+        },
+        {
+            "name": "Launch Json to Proto",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/json_to_proto",
+            "args": [
+                "-i",
+                "/test_lib/code_lib/P02001.code.json",
+                "-c",
+                "P02001"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build Json to Proto"
+        },
+        {
+            "name": "Launch Assembler",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/assembler",
+            "args": [
+                "-i", "/test_lib/behavior_lib/MCMP/multi_phases_with_router/MLSM_group3.asm.txt",
+                "-c", "MLSM",
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "build Assembler"
+        },
+    ]
+}

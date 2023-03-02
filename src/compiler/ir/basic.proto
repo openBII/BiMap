@@ -1,0 +1,64 @@
+// Copyright (C) OpenBII
+// Team: CBICR
+// SPDX-License-Identifier: Apache-2.0
+// See: https://spdx.org/licenses/
+
+syntax = "proto2";
+
+package tianjic_ir;
+
+message Shape {
+    optional int32 nx = 1 [default = 0];
+    optional int32 ny = 2 [default = 0];
+    optional int32 nf = 3 [default = 0];
+    optional int32 nr = 4 [default = 0];
+    optional int32 nkx = 5 [default = 0];
+    optional int32 nky = 6 [default = 0];
+    optional int32 niy = 7 [default = 0];
+    optional int32 nix = 8 [default = 0];
+    optional int32 n_branch = 10 [default = 0]; // Branch方向
+    
+    repeated int32 extra_dimensions = 15;  // 确保维度的可扩展性
+}
+
+// 2,3: Bias 0,1: 为常数b
+enum BiasType {
+  VECTOR = 1;
+  CONSTANT = 2;
+}
+
+// 0: int32 1: int8 2: uint8 3: Tenary
+enum Precision {
+    INT_8 = 0;
+    UINT_8 = 1;
+    INT_16 = 2;
+    UINT_16 = 3;
+    INT_32 = 4;
+    UINT_32 = 5;
+    FLOAT_16 = 6;
+    FLOAT_32 = 7;
+    TERNARY = 8;
+    INT_28 = 9;
+    UINT_4 = 10;
+  
+    INT_9 = 100;
+}
+
+enum Direction {
+  SERDES_EAST = 0;
+  SERDES_SOUTH = 1;
+  SERDES_WEST = 2;
+  SERDES_NORTH = 3;
+}
+
+enum TestMode {
+  MEMORY_STATE = 0;
+  PRIM_OUTPUT = 1;
+  CASE_OUTPUT = 2;
+}
+
+message TestConfig {
+  optional int64 random_seed = 1;
+  optional string test_case_name = 2;
+  optional TestMode test_mode = 3;
+}

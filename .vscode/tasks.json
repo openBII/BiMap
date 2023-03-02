@@ -1,0 +1,107 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "shell",
+            "label": "compile all proto file",
+            "command": "./compile_all.sh",
+            "options": {
+                "cwd": "${workspaceFolder}/src/compiler/ir"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "type": "shell",
+            "label": "build code generator",
+            "command": "make",
+            "args": [
+                "-f",
+                "code_generator.mak",
+                "-j"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/build"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "dependsOn": ["compile all proto file"]
+        },
+        {
+            "type": "shell",
+            "label": "build behavior simulator",
+            "command": "make",
+            "args": [
+                "-f",
+                "behavior_simulator.mak",
+                "-j"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/build"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+        },
+        {
+            "type": "shell",
+            "label": "build clock simulator",
+            "command": "make",
+            "args": [
+                "-f",
+                "clock_simulator.mak",
+                "-j"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/build"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "dependsOn": ["compile all proto file"]
+        },
+        {
+            "type": "shell",
+            "label": "build Json to Proto",
+            "command": "make",
+            "args": [
+                "-f",
+                "json_to_proto.mak",
+                "-j"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/build"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "dependsOn": ["compile all proto file"]
+        },
+        {
+            "type": "shell",
+            "label": "build Assembler",
+            "command": "make",
+            "args": [
+                "-f",
+                "assembler.mak",
+                "-j"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/build"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+        }
+    ]
+}

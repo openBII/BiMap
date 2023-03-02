@@ -1,0 +1,79 @@
+{
+    "configurations": {
+        "code_generator": {
+            "adapter": "vscode-cpptools",
+            "configuration": {
+                "variables" : {
+                },
+                "type":    "cppdbg",
+                "request": "launch",
+                "program": "${workspaceRoot}/build/code_generator",
+                "args": [
+                    "-i",
+                    "${relativeFile}",
+                    "-c",
+                    "${fileBasenameNoExtension}"
+                ],
+                "cwd": "${workspaceRoot}",
+                "environment": [
+                ] ,
+                "externalConsole": true,
+                "stopAtEntry": true,
+                "MIMode": "gdb",
+                "logging": {
+                    "engineLogging": false
+                },
+                "setupCommands": [
+                    {
+                        "description": "Enable pretty-printing for gdb",
+                        "text": "-enable-pretty-printing",
+                        "ignoreFailures": true
+                    }
+                ],
+                "breakpointers": {
+                    "exception": {
+                        "cpp_throw": "Y",
+                        "cpp_catch": "N"
+                    }
+                }
+            }},
+        "behavior_simulator": {
+            "adapter": "vscode-cpptools",
+            "configuration": {
+                "variables" : {
+                },
+                "type":    "cppdbg",
+                "request": "launch",
+                "program": "${workspaceRoot}/build/behavior_simulator",
+                "args": [
+                    "-i",
+                    "${relativeFile}",
+                    "-c",
+                    "${fileBasenameNoExtension}"
+                ],
+                "cwd": "${workspaceRoot}",
+                "environment": [
+                ] ,
+                "externalConsole": true,
+                "stopAtEntry": true,
+                "MIMode": "gdb",
+                "logging": {
+                    "engineLogging": false
+                },
+                "setupCommands": [
+                    {
+                        "description": "Enable pretty-printing for gdb",
+                        "text": "-enable-pretty-printing",
+                        "ignoreFailures": true
+                    }
+                ],
+                "breakpointers": {
+                    "exception": {
+                        "cpp_throw": "Y",
+                        "cpp_catch": "N"
+                    }
+                }
+            }
+        }
+    }
+}

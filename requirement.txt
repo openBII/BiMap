@@ -1,0 +1,11 @@
+pytest
+pytest-html
+pytest-xdist
+numpy
+pyecharts
+torch
+onnx
+onnx-simplifier
+bidict
+toml
+hnn

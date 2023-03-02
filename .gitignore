@@ -1,0 +1,25 @@
+editor = vim
+*.pro.user.*
+./ideas
+.idea
+**/__pycache__
+# .vscode/  里面有一些配置文件还是要共享的
+
+*.o
+*.d
+*.so
+*.bin
+*.out
+*.log
+*.DS_Store
+
+io_server.log
+rect1.png
+build/code_generator
+build/behavior_simulator
+build/assembler
+build/clock_simulator
+
+docs/**/build
+
+**/temp/

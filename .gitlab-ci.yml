@@ -1,0 +1,41 @@
+stages:
+  - build
+  - test
+
+cache:
+  paths:
+    - build/code_generator
+    - build/clock_simulator
+    - build/json_to_proto
+    - build/behavior_simulator
+    - src/compiler/ir/*
+
+build_job:
+  stage: build
+  only:
+    - master
+  before_script:
+    - cd src/compiler/ir
+    - ./compile_all_ir.sh
+    - cd ../../..
+
+  script:
+    - cd build 
+    - bash ./compile_all.sh
+
+
+
+
+test_mp:
+  stage: test
+  only:
+    - master
+    - test_frame
+  before_script:
+    - pip install -r requirement.txt -i http://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com
+  script:
+    - source ./setenv.sh
+    - pytest  test/regression_tests
+    - echo "test_job done"
+  
+

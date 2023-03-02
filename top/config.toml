@@ -1,0 +1,37 @@
+title = "TianjicX Compiler Config"
+[path]
+test_lib = '/test_lib/'
+temp = 'temp/'
+data = '/data/'
+task_out = "task_out/"
+map_out = "map_out/"
+behavior_out = "behavior_out/"
+behavior_py_out = "behavior_py_out/"
+clock_out = "clock_out/"
+
+[chip_arch]
+CHIP_X_MAX = 1
+CHIP_Y_MAX = 1
+CORE_X_MAX = 16
+CORE_Y_MAX = 10
+CORE_MAX = 160
+STEP_GROUP_MAX = 4
+PHASE_GROUP_MAX = 32
+PHASE_MAX = 32
+PHASE_ADAPT = true
+
+[memory]
+MEM0_END = 0x3fff
+MEM1_END = 0x7fff # 资源模型中的内存大小, 单位 4B
+MEM2_END = 0x8fff # 也代表执行模型中实际的内存总大小
+
+[computation]
+MAC_X_SIZE = 4
+MAC_Y_SIZE = 32
+
+[router]
+ROUTER_STRATEGY = "xy" # 先 x 后 y
+PACKET_SIZE = 64       # 不算包头 64bit
+
+[tcp]
+PORT = 9998

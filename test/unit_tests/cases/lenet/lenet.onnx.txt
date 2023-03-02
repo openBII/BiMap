@@ -1,0 +1,365 @@
+Graph {
+	Node Conv_0 {
+		op_type: Conv
+		inputs: ['input.1', 'conv1.weight', 'conv1.bias']
+		outputs: ['onnx::Clip_11']
+		Attribute dilations {
+			data_type: ONNXAttributeDataType.TYPE_PROTO
+			value: [1, 1]
+		}
+		Attribute group {
+			data_type: ONNXAttributeDataType.INT
+			value: 1
+		}
+		Attribute kernel_shape {
+			data_type: ONNXAttributeDataType.TYPE_PROTO
+			value: [5, 5]
+		}
+		Attribute pads {
+			data_type: ONNXAttributeDataType.TYPE_PROTO
+			value: [2, 2, 2, 2]
+		}
+		Attribute strides {
+			data_type: ONNXAttributeDataType.TYPE_PROTO
+			value: [1, 1]
+		}
+		input_nodes: []
+		output_nodes: ['Cut_0']
+	}
+	Node Relu_6 {
+		op_type: Relu
+		inputs: ['input']
+		outputs: ['onnx::MaxPool_17']
+		input_nodes: ['Cut_0']
+		output_nodes: ['MaxPool_7']
+	}
+	Node MaxPool_7 {
+		op_type: MaxPool
+		inputs: ['onnx::MaxPool_17']
+		outputs: ['input.4']
+		Attribute kernel_shape {
+			data_type: ONNXAttributeDataType.TYPE_PROTO
+			value: [2, 2]
+		}
+		Attribute pads {
+			data_type: ONNXAttributeDataType.TYPE_PROTO
+			value: [0, 0, 0, 0]
+		}
+		Attribute strides {
+			data_type: ONNXAttributeDataType.TYPE_PROTO
+			value: [2, 2]
+		}
+		input_nodes: ['Relu_6']
+		output_nodes: ['Conv_8']
+	}
+	Node Conv_8 {
+		op_type: Conv
+		inputs: ['input.4', 'conv2.weight', 'conv2.bias']
+		outputs: ['onnx::Clip_19']
+		Attribute dilations {
+			data_type: ONNXAttributeDataType.TYPE_PROTO
+			value: [1, 1]
+		}
+		Attribute group {
+			data_type: ONNXAttributeDataType.INT
+			value: 1
+		}
+		Attribute kernel_shape {
+			data_type: ONNXAttributeDataType.TYPE_PROTO
+			value: [5, 5]
+		}
+		Attribute pads {
+			data_type: ONNXAttributeDataType.TYPE_PROTO
+			value: [0, 0, 0, 0]
+		}
+		Attribute strides {
+			data_type: ONNXAttributeDataType.TYPE_PROTO
+			value: [1, 1]
+		}
+		input_nodes: ['MaxPool_7']
+		output_nodes: ['Cut_1']
+	}
+	Node Relu_14 {
+		op_type: Relu
+		inputs: ['input.8']
+		outputs: ['onnx::MaxPool_25']
+		input_nodes: ['Cut_1']
+		output_nodes: ['MaxPool_15']
+	}
+	Node MaxPool_15 {
+		op_type: MaxPool
+		inputs: ['onnx::MaxPool_25']
+		outputs: ['onnx::Transpose_26']
+		Attribute kernel_shape {
+			data_type: ONNXAttributeDataType.TYPE_PROTO
+			value: [2, 2]
+		}
+		Attribute pads {
+			data_type: ONNXAttributeDataType.TYPE_PROTO
+			value: [0, 0, 0, 0]
+		}
+		Attribute strides {
+			data_type: ONNXAttributeDataType.TYPE_PROTO
+			value: [2, 2]
+		}
+		input_nodes: ['Relu_14']
+		output_nodes: ['Reshape_17']
+	}
+	Node Reshape_17 {
+		op_type: Flatten
+		inputs: ['onnx::Transpose_26']
+		outputs: ['x']
+		input_nodes: ['MaxPool_15']
+		output_nodes: ['Gemm_18']
+	}
+	Node Gemm_18 {
+		op_type: Gemm
+		inputs: ['x', 'linear1.weight', 'linear1.bias']
+		outputs: ['onnx::Clip_34']
+		Attribute alpha {
+			data_type: ONNXAttributeDataType.FLOAT
+			value: 1.0
+		}
+		Attribute beta {
+			data_type: ONNXAttributeDataType.FLOAT
+			value: 1.0
+		}
+		Attribute transB {
+			data_type: ONNXAttributeDataType.INT
+			value: 1
+		}
+		input_nodes: ['Reshape_17']
+		output_nodes: ['Cut_2']
+	}
+	Node Relu_24 {
+		op_type: Relu
+		inputs: ['input.12']
+		outputs: ['onnx::Gemm_40']
+		input_nodes: ['Cut_2']
+		output_nodes: ['Gemm_25']
+	}
+	Node Gemm_25 {
+		op_type: Gemm
+		inputs: ['onnx::Gemm_40', 'linear2.weight', 'linear2.bias']
+		outputs: ['onnx::Clip_41']
+		Attribute alpha {
+			data_type: ONNXAttributeDataType.FLOAT
+			value: 1.0
+		}
+		Attribute beta {
+			data_type: ONNXAttributeDataType.FLOAT
+			value: 1.0
+		}
+		Attribute transB {
+			data_type: ONNXAttributeDataType.INT
+			value: 1
+		}
+		input_nodes: ['Relu_24']
+		output_nodes: ['Cut_3']
+	}
+	Node Relu_31 {
+		op_type: Relu
+		inputs: ['input.16']
+		outputs: ['onnx::Gemm_47']
+		input_nodes: ['Cut_3']
+		output_nodes: ['Gemm_32']
+	}
+	Node Gemm_32 {
+		op_type: Gemm
+		inputs: ['onnx::Gemm_47', 'linear3.weight', 'linear3.bias']
+		outputs: ['onnx::Clip_48']
+		Attribute alpha {
+			data_type: ONNXAttributeDataType.FLOAT
+			value: 1.0
+		}
+		Attribute beta {
+			data_type: ONNXAttributeDataType.FLOAT
+			value: 1.0
+		}
+		Attribute transB {
+			data_type: ONNXAttributeDataType.INT
+			value: 1
+		}
+		input_nodes: ['Relu_31']
+		output_nodes: ()
+	}
+	Node Cut_0 {
+		op_type: Cut
+		inputs: ['onnx::Clip_11']
+		outputs: ['input']
+		Attribute bit_shift_num {
+			data_type: ONNXAttributeDataType.INT
+			value: 8
+		}
+		input_nodes: ['Conv_0']
+		output_nodes: ['Relu_6']
+	}
+	Node Cut_1 {
+		op_type: Cut
+		inputs: ['onnx::Clip_19']
+		outputs: ['input.8']
+		Attribute bit_shift_num {
+			data_type: ONNXAttributeDataType.INT
+			value: 10
+		}
+		input_nodes: ['Conv_8']
+		output_nodes: ['Relu_14']
+	}
+	Node Cut_2 {
+		op_type: Cut
+		inputs: ['onnx::Clip_34']
+		outputs: ['input.12']
+		Attribute bit_shift_num {
+			data_type: ONNXAttributeDataType.INT
+			value: 10
+		}
+		input_nodes: ['Gemm_18']
+		output_nodes: ['Relu_24']
+	}
+	Node Cut_3 {
+		op_type: Cut
+		inputs: ['onnx::Clip_41']
+		outputs: ['input.16']
+		Attribute bit_shift_num {
+			data_type: ONNXAttributeDataType.INT
+			value: 10
+		}
+		input_nodes: ['Gemm_25']
+		output_nodes: ['Relu_31']
+	}
+	Data conv1.weight {
+		data_type: ONNXDataType.INT8
+		shape: [6, 1, 5, 5]
+		is_static: True
+	}
+	Data conv1.bias {
+		data_type: ONNXDataType.INT32
+		shape: [6]
+		is_static: True
+	}
+	Data conv2.weight {
+		data_type: ONNXDataType.INT8
+		shape: [16, 6, 5, 5]
+		is_static: True
+	}
+	Data conv2.bias {
+		data_type: ONNXDataType.INT32
+		shape: [16]
+		is_static: True
+	}
+	Data linear1.weight {
+		data_type: ONNXDataType.INT8
+		shape: [120, 400]
+		is_static: True
+	}
+	Data linear1.bias {
+		data_type: ONNXDataType.INT32
+		shape: [120]
+		is_static: True
+	}
+	Data linear2.weight {
+		data_type: ONNXDataType.INT8
+		shape: [84, 120]
+		is_static: True
+	}
+	Data linear2.bias {
+		data_type: ONNXDataType.INT32
+		shape: [84]
+		is_static: True
+	}
+	Data linear3.weight {
+		data_type: ONNXDataType.INT8
+		shape: [10, 84]
+		is_static: True
+	}
+	Data linear3.bias {
+		data_type: ONNXDataType.INT32
+		shape: [10]
+		is_static: True
+	}
+	Data input.1 {
+		data_type: ONNXDataType.INT8
+		shape: [1, 1, 28, 28]
+		is_static: False
+	}
+	Data onnx::Clip_11 {
+		data_type: ONNXDataType.INT32
+		shape: [1, 6, 28, 28]
+		is_static: False
+	}
+	Data input {
+		data_type: ONNXDataType.INT8
+		shape: [1, 6, 28, 28]
+		is_static: False
+	}
+	Data onnx::MaxPool_17 {
+		data_type: ONNXDataType.INT8
+		shape: [1, 6, 28, 28]
+		is_static: False
+	}
+	Data input.4 {
+		data_type: ONNXDataType.INT8
+		shape: [1, 6, 14, 14]
+		is_static: False
+	}
+	Data onnx::Clip_19 {
+		data_type: ONNXDataType.INT32
+		shape: [1, 16, 10, 10]
+		is_static: False
+	}
+	Data input.8 {
+		data_type: ONNXDataType.INT8
+		shape: [1, 16, 10, 10]
+		is_static: False
+	}
+	Data onnx::MaxPool_25 {
+		data_type: ONNXDataType.INT8
+		shape: [1, 16, 10, 10]
+		is_static: False
+	}
+	Data onnx::Transpose_26 {
+		data_type: ONNXDataType.INT8
+		shape: [1, 16, 5, 5]
+		is_static: False
+	}
+	Data x {
+		data_type: ONNXDataType.INT8
+		shape: [1, 400]
+		is_static: False
+	}
+	Data onnx::Clip_34 {
+		data_type: ONNXDataType.INT32
+		shape: [1, 120]
+		is_static: False
+	}
+	Data input.12 {
+		data_type: ONNXDataType.INT8
+		shape: [1, 120]
+		is_static: False
+	}
+	Data onnx::Gemm_40 {
+		data_type: ONNXDataType.INT8
+		shape: [1, 120]
+		is_static: False
+	}
+	Data onnx::Clip_41 {
+		data_type: ONNXDataType.INT32
+		shape: [1, 84]
+		is_static: False
+	}
+	Data input.16 {
+		data_type: ONNXDataType.INT8
+		shape: [1, 84]
+		is_static: False
+	}
+	Data onnx::Gemm_47 {
+		data_type: ONNXDataType.INT8
+		shape: [1, 84]
+		is_static: False
+	}
+	Data onnx::Clip_48 {
+		data_type: ONNXDataType.INT32
+		shape: [1, 10]
+		is_static: False
+	}
+}

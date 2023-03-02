@@ -1,0 +1,178 @@
+// Copyright (C) OpenBII
+// Team: CBICR
+// SPDX-License-Identifier: Apache-2.0
+// See: https://spdx.org/licenses/
+
+syntax = "proto2";
+
+import "basic.proto";
+
+package tianjic_ir;
+
+message TaskGraph {
+  repeated TaskBlock blocks = 1;  // 任务块
+  repeated Edge edges = 2;  // 任务块之间的连接
+  repeated Group groups = 3;  // 任务组
+
+  optional TestConfig test_config = 4;
+}
+
+enum TaskBlockType {
+  SI = 0;
+  SW = 1;
+  SIC2D = 2;
+  SIFC = 3;
+  SIC = 4;
+  SB = 5;
+  SWFC = 6;
+  SW2D = 7;
+  CADD = 8;
+  CVVH = 9;
+  CVM = 10;
+  CC = 11;
+  CAX = 12;
+  CC2D = 13;
+  CVS = 14;
+  CCMPB = 15;
+  CAVG = 16;
+  CCMPS = 17;
+  CLUT = 18;
+  CLIF = 19;
+  INPUT = 50;
+  OUTPUT = 51;
+  TASK_NULL = 100;
+}
+
+message Group {
+  optional int32 group_id = 1;  // 任务组ID
+  repeated int32 block_ids = 2;  // 组内任务块ID
+}
+
+message TaskBlock {
+  optional int32 id = 1;  // 任务块ID
+  optional TaskBlockType type = 2;  // 任务块具体类型
+  optional Precision precision = 3;  // 任务块数据精度
+  optional Shape shape = 4;  // 任务块六面体形状
+  repeated EdgeCluster input_clusters = 5;    // !!!目前只支持每个输入边簇有一个连接边
+  repeated EdgeCluster output_clusters = 6;   // !!!目前只支持有一个输出边簇
+  optional Tensor data = 7;
+  // 计算任务块的属性
+  repeated Attribute attributes = 8;
+  optional bool is_virtual = 9;
+  optional int32 master_task_id = 10;
+  optional int32 pipeline_num = 11;
+  optional BiasType bias_type = 12;
+  // 输入输出结点的属性
+  optional int32 socket_id = 13;
+}
+
+message Attribute {
+  optional AttributeType type = 1;
+  optional Precision precision = 2;
+  optional int32 int_value = 3;
+  optional float float_value = 4;
+}
+
+enum AttributeType {
+  KERNEL_X = 0;  // kernel size
+  KERNEL_Y = 1;
+  STRIDE_X = 2;  // stride
+  STRIDE_Y = 3;
+  PAD_UP = 4;  // padding
+  PAD_DOWN = 5;
+  PAD_LEFT = 6;
+  PAD_RIGHT = 7;
+  CMP = 8;  // 比较器初值
+  CONSTANT_A = 9;  // 放缩常数
+  CONSTANT_B = 10;  // 偏置常数
+  DILATION_X = 11;  // 膨胀系数
+  DILATION_Y = 12;
+  BIT_SHIGT_NUM = 13;  // 隔位截取
+  VTH0 = 14;  // LIF+
+  VTH_ALPHA = 15;
+  VTH_BETA = 16;
+  VTH_INCRE = 17;
+  VR = 18;
+  VL = 19;
+  VLEAKY_ALPHA = 20;
+  VLEAKY_BETA = 21;
+  DV = 22;
+  REF_LEN = 23;
+  TW_CNT = 24;
+  VINIT = 25;
+  TW_LEN = 26;
+  SEED = 27;
+  LUT_DW = 28;  // LUT
+  VTH_ADPT_EN = 29;  // LIF+
+  VLEAKY_ADPT_EN = 30;
+  TW_EN = 31;
+  RESET_MODE = 32;
+  FIRE_TYPE = 33;
+  VM_CONST_EN = 34;
+  VM_CONST = 35;
+  VTHETA_CONST_EN = 36;
+  VTHETA_CONST = 37;
+}
+
+// 序列化的张量数值
+message Tensor {
+  // 张量形状
+  repeated int32 dims = 1;
+
+  // 张量的数据类型
+  // 这个field必须在Precision中取值
+  optional Precision precision = 2;
+
+  // 张量数据必须按行存储
+  //
+  // 根据data_type, 下面以_data结尾的field只有一个用来存储张量元素值
+  // data_type = FLOAT_16, FLOAT_32
+  repeated float float_data = 3 [packed = true];  // packed = true用于确保高效编码
+
+  // data_type = INT32, INT16, INT9, INT8, Ternary
+  repeated int32 int32_data = 4 [packed = true];
+
+  // data_type = UINT32, UINT_16, UINT_8
+  repeated uint32 uint32_data = 5 [packed = true];
+
+  // 可选, 张量ID
+  optional string name = 6;
+}
+
+message EdgeCluster {
+  optional Shape shape = 1;
+  repeated EdgeInterface interfaces = 2;
+}
+
+message EdgeInterface {
+  optional Shape position = 1;
+  optional Shape size = 2;
+  optional int32 edge_id = 3;
+}
+
+message Edge {
+  optional int32 id = 1;
+  optional int32 src_block_id = 2;  // source TaskBlock ID
+  optional int32 dst_block_id = 3;  // destination TaskBlock ID
+  repeated RearrangeInfo rearrange_info = 4;  // Rearrange信息
+}
+
+enum RearrangeInfoType {
+  IDENTITY = 0;
+  RESHAPE = 1;
+  PERMUTE = 2;
+  ROTATE = 3;
+  SHIFT = 4;
+  SCALE = 5;
+  SHEAR = 6;
+  REFLECT = 7;
+  AFFINE = 8;
+  PROJECT = 9;
+  SHUFFLE = 10;
+}
+
+message RearrangeInfo {
+  optional RearrangeInfoType type = 1;  // Rearrange的操作种类
+  repeated Tensor matrix = 2;  // Rearrange矩阵
+  // 此处待扩展
+}
