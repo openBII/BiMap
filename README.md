@@ -3,9 +3,7 @@
 
 类脑众核架构探索平台（Brain-inspired Many-core Architecture exploration Platform, Bi-Map），是旨在提供灵活通用的类脑部署解决方案、进行类脑体系结构关键技术探索的类脑系统软件，为编译与芯片架构设计这两大类脑系统中不可分割的研究方向提供服务。我们希望通过Bi-Map，使用者可以快速高效的将深度学习模型与传统类脑计算模型部署到类脑芯片上，也可以通过编译与仿真的协同优化，探索更好的编译映射策略与类脑架构设计。
 
-BiMap计划包含如下组件：
-
-![image](docs/sphinx/source/总述/_static/framework2.png)
+BiMap计划包含如下组件。
 
 **编译栈：** 将算法模型转换为芯片可执行的代码。包括，
 
