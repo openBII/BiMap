@@ -1,0 +1,8 @@
+# 生成的可执行文件和临时文件不上传到git上
+code_generator
+behavior_simulator
+clock_simulator
+json_to_proto
+assembler
+*Temp*
+*.out
