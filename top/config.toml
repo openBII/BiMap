@@ -21,9 +21,27 @@ PHASE_MAX = 32
 PHASE_ADAPT = true
 
 [memory]
+# TianjicX-SRAM
+RUNTIME_MEM = 0x7fff
+IO_MEM = 0x3c00
+CODE_MEM = 0x400
+
+RUNTIME_BANDWIDTH = 32 # Axon原语一个clock读写数据位宽为32B
+IO_BANDWIDTH = 16
+
+# IO_BANDWITDTH
+
 MEM0_END = 0x3fff
 MEM1_END = 0x7fff # 资源模型中的内存大小, 单位 4B
-MEM2_END = 0x8fff # 也代表执行模型中实际的内存总大小
+MEM2_END = 0xbfff # 0x8fff # 也代表执行模型中实际的内存总大小
+
+# TianjicX-DRAM
+# RUNTIME_MEM = 0x400000   # 4M * 4B
+# IO_MEM = 0xbfff
+# CODE_MEM = 0x400 # DRAM
+
+# RUNTIME_BANDWIDTH = 4
+# IO_BANDWIDTH = 32
 
 [computation]
 MAC_X_SIZE = 4
@@ -31,7 +49,7 @@ MAC_Y_SIZE = 32
 
 [router]
 ROUTER_STRATEGY = "xy" # 先 x 后 y
-PACKET_SIZE = 64       # 不算包头 64bit
+NOC_BANDWIDTH = 8       # 不算包头 8B
 
 [tcp]
 PORT = 9998
