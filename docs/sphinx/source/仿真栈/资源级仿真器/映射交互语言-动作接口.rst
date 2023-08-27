@@ -1,0 +1,525 @@
+========================================================================
+映射交互语言-动作接口
+========================================================================
+
+
+STEnv类
+########################################
+
+``STEnv`` 类的核心功能是创建时空映射环境，用于将 ``TaskGraph`` 中的任务块放到时空矩阵 ``STMatrix`` 中。
+
+
+动作接口
+########################################
+
+split_task
+************************************
+
+.. py:method:: split_task(task_id, split_vector[, split_funcs=SplitType.Average])
+
+  对应的任务块进行拆分，此动作接口只对计算任务块进行拆分，并自动完成对相应的输入输出存储任务块进行拆分和修改产生输入存储任务块的计算任务块的输出边簇信息和消费输出存储任务块的计算任务块的输入边簇信息，上述动作都直接作用于任务图上。
+
+  :param int task_id: 被拆分的计算任务块的ID， ``task_id`` 对应的任务块需是 ``CTaskBlock`` 对象。
+  :param Shape split_vector: 拆分向量为6维向量（ ``Shape`` 对象 ）， ``ny`` ``nx`` ``nf`` ``nr`` 4个维度的值分别代表在对应维度上拆分的份数， ``nkx`` ``nky`` 2个维度不可拆分，应赋值为1。 
+  :param split_funcs: 为枚举类 ``SplitType`` 对象组成的列表，列表中的每个元素代表对应维度上的拆分方式，目前只提供了 ``Average`` 一种拆分方式，当此输入为一个 ``SplitType`` 对象时，所有维度上采取相同的拆分方式，默认值为在所有维度上以 ``Average`` 方式进行拆分。
+  :type split_funcs: SplitType or List[SplitType]
+  :return: 返回由于拆分产生的新任务块的ID组成的列表，动作直接作用在 ``TaskGraph`` 对象上
+  
+  :使用示例1: 
+
+    对卷积的各个维度进行拆分，示例中的卷积的输入特征图形状为 ``ny = 8, nx = 8, nr = 32`` ，卷积核形状为 ``nky = 3, nkx = 3`` ，卷积的padding为1，stride为1。
+
+    对卷积在y方向拆分2份：由于需要补充交叠数据，所以 ``SICTaskBlock`` 的 ``ny = 5``；由于没有在输入输出通道方向拆分，所以 ``SWTaskBlock`` 发生复制。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对3号CCTaskBlock在y方向进行平均拆分2份
+        st_env.split_task(task_id=3, 
+                          split_vector=Shape(ny=2, nx=1, nf=1, nr=1, nky=1, nkx=1))
+
+  .. image::  _static/cc_cc_y.png
+    :width: 100%
+    :align: center
+
+  :使用示例2: 
+
+    卷积描述同示例1。
+
+    对卷积在x方向拆分2份：由于需要补充交叠数据，所以 ``SICTaskBlock`` 的 ``nx = 5``；由于没有在输入输出通道方向拆分，所以 ``SWTaskBlock`` 发生复制。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对3号CCTaskBlock在x方向进行平均拆分2份
+        st_env.split_task(task_id=3, 
+                          split_vector=Shape(ny=1, nx=2, nf=1, nr=1, nky=1, nkx=1))
+
+  .. image::  _static/cc_cc_x.png
+    :width: 100%
+    :align: center
+
+  :使用示例3: 
+
+    卷积描述同示例1。
+
+    对卷积在f方向拆分2份： 由于是输出通道方向拆分， ``SICTaskBlock`` 发生复制； ``SWTaskBlock`` 和 ``SBTaskBlock`` 均在f方向被拆分成2份。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对3号CCTaskBlock在f方向进行平均拆分2份
+        st_env.split_task(task_id=3, 
+                          split_vector=Shape(ny=1, nx=1, nf=2, nr=1, nky=1, nkx=1))
+
+  .. image::  _static/cc_cc_f.png
+    :width: 100%
+    :align: center
+
+  :使用示例4: 
+
+    卷积描述同示例1。
+
+    对卷积在r方向拆分2份： ``SICTaskBlock`` 和 ``SWTaskBlock`` 在r方向被拆分成2份； 输入通道拆分导致在完成卷积计算后需要将计算结果相加得到最终结果，所以自动生成了 ``CADDTaskBlock`` 完成求部分和的操作；此外由于是输入通道方向拆分， ``SBTaskBlock`` 不发生拆分，为避免重复进行加bias的操作，将 ``SBTaskBlock`` 连接到了 ``CADDTaskBlock`` 上。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对3号CCTaskBlock在r方向进行平均拆分2份
+        st_env.split_task(task_id=3, 
+                          split_vector=Shape(ny=1, nx=1, nf=1, nr=2, nky=1, nkx=1))
+
+  .. image::  _static/cc_cc_r.png
+    :width: 100%
+    :align: center
+
+  :使用示例5: 
+
+    卷积描述同示例1。
+
+    对卷积在y方向、f方向和r方向均拆分2份。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对3号CCTaskBlock在y, f, r方向均进行平均拆分2份
+        # 预期生成8个CCTaskBlock
+        st_env.split_task(task_id=3, 
+                          split_vector=Shape(ny=2, nx=1, nf=2, nr=2, nky=1, nkx=1))
+
+  .. image::  _static/cc_cc_yfr.png
+    :width: 100%
+    :align: center
+
+  综上，针对卷积任务，在某一维度上拆分2份，拆分后的每一份相较于原来的卷积任务如下表（只在一个维度上拆分，其它维度不拆分）：
+
+  =============== ============== ============== ============== ================
+  拆分维度         y             x                f             r
+  =============== ============== ============== ============== ================
+  输入数据存储量  约为原来一半   约为原来一半    不变           为原来一半
+  权重数据存储量  不变           不变            为原来一半     为原来一半
+  输出数据存储量  为原来一半     为原来一半      为原来一半     不变
+  计算量          为原来一半     为原来一半      为原来一半     为原来一半
+  生成新任务      不生成         不生成          不生成         生成CADD任务
+  =============== ============== ============== ============== ================
+
+  :使用示例6: 
+
+    对平均池化的各个维度进行拆分，相较于一般的平均池化， ``CAVGTaskBlock`` 可同时实现加bias的操作。示例中平均池化输入特征图形状为 ``ny = 8, nx = 8, nr = 32`` ，池化窗 ``nky = 2, nkx = 2`` ，stride为2，padding为0，同时进行加bias的操作。
+
+    对 ``CAVGTaskBlock`` 在y方向拆分2份： ``SITaskBlock`` 在y方向被拆分成2份， ``SBTaskBlock`` 发生复制。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对2号CAVGTaskBlock在y方向均进行平均拆分2份
+        st_env.split_task(task_id=2, 
+                          split_vector=Shape(ny=2, nx=1, nf=1, nr=1, nky=1, nkx=1))
+
+  .. image::  _static/cavg_cavg_y.png
+    :width: 100%
+    :align: center
+
+  :使用示例7: 
+
+    平均池化描述同示例6。
+
+    对 ``CAVGTaskBlock`` 在x方向拆分2份： ``SITaskBlock`` 在x方向被拆分成2份， ``SBTaskBlock`` 发生复制。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对2号CAVGTaskBlock在x方向均进行平均拆分2份
+        st_env.split_task(task_id=2, 
+                          split_vector=Shape(ny=1, nx=2, nf=1, nr=1, nky=1, nkx=1))
+
+  .. image::  _static/cavg_cavg_x.png
+    :width: 100%
+    :align: center
+
+  :使用示例8: 
+
+    平均池化描述同示例6。
+
+    对 ``CAVGTaskBlock`` 在f方向拆分2份： ``SITaskBlock`` 和 ``SBTaskBlock`` 在f方向被拆分成2份。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对2号CAVGTaskBlock在f方向均进行平均拆分2份
+        st_env.split_task(task_id=2, 
+                          split_vector=Shape(ny=1, nx=1, nf=2, nr=1, nky=1, nkx=1))
+
+  .. image::  _static/cavg_cavg_f.png
+    :width: 100%
+    :align: center
+
+  :使用示例9: 
+
+    平均池化描述同示例6。
+
+    对 ``CAVGTaskBlock`` 在y、x和f方向（所有可拆分维度）均拆分2份。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对2号CAVGTaskBlock在y, x, f方向均进行平均拆分2份
+        # 预期生成8个CAVGTaskBlock
+        st_env.split_task(task_id=2, 
+                          split_vector=Shape(ny=2, nx=2, nf=2, nr=1, nky=1, nkx=1))
+
+  .. image::  _static/cavg_cavg_yxf.png
+    :width: 100%
+    :align: center
+
+  综上，针对池化任务，在某一维度上拆分2份，拆分后的每一份相较于原来的池化任务如下表（只在一个维度上拆分，其它维度不拆分）：
+
+  =============== ============== ============== ==============
+  拆分维度         y             x                f            
+  =============== ============== ============== ==============
+  输入数据存储量  约为原来一半   约为原来一半    为原来一半
+  输出数据存储量  为原来一半     为原来一半      为原来一半  
+  计算量          为原来一半     为原来一半      为原来一半    
+  生成新任务      不生成         不生成          不生成        
+  =============== ============== ============== ==============
+
+  :使用示例10: 
+
+    对全连接的各个维度进行拆分，示例中的全连接计算的输入向量长度为32，输出向量长度也为32。
+
+    对全连接在f方向拆分2份： ``SIFCTaskBlock`` 发生复制； ``SWFCTaskBlock`` 和 ``SBTaskBlock`` 均被拆分成2份。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对3号CVMTaskBlock在f方向进行平均拆分2份
+        st_env.split_task(task_id=3, 
+                          split_vector=Shape(ny=1, nx=1, nf=2, nr=1, nky=1, nkx=1))
+
+  .. image::  _static/cvm_cvm_f.png
+    :width: 100%
+    :align: center
+
+  :使用示例11: 
+
+    全连接描述同示例10。
+
+    对全连接在r方向拆分2份： ``SIFCTaskBlock`` 和 ``SWFCTaskBlock`` 均被拆分成2份；由于在输入通道方向进行拆分，需对2个全连接的计算结果加和得到最终输出，所以自动生成了 ``CADDTaskBlock`` 用于求部分和；未避免重复进行加bias的操作， ``SBTaskBlock`` 被连接到了 ``CADDTaskBlock`` 上。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对3号CVMTaskBlock在r方向进行平均拆分2份
+        st_env.split_task(task_id=3, 
+                          split_vector=Shape(ny=1, nx=1, nf=1, nr=2, nky=1, nkx=1))
+
+  .. image::  _static/cvm_cvm_r.png
+    :width: 100%
+    :align: center
+
+  :使用示例12: 
+
+    全连接描述同示例10。
+
+    对全连接在f和r方向（所有可拆分维度）均拆分2份。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对3号CVMTaskBlock在f, r方向均进行平均拆分2份
+        # 预期生成4个CVMTaskBlock
+        st_env.split_task(task_id=3, 
+                          split_vector=Shape(ny=1, nx=1, nf=2, nr=2, nky=1, nkx=1))
+
+  .. image::  _static/cvm_cvm_fr.png
+    :width: 100%
+    :align: center
+
+  综上，针对全连接任务，在某一维度上拆分2份，拆分后的每一份相较于原来全连接任务如下表（只在一个维度上拆分，其它维度不拆分）：
+
+  =============== ============== ==============
+  拆分维度         f             r             
+  =============== ============== ==============
+  输入数据存储量  不变            为原来一半 
+  输出数据存储量  为原来一半      不变    
+  计算量          为原来一半      为原来一半    
+  生成新任务      不生成         生成CADD任务        
+  =============== ============== ==============
+
+  :使用示例13: 
+
+    对查找表计算的各个维度拆分，输入特征图形状为 ``ny = 8, nx = 8, nf = 32`` ，输入数据精度为INT8，与查找表的地址位宽相同，所以查找表的长度为256，对应的 ``SBTaskBlock`` 的 ``nf = 256`` ，输出数据精度也为INT8，所以查找表对应的 ``SBTaskBlock`` 的数据精度为INT8。
+
+    对查找表计算在y方向拆分2份：只要发生拆分，查找表对应的 ``SBTaskBlock`` 都需要复制到每个查找表计算中去； ``SITaskBlock`` 被拆分成2份。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对2号CLUTTaskBlock在y方向进行平均拆分2份
+        st_env.split_task(task_id=2, 
+                          split_vector=Shape(ny=2, nx=1, nf=1, nr=1, nky=1, nkx=1))
+
+  .. image::  _static/clut_clut_y.png
+    :width: 100%
+    :align: center
+
+  :使用示例14: 
+
+    查找表计算描述同示例13。
+
+    对查找表计算在x方向拆分2份：只要发生拆分，查找表对应的 ``SBTaskBlock`` 都需要复制到每个查找表计算中去； ``SITaskBlock`` 被拆分成2份。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对2号CLUTTaskBlock在x方向进行平均拆分2份
+        st_env.split_task(task_id=2, 
+                          split_vector=Shape(ny=1, nx=2, nf=1, nr=1, nky=1, nkx=1))
+
+  .. image::  _static/clut_clut_x.png
+    :width: 100%
+    :align: center
+
+  :使用示例15: 
+
+    查找表计算描述同示例13。
+
+    对查找表计算在f方向拆分2份：只要发生拆分，查找表对应的 ``SBTaskBlock`` 都需要复制到每个查找表计算中去； ``SITaskBlock`` 被拆分成2份。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对2号CLUTTaskBlock在f方向进行平均拆分2份
+        st_env.split_task(task_id=2, 
+                          split_vector=Shape(ny=1, nx=1, nf=2, nr=1, nky=1, nkx=1))
+
+  .. image::  _static/clut_clut_f.png
+    :width: 100%
+    :align: center
+
+  :使用示例16: 
+
+    查找表计算描述同示例13。
+
+    对查找表计算在y、x、f方向均拆分2份：只要发生拆分，查找表对应的 ``SBTaskBlock`` 都需要复制到每个查找表计算中去，所以会生成8个相同的 ``SBTaskBlock`` ； ``SITaskBlock`` 被拆分成8份。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        # 对2号CLUTTaskBlock在y, x, f方向均进行平均拆分2份
+        st_env.split_task(task_id=2, 
+                          split_vector=Shape(ny=2, nx=2, nf=2, nr=1, nky=1, nkx=1))
+
+  .. image::  _static/clut_clut_yxf.png
+    :width: 100%
+    :align: center
+
+  综上，针对查找表任务，在某一维度上拆分2份，拆分后的每一份相较于原来的查找表任务如下表（只在一个维度上拆分，其它维度不拆分）：
+
+  =============== ============== ============== ==============
+  拆分维度         y             x                f            
+  =============== ============== ============== ==============
+  输入数据存储量  为原来一半      为原来一半     为原来一半
+  查找表存储量    不变           不变           不变 
+  输出数据存储量  为原来一半     为原来一半      为原来一半  
+  计算量          为原来一半     为原来一半      为原来一半 
+  生成新任务      不生成         不生成          不生成        
+  =============== ============== ============== ==============
+
+split_group
+************************************
+
+.. py:method:: split_group(task_id_list, split_vector[, split_funcs=SplitType.Average])
+
+  对一组任务块进行拆分。
+
+  :param List[int] task_id_list: 被拆分的一组计算任务块的ID组成的列表。
+  :param split_vector: 如果输入为拆分向量，则对所有的计算任务块应用相同的拆分向量进行拆分；如果输入为拆分向量组成的列表，则按顺序获取列表中的拆分向量依次对任务块进行拆分。 
+  :type split_vector: Shape or List[Shape]
+  :param split_funcs: 输入类型为 ``SplitType`` 时，对所有任务块的所有维度应用相同的拆分方式；输入类型为 ``List[SplitType]`` 时，对每个任务块应用相同的拆分方式向量；输入类型为 ``List[List[SplitType]]`` 时，则按顺序获取列表中的拆分方式向量依次对任务块进行拆分。
+  :type split_funcs: SplitType or List[SplitType] or List[List[SplitType]]
+  :return: 返回由于拆分产生的新任务块的ID组成的列表，动作直接作用在 ``TaskGraph`` 对象上
+
+  :使用示例1: 
+
+    对一组计算任务块进行拆分，示例中包括三个连续的计算任务块， ``CCMPBTaskBlock`` ``CCTaskBlock`` 和 ``CCMPBTaskBlock`` 。
+
+    对两个 ``CCMPBTaskBlock`` 在f方向拆分2份。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        st_env.split_group(
+            task_id_list=[1, 7], 
+            split_vector=Shape(ny=1, nx=1, nf=2, nr=1, nky=1, nkx=1)
+        )
+
+  .. image::  _static/split_group_f.png
+    :width: 100%
+    :align: center
+
+  :使用示例2: 
+
+    任务图描述同示例1。
+
+    对两个 ``CCMPBTaskBlock`` 在f方向拆分2份，对 ``CCTaskBlock`` 在r方向拆分2份。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        st_env.split_group(
+            task_id_list=[1, 5, 7], 
+            split_vector=[
+                Shape(ny=1, nx=1, nf=2, nr=1, nky=1, nkx=1),
+                Shape(ny=1, nx=1, nf=1, nr=2, nky=1, nkx=1),
+                Shape(ny=1, nx=1, nf=2, nr=1, nky=1, nkx=1)
+            ]
+        )
+
+  .. image::  _static/split_group_frf.png
+    :width: 100%
+    :align: center
+
+put_in
+************************************
+
+.. py:method:: put_in(st_coord, task_id[, end_st_coord=None])
+
+  将一个任务块放到指定的时空坐标上，当任务块为存储任务块时，可设置 ``end_st_coord`` ，实现将存储任务块在 ``st_coord`` 到 ``end_st_coord`` （闭区间）存活。
+
+  :param STCoord st_coord: 指定的时空坐标，或开始时空坐标。
+  :param int task_id: 待放置到 ``STMatrix`` 中的任务块的ID。
+  :param STCoord end_st_coord: 结束时空坐标，当 ``task_id`` 对应的任务块为存储任务块时，如果任务块需要存活多个连续的phase，可设置此参数，使得任务块被放置到 ``st_coord`` 和 ``end_st_coord`` 之间的所有时空坐标上， ``st_coord`` 和 ``end_st_coord`` 只能在表示phase的维度上不同，且必须满足时间顺序，即 ``end_st_coord.time_coord[1] >= st_coord.time_coord[1]`` 。
+  :return: 无返回值，动作直接作用在 ``STMatrix`` 和 ``STContext`` 对象上
+
+  :使用示例: 
+
+    一个全连接对应的任务图，0号任务块 ``SIFCTaskBlock`` 为全连接输入，1号任务块 ``SWFCTaskBlock`` 为全连接权重，2号任务块 ``SBTaskBlock`` 为全连接偏置，3号任务块为 ``CVMTaskBlock`` ，4号任务块 ``SOTaskBlock`` 为全连接输出。
+
+    所有任务块都放到0号核，全连接计算在第1个phase完成，静态存储任务需要在所有phase存在。
+
+    .. code:: python
+
+        st_env = STEnv(task_graph, st_matrix)
+        st_env.put_in(
+          st_coord=STCoord((0, 0, 0, 0), (0, 1, PIIndex.MEMORY.value)), 
+          task_id=0
+        )
+        st_env.put_in(
+          st_coord=STCoord((0, 0, 0, 0), (0, 0, PIIndex.MEMORY.value)), 
+          task_id=1, 
+          end_st_coord=STCoord((0, 0, 0, 0), (0, 1, PIIndex.MEMORY.value))
+        )
+        st_env.put_in(
+          st_coord=STCoord((0, 0, 0, 0), (0, 0, PIIndex.MEMORY.value)), 
+          task_id=2, 
+          end_st_coord=STCoord((0, 0, 0, 0), (0, 1, PIIndex.MEMORY.value))
+        )
+        st_env.put_in(
+          st_coord=STCoord((0, 0, 0, 0), (0, 1, PIIndex.AXON.value)), 
+          task_id=3
+        )
+        st_env.put_in(
+          st_coord=STCoord((0, 0, 0, 0), (0, 1, PIIndex.MEMORY.value)), 
+          task_id=4
+        )
+
+  .. image::  _static/put_in.png
+    :width: 100%
+    :align: center
+
+put_group_in
+************************************
+
+.. py:method:: put_group_in(st_coord, task_id)
+
+  将一个计算任务块放到指定的时空坐标上，并将这个计算任务块所有的输入存储任务块放到同一个核的同一个phase中。
+
+  :param STCoord st_coord: 指定的时空坐标。
+  :param int task_id: 待放置到 ``STMatrix`` 中的计算任务块的ID。
+  :return: 无返回值，动作直接作用在 ``STMatrix`` 和 ``STContext`` 对象上
+
+  :使用示例:
+
+    计算图和映射结果图同 ``put_in`` 的示例。
+
+    .. code:: python
+
+        st_env.put_group_in(
+            st_coord=STCoord((0, 0, 0, 0), (0, 1, PIIndex.AXON.value)), 
+            task_id=3
+        )
+        # 不允许将同一个存储任务块重复放到同一个时空坐标
+        # 所以需要先取出两个静态存储任务块
+        st_env.take_out(
+            st_coord=STCoord((0, 0, 0, 0), (0, 1, PIIndex.MEMORY.value)), 
+            task_id=1
+        )
+        st_env.take_out(
+            st_coord=STCoord((0, 0, 0, 0), (0, 1, PIIndex.MEMORY.value)), 
+            task_id=2
+        )
+        st_env.put_in(
+            st_coord=STCoord((0, 0, 0, 0), (0, 0, PIIndex.MEMORY.value)), 
+            task_id=1, 
+            end_st_coord=STCoord((0, 0, 0, 0), (0, 1, PIIndex.MEMORY.value))
+        )
+        st_env.put_in(
+            st_coord=STCoord((0, 0, 0, 0), (0, 0, PIIndex.MEMORY.value)), 
+            task_id=2, 
+            end_st_coord=STCoord((0, 0, 0, 0), (0, 1, PIIndex.MEMORY.value))
+        )
+        st_env.put_in(
+            st_coord=STCoord((0, 0, 0, 0), (0, 1, PIIndex.MEMORY.value)), 
+            task_id=4
+        )
+
+take_out
+************************************
+
+.. py:method:: take_out(st_coord[, task_id=None, end_st_coord=None])
+
+  将指定的时空坐标上的任务块取出，当时空坐标对应的为计算任务块时取出单独的计算任务块，当时空坐标对应的为存储任务块时，如果 ``task_id = None`` ，则取出当前核当前phase的所有存储任务块，否则取出指定存储任务块。与 ``put_in`` 相同，可设置 ``end_st_coord`` ，实现将指定存储任务块从 ``st_coord`` 到 ``end_st_coord`` （闭区间）取出。
+
+  :param STCoord st_coord: 指定的时空坐标，或开始时空坐标。
+  :param int task_id: 待从 ``STMatrix`` 中取出的任务块的ID。
+  :param STCoord end_st_coord: 结束时空坐标，当 ``task_id`` 对应的任务块为存储任务块时，如果任务块需要从多个连续的phase中取出，可设置此参数，取出从 ``st_coord`` 到 ``end_st_coord`` 之间的所有时空坐标上的任务块， ``st_coord`` 和 ``end_st_coord`` 只能在表示phase的维度上不同，且必须满足时间顺序，即 ``end_st_coord.time_coord[1] >= st_coord.time_coord[1]`` 。
+  :return: 无返回值，动作直接作用在 ``STMatrix`` 和 ``STContext`` 对象上
+
+  :使用示例1: 
+
+    原始计算图和映射结果图同 ``put_in`` 的示例。
+
+    将ID为1的存储任务块取出。
+
+    .. code:: python
+
+        st_env.take_out(
+          st_coord=STCoord((0, 0, 0, 0), (0, 0, PIIndex.MEMORY.value)), 
+          task_id=1, 
+          end_st_coord=STCoord((0, 0, 0, 0), (0, 1, PIIndex.MEMORY.value))
+        )
+
+  .. image::  _static/take_out.png
+    :width: 100%
+    :align: center
