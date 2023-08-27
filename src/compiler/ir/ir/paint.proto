@@ -1,0 +1,37 @@
+// Copyright (C) OpenBII
+// Team: CBICR
+// SPDX-License-Identifier: Apache-2.0
+// See: https://spdx.org/licenses/
+
+syntax = "proto2";
+
+package tianjic_ir.paint;
+
+message TaskGraph{
+    repeated Task tasks = 1;
+}
+
+message Task{
+    required int32 id = 1;
+    required int32 core_id = 2;
+    required Kind kind = 3;
+    required int32 type = 4;
+    repeated int32 input = 5;
+    repeated int32 output = 6;
+    required int32 start_phase = 7;
+    required int32 end_phase = 8;
+    required int32 length = 9;
+    repeated RouterEdge router = 10;
+    optional string name = 11;
+    required int32 core_x = 12;
+    required int32 core_y = 13;
+}
+
+message RouterEdge {
+    required int32 phase = 1;
+    required int32 id = 2;
+}
+enum Kind{
+    S = 0;
+    E = 1;
+}

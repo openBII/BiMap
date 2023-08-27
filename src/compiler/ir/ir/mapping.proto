@@ -1,0 +1,73 @@
+// Copyright (C) OpenBII
+// Team: CBICR
+// SPDX-License-Identifier: Apache-2.0
+// See: https://spdx.org/licenses/
+
+syntax = "proto2";
+
+import "task.proto";
+
+package tianjic_ir.map;
+
+// 1. 边映射 （++）
+// 2. 协结点 （++++）
+// 3. 循环组 （+++）
+// 4. 数据块实际的tiling数（缓存区大小）
+// 5. 加入一些执行控制信息（一帧，一直循环执行）
+// 6. 性能预估
+
+message Mapping {
+  optional TaskGraph graph = 1;  // 任务图
+  optional SpaceTimeMapping space_time_mapping = 2;  // 时空映射
+  optional int32 prediction_clock = 3;  // 资源级仿真器估计的step时钟
+}
+
+// 时空映射
+message SpaceTimeMapping {
+  repeated MappingDict node_map_dicts = 1;  // 任务结点的时空映射字典
+  repeated MappingDict edge_map_dicts = 2;  // 边的时空映射字典
+}
+
+// 字典的一个键-值对
+message MappingDict {
+  // 时空坐标
+  repeated SpaceTimeCoordinate space_time_coordinates = 1;
+  optional int32 task_id = 3;
+}
+
+// 时空坐标
+message SpaceTimeCoordinate {
+  optional SpaceCoordinate space = 1;
+  optional TimeCoordinate time = 2;
+}
+
+// 空间坐标
+message SpaceCoordinate {
+  optional BiTuple chip_array = 1;  // 永远为(0, 0)
+  optional BiTuple chip = 2; 
+  optional int32 step_group = 3; 
+  optional int32 phase_group = 4;
+  optional BiTuple core = 5; 
+}
+
+message BiTuple {
+  optional int32 x = 1;
+  optional int32 y = 2;
+}
+
+// 时间坐标
+message TimeCoordinate {
+  optional int32 step = 1; // 永远为0
+  optional int32 phase = 2;
+  optional PIIndex pi_index = 3; // 枚举类型
+  optional int32 end_phase = 4; // 对于持续多个phase的任务块，指定一个结束phase
+}
+
+enum PIIndex {
+  AXON = 1;
+  SOMA1 = 2;
+  ROUTER_RECIEVE = 3;
+  ROUTER_SEND = 4;
+  SOMA2 = 5;
+  MEMORY = 6;
+}

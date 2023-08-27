@@ -1,0 +1,32 @@
+// Copyright (C) OpenBII
+// Team: CBICR
+// SPDX-License-Identifier: Apache-2.0
+// See: https://spdx.org/licenses/
+
+syntax = "proto2";
+import "basic.proto";
+import "data.proto";
+package tianjic_ir;
+
+message Request
+{
+    optional string case_name = 1;
+    optional string storage_path = 111;
+    optional IOType request_type = 2;
+    optional int32 socket_id = 3; 
+    optional int32 nth = 4;
+    optional Shape shape = 5;  // 请求的数据块的大小
+    optional Shape begin_position = 6;
+    optional StorageOrder storage_order = 7;
+    optional AlignNumber align_number = 8;
+    optional Precision precision = 9;
+    optional bytes data = 10;
+
+    optional int32 seed = 11;
+
+    optional int32 total_blocks = 12;
+    optional int32 block_id = 19;
+    optional int32 block_size = 20;
+
+    optional string id = 21; 
+}

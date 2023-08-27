@@ -1,0 +1,556 @@
+// Copyright (C) OpenBII
+// Team: CBICR
+// SPDX-License-Identifier: Apache-2.0
+// See: https://spdx.org/licenses/
+
+syntax = "proto2";
+
+import "basic.proto";
+import "data.proto";
+
+package tianjic_ir.assembly;
+
+message Config {
+  optional BehaviorConfig behavior_config = 1;
+  optional DataConfig data_config = 2;
+  optional TestConfig test_config = 3;
+  optional DebugConfig debug_config = 4;
+}
+
+message BehaviorConfig {
+  // 时钟精确级仿真器需要仿真的时钟数，在正常的流程中应该被取消掉
+  optional int32 sim_clock = 1;
+  repeated StepConfig step_config = 2;
+  // 使用同一组触发信号的不同Step group
+  repeated SyncStepGroups sync_step_groups = 3;
+}
+
+message SyncStepGroups {
+  repeated int32 step_group_ids = 1;
+}
+
+message StepConfig {
+  // 暂且不考虑chip array的情况
+  optional int32 chip_x = 1;
+  optional int32 chip_y = 2;
+  optional int32 step_group_id = 3;
+  repeated PhaseGroupConfig phase_group_config = 4;
+
+  optional int32 clock0_in_step = 5;
+  optional int32 clock1_in_step = 6;
+  optional int32 step_exe_number = 7;
+}
+
+message PhaseGroupConfig {
+  optional int32 phase_group_id = 1;
+  optional PhaseMode phase_mode = 2;
+  // 如果phase模式是FIXED_CLOCK，则时钟数设置
+  optional int32 phase_clock = 3;
+  repeated CoreConfig core_config = 4;
+}
+
+enum PhaseMode {
+  FIXED_CLOCK = 1; // 对于原来的0
+  ADAPTED_CLOCK = 2;  // 对于原来的1
+}
+
+message CoreConfig {
+  optional int32 core_x = 1;
+  optional int32 core_y = 2;
+  repeated StaticPrimList static_prim_list = 3;
+  repeated InstantPrimList instant_prim_list = 4;
+  optional Registers registers = 5;
+}
+
+message StaticPrimList {
+  optional AxonPrim axon = 1;
+  optional SomaPrim soma1 = 2;
+  optional RouterPrim router = 3;
+  optional SomaPrim soma2 = 4;
+}
+
+message InstantPrimList {
+  optional AxonPrim axon = 1;
+  optional SomaPrim soma1 = 2;
+  optional RouterPrim router = 3;
+  optional SomaPrim soma2 = 4;
+}
+
+message Registers {
+  // 这部分的寄存器需要进行一个分类，不是所有的寄存器都呈现在这里
+  optional int32 Receive_PI_addr_base = 1;
+  optional int32 PI_CXY = 2;
+  optional int32 PI_Nx = 3;
+  optional int32 PI_Ny = 4;
+  optional int32 PI_sign_CXY = 5;
+  optional int32 PI_sign_Nx = 6;
+  optional int32 PI_sign_Ny = 7;
+  optional int32 instant_PI_en = 8;
+  optional int32 fixed_instant_PI = 9;
+  optional int32 instant_PI_number = 10;
+  optional int32 PI_loop_en = 11;
+  optional int32 PI_loop_num = 12;
+  optional int32 start_instant_PI_num = 13;
+  optional int32 Addr_instant_PI_base = 14;
+}
+
+message DebugConfig {
+  optional bool MCHIP_CASE = 1;
+  optional bool DUMP_A_AD_INA = 2;
+  optional bool DUMP_A_DI_INA = 3;
+  optional bool DUMP_A_DO_INA = 4;
+  optional bool DUMP_A_AD_INB = 5;
+  optional bool DUMP_A_DI_INB = 6;
+  optional bool DUMP_A_DO_INB = 7;
+  optional bool DUMP_A_AD_BIAS = 8;
+  optional bool DUMP_A_DI_BIAS = 9;
+  optional bool DUMP_A_DO_BIAS = 10;
+  optional bool DUMP_A_AD_VOU = 11;
+  optional bool DUMP_A_DO_VOU = 12;
+  optional bool DUMP_MAC = 13;
+  optional bool DUMP_D_SOMA = 14;
+  optional bool DUMP_A_RHEAD = 15;
+  optional bool DUMP_D_RHEAD = 16;
+  optional bool DUMP_A_DOUT = 17;
+  optional bool DUMP_D_DOUT = 18;
+  optional bool DUMP_D_SEND = 19;
+  optional bool DUMP_A_DIN = 20;
+  optional bool DUMP_D_DIN = 21;
+  optional bool DUMP_DBGMSG_T = 22;
+  optional bool DUMP_DBGMSG_C = 23;
+  optional bool DUMP_DBGMSG_A = 24;
+  optional bool DUMP_DBGMSG_S = 25;
+  optional bool DUMP_DBGMSG_R = 26;
+  optional int32 DUMP_STEP_NUM = 27;
+  optional int32 DUMP_PHASE_NUM = 28;
+}
+
+message AxonPrim {
+  optional int32 pic = 1;
+  optional P02 p02 = 2;
+  optional P03 p03 = 3;
+  optional P04 p04 = 4;
+  optional P41 p41 = 5;
+  optional P43 p43 = 6;
+  optional P81 p81 = 7;
+  optional P83 p83 = 8;
+
+  // 数据块关联信息
+  optional string x1_block = 9;
+  optional string x2_block = 10;
+  optional string bias_block = 11;
+  repeated string output_block = 12;
+
+  // 形状
+  optional Shape shape = 13;
+
+  // 地址
+  optional int32 x1_base_addr = 14;
+  optional int32 x1_addr_length = 15;
+  // P02、P83没有这个
+  optional int32 x2_base_addr = 16;
+  optional int32 x2_addr_length = 17;
+  optional int32 bias_base_addr = 18;
+  optional int32 bias_addr_length = 19;
+  optional int32 o_base_addr = 20;
+  optional int32 o_addr_length = 21;
+
+  optional bool reset_x1_addr = 22;
+  optional bool reset_o_addr = 23; 
+}
+
+// 求和 average pooling
+message P02 {
+  // True: pooling 模式 False: 向量相加模式
+  optional bool avg_pooling_en = 1;
+  // INT_8 int8 uint8 Tenary
+  optional Precision x1_precision = 2;
+  // VECTOR CONSTANT
+  optional BiasType bias_type = 3;
+  optional int32 bias_length = 4;
+  optional bool has_pad = 5;
+  optional int32 constant_b = 6;
+  optional bool a2s2_mode = 7;
+  
+  // 特定参数相关
+  optional int32 stride_x = 13;
+  optional int32 stride_y = 14;
+  optional int32 pad_top = 15;
+  optional int32 pad_down = 16;
+  optional int32 pad_left = 17;
+  optional int32 pad_right = 18;
+}
+
+message P03 {
+  optional bool tensor_en = 1;
+  optional Precision x1_precision = 2;
+  optional BiasType bias_type = 3;
+  optional int32 bias_length = 4;
+  optional int32 constant_b = 5;
+  
+  optional int32 stride_x = 8;
+  optional int32 stride_y = 9;
+  optional int32 nif = 10;
+  optional bool a2s2_mode = 15;
+}
+
+message P04 {
+  optional Precision x1_precision = 1;
+  optional Precision x2_precision = 2;
+  optional BiasType bias_type = 3;
+  optional int32 constant_b = 4;
+  optional bool a2s2_mode = 5;
+}
+
+message P41 {
+  optional Precision x1_precision = 1;
+  optional Precision x2_precision = 2;
+  optional BiasType bias_type = 3;
+  optional bool has_pad = 5;
+  optional bool a2s2_mode = 6;
+
+  optional int32 stride_x = 13;
+  optional int32 stride_y = 14;
+  optional int32 dilate_x = 15;
+  optional int32 dilate_y = 16;
+  optional int32 pad_top = 17;
+  optional int32 pad_down = 18;
+  optional int32 pad_left = 19;
+  optional int32 pad_right = 20;
+
+  optional bool axon_delay = 21;
+  optional int32 delay_clock = 22;
+}
+
+message P43 {
+  optional bool tensor_en = 1;
+  optional Precision x1_precision = 2;
+  optional Precision x2_precision = 3;
+  optional BiasType bias_type = 4;
+  optional int32 constant_b = 5;
+  optional bool a2s2_mode = 6;
+
+  optional int32 x2_length = 7;
+  optional int32 bias_length = 8;
+  optional int32 stride_x = 13;
+  optional int32 stride_y = 14;
+}
+
+message P81 {
+  optional Precision x1_precision = 1;
+  optional Precision x2_precision = 2;
+  optional BiasType bias_type = 3;
+  optional bool has_pad = 5;
+  optional bool a2s2_mode = 6;
+
+  optional int32 stride_x = 13;
+  optional int32 stride_y = 14;
+  optional int32 dilate_x = 15;
+  optional int32 dilate_y = 16;
+  optional int32 pad_top = 17;
+  optional int32 pad_down = 18;
+  optional int32 pad_left = 19;
+  optional int32 pad_right = 20;
+}
+
+message P83 {
+  optional bool tensor_en = 1;
+  optional Precision x1_precision = 2;
+  optional BiasType bias_type = 3;
+  optional int32 constant_a = 4;
+  optional int32 constant_b = 5;
+  optional bool a2s2_mode = 6;
+
+  optional int32 bias_length = 7;
+  optional int32 stride_x = 10;
+  optional int32 stride_y = 11;
+}
+
+message SomaPrim {
+  optional int32 pic = 1;
+  optional PX5 px5 = 2;
+  optional P07 p07 = 3;
+  optional P08 p08 = 4;
+  optional P06 p06 = 5;
+  optional P26 p26 = 6;
+
+  // 数据块关联信息
+  optional string x1_block = 7;
+  optional string ciso_block = 8;
+  optional string lut_block = 9;
+  // P08相关
+  optional string uin_block = 10;
+  optional string s_block = 11;
+  optional string v_block = 12;
+  optional string vm_block = 13;
+  optional string vtheta_block = 14;
+  // P08相关完了
+  repeated string output_block = 15;
+}
+
+message PX5 {
+  // 0x01是min  (05和25一个是min，一个是max)
+  optional int32 pic_mode = 1;
+  // 0: int32 1: int8 3: Tenary
+  optional Precision x1_precision = 2;
+  optional Precision out_precision = 3;
+  optional bool has_pad = 4;
+
+  optional int32 nif = 5;
+  optional int32 nof = 6;
+  optional int32 nix = 7;
+  optional int32 niy = 8;
+  optional int32 nkx = 9;
+  optional int32 nky = 10;
+  optional int32 stride_x = 11;
+  optional int32 stride_y = 12;
+  optional int32 pad_top = 13;
+  optional int32 pad_down = 14;
+  optional int32 pad_left = 15;
+  optional int32 pad_right = 16;
+
+  repeated int32 compare_init = 17;
+  optional int32 bit_shift_num = 18;
+
+  // 内存地址相关
+  optional int32 x1_base_addr = 19;
+  optional int32 x1_addr_length = 20;
+  optional int32 o_base_addr = 21;
+  optional int32 o_addr_length = 22;
+  optional bool row_pipeline_en = 23;
+  optional int32 row_pipeline_num = 24;
+
+  optional bool reset_x1_addr = 25;
+  optional bool reset_o_addr = 26;
+}
+
+message P07 {
+  optional Precision x1_precision = 1;
+  optional Precision x2_precision = 2;
+
+  optional int32 neuron_real_num = 3;
+  optional int32 group_num = 4;
+
+  // 内存地址相关
+  optional int32 x1_base_addr = 5;
+  optional int32 x1_addr_length = 6;
+  optional int32 lut_base_addr = 7;
+  optional int32 lut_addr_length = 8;
+  optional int32 o_base_addr = 9;
+  optional int32 o_addr_length = 10;
+  // 0:4b   1:8b    2:12b   3:16b
+  optional int32 lut_data_width = 11;
+  optional int32 bit_shift_num = 12;
+  optional bool row_pipeline_en = 13;
+  optional int32 row_pipeline_num = 14;
+
+  optional bool reset_x1_addr = 15;
+  optional bool reset_o_addr = 16;
+}
+
+message P08 {
+  optional int32 neuron_num = 1;
+  optional int32 group_num = 2;
+
+  optional int32 seed = 3;
+  optional int32 Vth0 = 4;
+  optional bool Vth_adpt_en = 5;
+  optional int32 Vth_alpha = 6;
+  optional int32 Vth_beta = 7;
+  optional int32 Vth_Incre = 8;
+  optional int32 VR = 9;
+  optional int32 VL = 10;
+  optional bool Vleaky_adpt_en = 11;
+  optional int32 Vleaky_alpha = 12;
+  optional int32 Vleaky_beta = 13;
+  optional int32 dV = 14;
+  optional int32 Ref_len = 15;
+  optional int32 Tw_cnt = 16;
+  optional int32 Vinit = 17;
+  optional int32 Tw_len = 18;
+  optional bool Tw_en = 19;
+
+  optional bool VM_const_en = 20;
+  optional int32 VM_const = 21;
+  optional int32 VM_len = 22;
+
+  optional bool Vtheta_const_en = 23;
+  optional int32 Vtheta_const = 24;
+  optional int32 Vtheta_len = 25;
+
+  optional bool ref_cnt_const_en = 26;
+  optional int32 ref_cnt_const = 27;
+
+  optional int32 reset_mode = 28;
+  optional int32 fire_type = 29;
+  optional int32 bit_shift_num = 30;
+
+  // 内存地址相关
+  optional int32 uin_base_addr = 31;
+  optional int32 uin_addr_length = 32;
+  optional int32 s_base_addr = 33;
+  optional int32 s_addr_length = 34;
+  optional int32 v_base_addr = 35;
+  optional int32 v_addr_length = 36;
+  optional int32 vm_base_addr = 37;
+  optional int32 vm_addr_length = 38;
+  optional int32 vtheta_base_addr = 39;
+  optional int32 vtheta_addr_length = 40;
+  optional int32 para_base_addr = 41;
+  optional int32 para_addr_length = 42;
+  optional int32 row_pipeline_en = 43;
+  optional int32 row_pipeline_num = 44;
+
+  optional bool reset_uin_addr = 45;
+  optional bool reset_o_addr = 46;
+  optional bool reset_s_addr = 47;
+  optional bool reset_vm_addr = 48;
+  optional bool reset_vtheta_addr = 49;
+}
+
+message P06 {
+  optional Precision x1_precision = 1;
+  optional Precision out_precision = 2;
+
+  optional int32 length_in = 3;
+  optional int32 length_out = 4;
+  optional int32 length_ciso = 5;
+  optional int32 num_in = 6;
+  optional int32 num_out = 7;
+  optional int32 num_ciso = 8;
+
+  // 内存地址相关
+  optional int32 x1_base_addr = 9;
+  optional int32 x1_addr_length = 10;
+  optional int32 ciso_base_addr = 11;
+  optional int32 ciso_addr_length = 12;
+  optional int32 o_base_addr = 13;
+  optional int32 o_addr_length = 14;
+
+  optional int32 bit_shift_num = 15;
+  optional bool row_pipeline_en = 16;
+  optional int32 row_pipeline_num = 17;
+  optional int32 in_ciso_pipe_sel = 18;
+
+  optional bool reset_x1_addr = 19;
+  optional bool reset_ciso_addr = 20;
+  optional bool reset_o_addr = 21;
+
+  optional int32 real_length_in_en = 22;
+  optional int32 real_num_in = 23;
+}
+
+message P26 {
+  optional Precision x1_precision = 1;
+  optional Precision out_precision = 2;
+
+  optional int32 length_in = 3;
+  optional int32 length_out = 4;
+  optional int32 length_ciso = 5;
+  optional int32 num_in = 6;
+  optional int32 num_out = 7;
+  optional int32 num_ciso = 8;
+
+  // 内存地址相关
+  optional int32 x1_base_addr = 9;
+  optional int32 x1_addr_length = 10;
+  optional int32 ciso_base_addr = 11;
+  optional int32 ciso_addr_length = 12;
+  optional int32 o_base_addr = 13;
+  optional int32 o_addr_length = 14;
+
+  optional int32 bit_shift_num = 15;
+  optional bool row_pipeline_en = 16;
+  optional int32 row_pipeline_num = 17;
+  // out_ciso_sel在06merge模式不起作用，默认是0就行；
+  // 在26原语中起作用，是决定的是和router交互的问题，告诉router发送的是ciso向量还是out向量
+  // out_ciso_sel=0的时候，router发送out向量
+  // out_ciso_sel=1的时候，router发送ciso向量
+  optional int32 out_ciso_sel = 18;
+
+  optional bool reset_x1_addr = 19;
+  optional bool reset_ciso_addr = 20;
+  optional bool reset_o_addr = 21;
+}
+
+message RouterPrim {
+  optional P09 p09 = 1;
+
+  // 数据块关联信息
+  optional string send_block = 2;
+  optional string router_table_block = 3;
+  optional string receive_block = 4;
+}
+
+message P09 {
+  //发送相关
+  optional bool Send_en = 1;
+  optional int32 Send_number = 2; // 发送数据包个数（不算多播/中继发送） 0-65535
+  optional int32 Relay_number = 3;    // 0-4095
+  optional RouterHeadMode router_head_mode = 4; //  Rhead_mode
+  optional PacketSizeMode packet_size_mode = 5; // T_mode
+  optional MemoryArea out_memory = 6; // Dout_memory_select 待发送数据的memory选择
+  optional int32 Nx = 7; // 多播x步长
+  optional int32 Ny = 8; // 多播y步长
+  optional int32 CXY = 9; // 中继/多播模式
+  optional int32 Addr_Dout_base = 10;
+  optional int32 Addr_Dout_length = 11;
+  optional int32 Addr_Rhead_base = 12;
+  optional int32 Addr_Rhead_length = 13;
+
+  repeated RouterHead router_heads = 14; // 路由表头
+
+  //接收相关
+  optional bool Receive_en = 15;
+  optional int32 Receive_number = 16;  // 本core应接受结束标志总数，包括中继/多播包的结束标志 0-4095
+  optional int32 Addr_Din_base = 17;
+  optional int32 Addr_Din_length = 18;
+
+  //即时原语相关
+  optional bool Send_PI_en = 19;   // instant packets related
+  optional int32 Send_PI_num = 20; // 应发送即时原语个数，0表示1
+  optional int32 Send_PI_addr_base = 21;
+
+  optional bool Back_sign_en = 22; // 即时原语返回应答  
+  optional int32 Receive_sign_num = 23; // 接受即时原语返回应答个数
+  optional bool Q = 24; // 接收即时原语的簇的代表core，置True 1，其余置False 0
+  optional bool Receive_sign_en = 25; // 触发组的所有core全置1，其余置0
+  
+  //模块协同相关
+  optional bool Soma_in_en = 26; // 是否和soma进行数据交互
+}
+
+message RouterHead {
+  optional bool is_instant_request = 1; // S
+  optional PacketSizeMode packet_size_mode = 2; // T_mode, 这里是冗余记录，与原语中的packet_size_mode保持一致
+  optional bool is_packet_finish = 3; // P
+  optional RelayType relay_type = 4; // Q
+  optional int32 dx = 5; // X int8
+  optional int32 dy = 6; // Y int8
+  optional int32 destination_addr = 7; // A 12bit
+  // 如果RouterHeadMode是MULTI_USE，则配置下面的参数
+  optional int32 pack_per_router_head = 8;  // pack_per_Rhead 12bit 0-4095
+  optional int32 destination_offset = 9;   // A_offset 12bit
+  optional int32 destination_const = 10;   // Const 7bit
+  optional bool enable = 11;  // EN
+}
+
+enum RouterHeadMode {
+  SINGLE_USE = 0;    // 0, 默认 表头只用一次（一对一）
+  MULTI_USE = 1;  // 1, 表头用多次（一对多）
+}
+
+enum MemoryArea {
+  MEM2 = 0;   // 0
+  MEM3 = 1;   // 1
+}
+
+enum PacketSizeMode {
+  SINGLE_NEURON = 0;    // 0, 包的有效数据量是8bit
+  MULTIPLE_NEURON = 1;  // 1, 默认，包的有效数据量是64bit
+}
+
+enum RelayType {
+  UNI_CAST = 0;    // 0, 默认 单播
+  MULTI_RELAY_CAST = 1;  // 1, 多播
+}

@@ -1,0 +1,347 @@
+// Copyright (C) OpenBII
+// Team: CBICR
+// SPDX-License-Identifier: Apache-2.0
+// See: https://spdx.org/licenses/
+
+syntax = "proto2";
+
+import "data.proto";
+import "basic.proto";
+
+package tianjic_ir.code;
+
+message Config {
+  repeated ChipArray chip_arrays = 1; //由jsonconfig中的root对象包含一个ChipArray改为多个ChipArray，每个ChipArray保存多个chip的信息
+  optional int32 sim_clock = 2; //对应root->"sim_clock"
+  optional DebugFileSwitch debug_file_switch = 3; //对应root->"debug_file_switch"
+  optional DataConfig data_config = 4; 
+  optional TestConfig test_config = 5;
+}
+
+
+//对应root->debug_file_switch中的具体调试开关字段
+message DebugFileSwitch{
+  optional bool MCHIP_CASE = 1;
+  optional bool DUMP_A_AD_INA = 2;
+  optional bool DUMP_A_DI_INA = 3;
+  optional bool DUMP_A_DO_INA = 4;
+  optional bool DUMP_A_AD_INB = 5;
+  optional bool DUMP_A_DI_INB = 6;
+  optional bool DUMP_A_DO_INB = 7;
+  optional bool DUMP_A_AD_BIAS = 8;
+  optional bool DUMP_A_DI_BIAS = 9;
+  optional bool DUMP_A_DO_BIAS = 10;
+  optional bool DUMP_A_AD_VOU = 11;
+  optional bool DUMP_A_DO_VOU = 12;
+  optional bool DUMP_MAC = 13;
+  optional bool DUMP_D_SOMA = 14;
+  optional bool DUMP_A_RHEAD = 15;
+  optional bool DUMP_D_RHEAD = 16;
+  optional bool DUMP_A_DOUT = 17;
+  optional bool DUMP_D_DOUT = 18;
+  optional bool DUMP_D_SEND = 19;
+  optional bool DUMP_A_DIN = 20;
+  optional bool DUMP_D_DIN = 21;
+  optional bool DUMP_DBGMSG_T = 22;
+  optional bool DUMP_DBGMSG_C = 23;
+  optional bool DUMP_DBGMSG_A = 24;
+  optional bool DUMP_DBGMSG_S = 25;
+  optional bool DUMP_DBGMSG_R = 26;
+  optional int32 DUMP_STEP_NUM = 27;
+  optional int32 DUMP_PHASE_NUM = 28;
+}
+
+
+//对应root->"ChipArray"
+message ChipArray{
+  repeated Chip chips = 1;
+}
+
+
+//对应root->"ChipArray"数组中的每个元素（json对象）
+message Chip{
+  optional ChipID chip_id = 1;
+  optional int32 CORE_X_MAX = 2;
+  optional int32 CORE_Y_MAX = 3;
+  optional Trigger trigger = 4;
+  repeated PhaseGroupConfig phase_group_configs = 5; //jsonconfig中的key=ChipConfig数组
+  repeated Core cores = 6;
+  repeated StepClock step_clock = 7;
+}
+
+//对应root->ChipArray[0]->"ChipID"
+message ChipID{
+  optional int32 cx = 1;
+  optional int32 cy = 2;
+}
+
+//对应root->ChipArray[0]->"trigger"
+message Trigger{
+  repeated int32 start = 1;
+  repeated int32 high = 2;
+  repeated int32 low = 3;
+}
+
+//对应root->ChipArray[0]->"ChipConfig"
+message PhaseGroupConfig{ //jsonconfig中的ChipConfig，改名为PhaseGroupConfig
+  // 拼写问题
+  optional int32 PhaseGroup = 1;  
+  optional int32 Sim_clock = 2;  // phase in clock
+  optional int32 trigger = 3;   // trigger_select 单网络的时候都是1
+  optional int32 P_adpt = 4;
+}
+
+
+//对应root->ChipArray[0]->"step_clock"
+message StepClock{
+  optional int32 clock0_in_step = 1;
+  optional int32 clock1_in_step = 2;
+}
+
+
+//对应root->ChipArray[0]->"CoreConfig"数组中的每个元素（json对象）
+message Core{
+  optional CoreInfo core_info = 1;
+  repeated PIGroup pi_list = 2;
+  repeated InitData initData = 3;
+  repeated MemoryOutput memory_output = 4;  // 打印信息
+  optional bool core_en = 5;
+}
+
+
+//对应root->ChipArray[0]->CoreConfig[0]->"CoreInfo"
+message CoreInfo{
+  optional int32 x = 1;
+  optional int32 y = 2;
+  optional int32 phase_group = 3;//原来的CoreGroup，表示core属于哪个phase group的
+  optional int32 static_PI_base_addr = 4;
+  optional CoreRegisters registers = 5;
+}
+
+
+//对应root->ChipArray[0]->CoreConfig[0]->"CoreInfo"->"registers"
+message CoreRegisters{
+  optional int32 Receive_PI_addr_base = 1;
+  optional int32 PI_CXY = 2;
+  optional int32 PI_Nx = 3;
+  optional int32 PI_Ny = 4;
+  optional int32 PI_sign_CXY = 5;
+  optional int32 PI_sign_Nx = 6;
+  optional int32 PI_sign_Ny = 7;
+  optional int32 instant_PI_en = 8;
+  optional int32 fixed_instant_PI = 9;
+  optional int32 instant_PI_number = 10;
+  optional int32 PI_loop_en = 11;
+  optional int32 PI_loop_num = 12;
+  optional int32 start_instant_PI_num = 13;
+  optional int32 Addr_instant_PI_base = 14;
+}
+
+//对应root->ChipArray[0]->CoreConfig[0]->"CoreInfo"->"PI"数组中的每个元素（json对象）
+message PIGroup{
+  optional bool A_valid = 1;
+  optional bool S1_valid = 2;
+  optional bool R_valid = 3;
+  optional bool S2_valid = 4;
+  optional PIParameter pi_parameter = 5;
+}
+
+
+//对应root->ChipArray[0]->CoreConfig[0]->"CoreInfo"->PI[0]->"PI_parameter"数组
+//PI_parameter[0]对应axon
+//PI_parameter[1]对应soma1
+//PI_parameter[2]对应router
+//PI_parameter[3]对应soma2
+message PIParameter{
+  optional AxonParameter axon = 1;
+  optional SomaParameter soma1 = 2;
+  optional RouterParameter router = 3;
+  optional SomaParameter soma2 = 4;
+}
+
+//对应root->ChipArray[0]->CoreConfig[0]->"CoreInfo"->"initData"数组中的每个元素（json对象）
+message InitData{
+  optional int32 start = 1;
+  optional int32 length = 2;
+  repeated int32 data = 3; //data数组每个元素为一个4B的数，在memory中顺序存储
+}
+
+
+//对应root->ChipArray[0]->CoreConfig[0]->"CoreInfo"->"MemoryOutput"数组中的每个元素（json对象）
+message MemoryOutput{
+  repeated MemorySegment memory_segs = 1;
+}
+
+message MemorySegment{
+  optional int32 start = 1;
+  optional int32 length = 2;
+}
+
+//axon原语的所有原语参数
+message AxonParameter{
+  optional int32 PIC = 1;  
+  optional int32 reset_x1_addr = 2;         // 载入原语后InA地址复位标志
+  optional int32 reset_o_addr = 3;         // 载入原语后Vout地址复位标志
+  optional int32 mac_group_number_last = 4;     // 图像每行最后一次上窗时的MAC开启组数
+  optional int32 x1_precision = 5;             // InA数据类型
+  optional int32 x2_precision = 6;             // InB数据类型
+  optional int32 bias_type = 7;            // Dendrite赋初值标志位
+  optional int32 bias_base_addr = 8;       // 偏置向量的初始地址
+  optional int32 x1_base_addr = 9;        // 输入数据InA地址区间的初始地址
+  optional int32 x1_end_addr = 10;        // 输入数据InA地址区间的结束地址
+  optional int32 x2_base_addr = 11;       // 输入数据InB地址区间的初始地址
+  optional int32 o_base_addr = 12;         // 输出Vout初始地址
+  optional int32 o_end_addr = 13;          // 输出数据Vout地址区间的结束地址
+  optional int32 loop0_extent = 14;              // 第1级循环计数最大值
+  optional int32 loop1_extent = 15;              // 第2级循环计数最大值
+  optional int32 loop2_extent = 16;              // 第3级循环计数最大值
+  optional int32 loop3_extent = 17;              // 第4级循环计数最大值
+  optional int32 loop4_extent = 18;              // 第5级循环计数最大值
+  optional int32 loop5_extent = 19;              // 第6级循环计数最大值
+  optional int32 loop0_num_in_last_row = 20;  // M方向最后一组channel内有效X个数（0x04、0x41有效）
+  optional int32 x1_addr_loop1_step = 21;    // 第2级循环内数据InA地址步进大小
+  optional int32 x1_addr_loop2_step = 22;    // 第3级循环内数据InA地址步进大小
+  optional int32 x1_addr_loop3_step = 23;    // 第4级循环内数据InA地址步进大小
+  optional int32 x1_addr_loop4_step = 24;    // 第5级循环内数据InA地址步进大小
+  optional int32 x1_addr_loop5_step = 25;    // 第6级循环内数据InA地址步进大小
+  optional int32 x1_addr_mac_step = 26;   // 随MAC组数数据InA地址步进大小
+  optional int32 stride_x = 27;                  // 卷积滑窗水平步距
+  optional int32 stride_y = 28;                  // 卷积滑窗垂直步距
+  optional int32 dilate_x = 29;                  // 卷积窗水平方向膨胀系数
+  optional int32 dilate_y = 30;                  // 卷积窗垂直方向膨胀系数
+  optional int32 pad_top = 31;             // 图像上方补0行数
+  optional int32 pad_down = 32;            // 图像下方补0行数
+  optional int32 pad_left = 33;            // 图像左侧补0行数
+  optional int32 pad_right = 34;           // 图像右侧补0行数
+  optional int32 constant_a = 35;          // 常数值a
+  optional int32 constant_b = 36;          // 常数值b
+  optional int32 a2s2_mode = 37;           // Axon允许Soma2原语的启动方式
+}
+
+
+//soma原语的所有原语参数
+message SomaParameter{
+//05/25原语
+  optional int32 PIC = 1;
+  optional int32 pic_mode = 2;
+  optional int32 reset_x1_addr = 3;
+  optional int32 reset_o_addr = 4;
+  optional int32 row_pipeline_en = 5;
+  optional int32 x1_precision = 6;
+  optional int32 x2_precision = 7;
+  optional int32 x1_base_addr = 8;
+  optional int32 x1_end_addr = 9;
+  optional int32 o_base_addr = 10;
+  optional int32 o_end_addr = 11;
+  optional int32 nif = 12;  // 没有这个
+  optional int32 nkx = 13;
+  optional int32 nky = 14;
+  optional int32 nof = 15;
+  optional int32 nx = 16;
+  optional int32 ny = 17;
+  optional int32 kx_step = 18;
+  optional int32 ky_step = 19;
+  optional int32 f_step = 20;
+  optional int32 x_step = 21;
+  optional int32 y_step = 22;
+  optional int32 stride_x = 23;
+  optional int32 stride_y = 24;
+  optional int32 pad_top = 25;
+  optional int32 pad_down = 26;
+  optional int32 pad_left = 27;
+  optional int32 pad_right = 28;
+  optional int32 compare_init = 29;
+  optional int32 bit_shift_num = 30;
+  optional int32 row_pipeline_num = 31;
+  optional int32 memory_select = 32;
+//06/26原语
+  optional int32 reset_ciso_addr = 35;
+  optional int32 ciso_base_addr = 40;
+  optional int32 ciso_end_addr = 41;
+  optional int32 Km_num_in = 42;
+  optional int32 Km_num_ciso = 43;
+  optional int32 Km_num_out = 44;
+  optional int32 num_in = 45;
+  optional int32 num_ciso = 46;
+  optional int32 num_out = 47;
+  optional int32 out_precision = 49;
+  optional int32 out_ciso_sel = 51;
+  optional int32 in_ciso_pipe_sel = 52;
+//07原语
+  optional int32 neuron_num = 53; //07/08
+  optional int32 Y_num = 54; //07/08
+  optional int32 lut_base_addr = 55;
+  optional int32 lut_data_width = 56;
+//08原语
+  optional int32 reset_uin_addr = 57;
+  optional int32 reset_s_addr = 59;
+  optional int32 reset_vm_addr = 60;
+  optional int32 reset_vtheta_addr = 61;
+  optional int32 Tw_en = 62;
+  optional int32 uin_base_addr = 63;
+  optional int32 uin_end_addr = 64;
+  optional int32 s_base_addr = 65;
+  optional int32 s_end_addr = 66;
+  optional int32 v_base_addr = 67;
+  optional int32 vm_base_addr = 69;
+  optional int32 vm_end_addr = 70;
+  optional int32 vtheta_base_addr = 71;
+  optional int32 vtheta_end_addr = 72;
+  optional int32 para_base_addr = 73;
+  optional int32 Tw_len = 75;
+  optional int32 Vinit = 77;
+  optional int32 reset_mode = 78;
+  optional int32 fire_type = 79;
+  optional int32 Vth_adpt_en = 80;
+  optional int32 Vleaky_adpt_en = 81;
+  optional int32 seed = 82;
+  optional int32 Vth0 = 83;
+  optional int32 Vth_alpha = 84;
+  optional int32 Vth_beta = 85;
+  optional int32 Vth_Incre = 86;
+  optional int32 VR = 87;
+  optional int32 VL = 88;
+  optional int32 Vleaky_alpha = 89;
+  optional int32 Vleaky_beta = 90;
+  optional int32 dV = 91;
+  optional int32 Ref_len = 92;
+  optional int32 Tw_cnt = 93;
+}
+
+//router原语的所有原语参数
+message RouterParameter{
+  optional int32 PIC = 1;
+  optional int32 Rhead_mode = 2; // 一对一 or 一对多
+  optional int32 CXY = 3; // 中继/多播模式
+
+  optional int32 Send_en = 4;  
+  optional int32 Receive_en = 5;
+
+  optional int32 Dout_memory_select = 6; //待发送数据的memory选择，0:mem2/1:mem3
+
+  optional int32 Addr_Dout_base = 7;
+  optional int32 Addr_Dout_length = 8;
+  optional int32 Addr_Rhead_base = 9;
+  optional int32 Addr_Rhead_length = 10;
+  optional int32 Addr_Din_base = 11;
+  optional int32 Addr_Din_length = 12;
+  
+  optional int32 Send_number = 13; // 发送数据包个数（不算多播/中继发送）
+  optional int32 Receive_number = 14;  //本core应接受结束标志总数，包括中继/多播包的结束标志
+  
+  optional int32 Nx = 15; // 多播x步长
+  optional int32 Ny = 16; // 多播y步长
+
+  optional int32 Send_PI_en = 17; // instant packets related
+  optional int32 Send_PI_num = 19; // 应发送即时原语个数，0表示1
+  optional int32 Send_PI_addr_base = 21;
+
+  optional int32 Back_Sign_en = 18; // 即时原语返回应答  
+  optional int32 Receive_sign_num = 20; // 接受即时原语返回应答个数
+  optional int32 Relay_number = 22;
+  optional int32 Q = 23; // 接收即时原语的簇的代表core，置1，其余置0
+  optional int32 T_mode = 24; // 单包发送/多包发送
+  optional int32 Receive_sign_en = 25; // 触发组的所有core全置1，其余置0
+  optional int32 Soma_in_en = 26; // 是否和soma进行数据交互
+}
+

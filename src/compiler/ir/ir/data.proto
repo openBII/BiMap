@@ -1,0 +1,84 @@
+// Copyright (C) OpenBII
+// Team: CBICR
+// SPDX-License-Identifier: Apache-2.0
+// See: https://spdx.org/licenses/
+
+syntax = "proto2";
+
+import "basic.proto";
+
+package tianjic_ir;
+
+message DataConfig {
+  repeated StaticBlock static_blocks = 1;
+  repeated DynamicBlock dynamic_blocks = 2;
+}
+
+message StaticBlock {
+  optional string id = 1;
+  optional int32 net_id = 2;
+  optional Precision precision = 4;
+
+  optional int32 chip_idx = 5;
+  optional int32 chip_idy = 6;
+  optional int32 core_idx = 7;
+  optional int32 core_idy = 8;
+  optional int32 start_addr = 9;
+
+  repeated int32 phases = 13;  // 默认不填，就是运行最开始的时候打入
+}
+
+// 输入输出数据部分
+message DynamicBlock {
+  optional IOType io_type = 1;  //0 0 代表输入块，1代表输出块
+  optional string id = 2;
+  optional int32 net_id = 3;
+  optional int32 socket_id = 4;  // 针对多输入、多输出情况，指明第几个输入输出
+  optional int32 socket_size = 24;  // 一个输入/输出对应与几个dynamic block
+  optional Shape begin_position = 5;
+  // optional Shape end_position = 6;  // 左闭右闭
+  optional Shape shape = 6;  // 左闭右闭
+
+  optional int32 chip_idx = 7;
+  optional int32 chip_idy = 8;
+  optional int32 core_idx = 9;
+  optional int32 core_idy = 10;
+  optional int32 start_addr = 11;
+  // 只在Output Block里会用到
+  optional int32 length = 12;
+  optional int32 step_group = 13;
+  optional int32 phase_group = 14;
+
+  // 数据块精度，img精度按默认
+  optional Precision precision = 15;
+
+  // 真实img用的参数
+  optional StorageOrder storage_order = 16;
+  optional AlignNumber align_number = 17;
+
+  repeated int32 phases = 18;
+
+  optional Direction direction = 19;
+}
+
+enum IOType {
+  INPUT_DATA = 1;
+  OUTPUT_DATA = 2;
+  STATIC_DATA = 3;
+}
+
+enum StorageOrder {
+  F_X_Y = 0;
+  X_Y_F = 1;
+  F8_R_KX_KY_F = 3;
+  F32_R_KX_KY_F = 4;
+  F32_R_F = 5;
+  NO_ORDER = 8;
+}
+
+enum AlignNumber {
+  ALIGN_8 = 0;
+  ALIGN_16 = 1;
+  ALIGN_32 = 3;
+  ALIGN_OUTPUT = 4; // 与输出的f方向对齐
+}
