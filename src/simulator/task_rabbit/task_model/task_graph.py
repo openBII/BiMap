@@ -7,17 +7,16 @@ from src.simulator.task_rabbit.task_model.task_block import (TaskBlock, TaskBloc
 
 
 class TaskGraph():
-    """ 
-    任务图，Task IR的具体形式，有任务结点（TaskBlock）和任务之间的边（Edge）组成
+    """An implementation of Task IR, which is composed of TaskBlocks and Edges.
     """
 
     def __init__(self):
         self._nodes: OrderedDict[int, TaskBlock] = OrderedDict()
-        # 记录结点分组情况，分组一般用于便捷操作
+        # groups of nodes for convenience
         self._groups: Dict[int, Set[int]] = {}
 
-        self._inputs = set()
-        self._outputs = set()
+        self._inputs: Set[int] = set()
+        self._outputs: Set[int] = set()
 
     @property
     def groups(self):
@@ -34,32 +33,43 @@ class TaskGraph():
         return {id for id in self._nodes.keys() if self._nodes[id].is_enable()}
 
     def get_input_node_ids(self) -> Union[Set[int], int]:
-        # 如果输入结点只有一个，则返回该结点ID, 否则返回ID集合
+        """Return the IDs of input nodes.
+
+        If there is only one input node, this method will return the ID of this node. 
+        Otherwise, it will return the set of IDs of the input nodes.
+        """
         if len(self._inputs) == 1:
             for id in self._inputs:
                 return id
         return self._inputs
 
     def get_output_node_ids(self) -> Union[Set[int], int]:
-        # 如果输出结点只有一个，则返回该结点ID, 否则返回ID集合
+        """Return the IDs of output nodes.
+
+        If there is only one output node, this method will return the ID of this node. 
+        Otherwise, it will return the set of IDs of the output nodes.
+        """
         if len(self._outputs) == 1:
             for id in self._outputs:
                 return id
         return self._outputs
 
     def add_node(self, task_node: TaskBlock) -> None:
-        """ 
-        增加任务结点，增加后，不保证任务图中的结点仍然是拓扑序
-        结点之间的连接关系由TaskBlock本身维持，所以本函数不影响边的构建
+        """Add node into the task graph.
+
+        After adding a node, the set of nodes is not in topological order.
+        The connections between nodes are maintained by the TaskBlock itself, 
+        so this method will not influence the construction of edges.
+
         Raises:
-            ValueError: 当加入的TaskBlock的ID已经存在于TaskGraph时，抛出异常
+            ValueError: raise when the node already exists or the node is not enabled.
         """
         if not task_node.is_enable():
-            raise ValueError('Task {:d} is not enable'.format(task_node.id))
+            raise ValueError('Task {:d} is not enabled'.format(task_node.id))
 
         id = task_node.id
         if id in self._nodes:
-            raise ValueError('Already has node {:d}'.format(id))
+            raise ValueError('Task {:d} already in this task graph'.format(id))
         self._nodes[id] = task_node
 
         if task_node.task_type == TaskBlockType.INPUT:
@@ -70,31 +80,33 @@ class TaskGraph():
     def connect(self, source_id: int, destination_id: int,
                  source_position: Shape = None, source_size: Shape = None,
                  destination_position: Shape = None, destination_size: Shape = None,
-                 rearrange_info: List[RearrangeInfo] = None) -> None:
-        """
-        增加边连接，即从指定源任务结点的指定边簇（cluster）连接到目的结点的指定边簇
-        增加连接，不保证任务图中的结点仍然是拓扑序
+                 rearrange_info: List[RearrangeInfo] = None) -> Edge:
+        """Add a edge between Task source_id and Task destination_id
+
+        The edge will connect a slice of the output data of Task source_id to 
+        a slice of the input data of Task destination_id.
+
+        Notice: Two nodes can be connected by multiple edges.
 
         Args:
-            source_id: 源任务结点的ID
-            destination_id: 目的结点的ID
-            source_position: 源结点的边簇中准备通过此连接发送的数据形状起始位置
-            source_size: 源结点的边簇中准备通过此连接发送的数据形状大小
-            destination_position: 目的结点的边簇中准备接收此连接发送的数据形状起始位置
-            destination_size: 目的结点的边簇中准备通过此连接接收的数据形状大小
-            rearrange_info: 该条边进行的数据重排操作
+            source_id: ID of the source node.
+            destination_id: ID of the sink node.
+            source_position: The starting position of the slice of the output data of the source node.
+            source_size: The size of the slice of the output data of the source node.
+            destination_position: The starting position of the slice of the input data of the sink node.
+            destination_size: The size of the slice of the input data of the sink node.
+            rearrange_info: Information on data rearrangement operations in this edge.
 
         Raises:
-            ValueError: 当源结点或目的结点的ID不在TaskGraph中时，抛出异常
-            注：两个结点之间可以重复加入多条边，只是在本接口不做限制
+            ValueError: raise when the source node or the sink node is not in the task graph.
         """
         if source_id not in self._nodes:
-            raise ValueError('Node ' + source_id + ' not in the graph')
+            raise ValueError('Task ' + str(source_id) + ' not in the graph')
         if destination_id not in self._nodes:
-            raise ValueError('Node ' + destination_id + ' not in the graph')
+            raise ValueError('Task ' + str(destination_id) + ' not in the graph')
 
-        in_task = self._nodes[source_id]  # type: TaskBlock
-        out_task = self._nodes[destination_id]  # type: TaskBlock
+        in_task = self._nodes[source_id]
+        out_task = self._nodes[destination_id]
         edge = Edge(in_task, out_task, source_position, source_size, \
                     destination_position, destination_size, rearrange_info)
 
@@ -102,6 +114,7 @@ class TaskGraph():
         in_task.add_output_edge(edge)
         return edge
 
+    # FIXME: 这个方法有问题，all_in_tasks这个方法被注释掉了
     def delete_node(self, task_id: int) -> None:
         """
         将task_id表示的结点从Task Graph中移除，即删除所有和该结点相关的边连接
@@ -112,9 +125,9 @@ class TaskGraph():
             ValueError: 当结点的ID不在TaskGraph中时，抛出异常
         """
         if task_id not in self._nodes:
-            raise ValueError('Node ' + task_id + ' not in the graph')
+            raise ValueError('Task ' + str(task_id) + ' not in the graph')
 
-        task = self._nodes.pop(task_id)  # type: TaskBlock
+        task = self._nodes.pop(task_id) 
 
         for in_task in task.all_in_tasks:
             in_task.remove_output_task(task_id)
@@ -128,27 +141,25 @@ class TaskGraph():
             self._outputs.remove(id)
 
     def disable_node(self, task_id: int) -> None:
-        """
-        Disable task_id表示的结点
+        """Disable the node whose ID is task_id.
 
         Raises:
-            ValueError: 当结点的ID不在TaskGraph中时，抛出异常
+            ValueError: raise when the input ID is not in the task graph.
         """
         if task_id not in self._nodes:
-            raise ValueError(task_id + ' not in the graph')
+            raise ValueError('Task ' + str(task_id) + ' not in the graph')
 
         task = self.get_node(task_id)
         task.disable()
 
     def enable_node(self, task_id: int) -> None:
-        """
-        Enable task_id表示的结点
+        """Enable the node whose ID is task_id.
 
         Raises:
-            ValueError: 当结点的ID不在TaskGraph中时，抛出异常
+            ValueError: raise when the input ID is not in the task graph.
         """
         if task_id not in self._nodes:
-            raise ValueError(task_id + ' not in the graph')
+            raise ValueError('Task ' + str(task_id) + ' not in the graph')
 
         task = self._nodes[task_id]
         task.enable()
@@ -175,7 +186,7 @@ class TaskGraph():
         """
         for task_id in task_ids:
             if task_id not in self._nodes:
-                raise ValueError('Node ' + task_id + ' not in the graph')
+                raise ValueError('Task ' + str(task_id) + ' not in the graph')
             if not self._nodes[task_id].is_enable():
                 raise ValueError('Task {:d} is not enable'.format(task_id))
 
@@ -195,6 +206,7 @@ class TaskGraph():
                     1 if group_id is None else group_id
             self._groups[new_group_id] = task_ids
 
+    # TODO: implement this in C++
     def topologize(self) -> None:
         """
         将所有结点拓扑排序并重新存到_nodes里
@@ -251,10 +263,11 @@ class TaskGraph():
             raise ValueError('There is no edge between two tasks')
 
         source_task = self.get_node(src_task_id)
-        for edge in source_task.get_output_edges():
+        for edge in source_task.output_edges:
             if edge.out_task.id == dst_task_id and edge.is_enable():
                 return edge
 
+    # FIXME TaskBlock的check方法未定义
     def check(self) -> None:
         """
         检查结点的基本形状信息
@@ -266,14 +279,22 @@ class TaskGraph():
                 node.check()
 
     def input(self, tick_num: int) -> Set[TaskBlock]:
-        enabled_task = set()
+        """The task graph will accept tick_num ticks.
+
+        Args:
+            tick_num: int, number of input ticks.
+
+        Returns:
+            activated_tasks: Set[TaskBlock], which tasks will be activated after injecting the input ticks.
+        """
+        activated_tasks = set()
         for input_task_id in self._inputs:
             input_task = self._nodes[input_task_id]
             input_task.fire(tick_num)
             for next_task in input_task.out_tasks:
                 if next_task.activated:
-                    enabled_task.add(next_task)
-        return enabled_task
+                    activated_tasks.add(next_task)
+        return activated_tasks
             
     def __contains__(self, node_id: str):
         if node_id in self._nodes:
