@@ -6,10 +6,10 @@ STPoint类描述STMatrix中的一个点
 具体的说，在tianjicX架构中，表示一个Core model的一个Phase
 """
 
-from task_rabbit.task_model.task_block_type import TaskBlockType
-from task_rabbit.task_model.task_block import TaskBlock
-from resource_simulator.evaluation_model.recorder import ComputationRecorder, MemoryRecorder, RouterRecorder
-from resource_simulator.st_model.tick import Tick
+from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
+from src.simulator.task_rabbit.task_model.task_block import TaskBlock
+from src.simulator.resource_simulator.evaluation_model.recorder import ComputationRecorder, MemoryRecorder, RouterRecorder
+from src.simulator.resource_simulator.st_model.tick import Tick
 
 from typing import List
 

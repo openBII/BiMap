@@ -6,10 +6,10 @@ StMatrix类是一种自定义的list，表示一个时空矩阵，保存STPoint
 具体的说，在tianjicX架构中，表示一个Core model
 """
 
-from resource_simulator.st_model.st_coord import MLCoord, Coord
+from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
 
-from resource_simulator.st_model.st_point import STPoint
-from resource_simulator.st_model.matrix_config import MatrixConfig
+from src.simulator.resource_simulator.st_model.st_point import STPoint
+from src.simulator.resource_simulator.st_model.matrix_config import MatrixConfig
 
 
 # 为什么不选择直接继承dict的方式

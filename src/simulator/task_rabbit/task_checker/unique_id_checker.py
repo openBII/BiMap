@@ -6,7 +6,7 @@
 
 
 
-from task_rabbit.task_model.task_visitor import TaskVisitor
+from src.simulator.task_rabbit.task_model.task_visitor import TaskVisitor
 
 
 class UniqueIDChecker(TaskVisitor):

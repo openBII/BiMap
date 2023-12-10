@@ -1,7 +1,7 @@
 import math
-from task_rabbit.task_model.task_block_type import TaskBlockType
-from task_rabbit.task_model.shape import Shape
-from task_rabbit.task_model.precision import Precision
+from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
+from src.simulator.task_rabbit.task_model.shape import Shape
+from src.simulator.task_rabbit.task_model.precision import Precision
 
 
 class Storage():

@@ -2,8 +2,8 @@
 # coding: utf-8
 
 from copy import deepcopy
-from task_rabbit.task_model.edge import Edge
-from task_rabbit.task_model.task_block import TaskBlock
+from src.simulator.task_rabbit.task_model.edge import Edge
+from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 
 
 class Replicater(object):

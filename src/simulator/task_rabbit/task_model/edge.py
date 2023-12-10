@@ -2,9 +2,9 @@ from enum import Enum
 from typing import List
 from queue import Queue
 
-from task_rabbit.task_model.task_block_state import TaskState
-from task_rabbit.task_model.shape import Shape
-from resource_simulator.st_model.tick import Tick
+from src.simulator.task_rabbit.task_model.task_block_state import TaskState
+from src.simulator.task_rabbit.task_model.shape import Shape
+from src.simulator.resource_simulator.st_model.tick import Tick
 
 
 

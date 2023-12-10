@@ -2,10 +2,10 @@
 # coding: utf-8
 
 from copy import deepcopy
-from resource_simulator.st_model.st_point import STPoint
-from resource_simulator.st_model.st_coord import MLCoord, Coord
-from resource_simulator.st_model.st_matrix import STMatrix
-from task_rabbit.task_model.task_graph import TaskGraph
+from src.simulator.resource_simulator.st_model.st_point import STPoint
+from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
+from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
+from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
 
 
 class ColumnDeleter(object):

@@ -9,19 +9,19 @@ STEnv类描述性能级仿真环境
 from copy import deepcopy
 from typing import List, Union
 from top.config import GlobalConfig
-from task_rabbit.task_model.task_block_type import TaskBlockType
-from task_rabbit.task_model.task_block import TaskBlock
-from task_rabbit.task_model.shape import Shape
-from task_rabbit.task_model.task_graph import TaskGraph
-from resource_simulator.st_model.st_matrix import STMatrix
-from resource_simulator.history import History
-from resource_simulator.st_context import STContext
-from resource_simulator.evaluation_model.evaluation_model import EvaluationModel
-from resource_simulator.action_model import ActionModel
-from resource_simulator.action_model.splitter import SplitType
-from resource_simulator.evaluation_model.evaluation import MemoryEvaluation
-from task_rabbit.task_checker.checker import TaskChecker
-from resource_simulator.st_model.st_coord import MLCoord
+from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
+from src.simulator.task_rabbit.task_model.task_block import TaskBlock
+from src.simulator.task_rabbit.task_model.shape import Shape
+from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
+from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
+from src.simulator.resource_simulator.history import History
+from src.simulator.resource_simulator.st_context import STContext
+from src.simulator.resource_simulator.evaluation_model.evaluation_model import EvaluationModel
+from src.simulator.resource_simulator.action_model import ActionModel
+from src.simulator.resource_simulator.action_model.splitter import SplitType
+from src.simulator.resource_simulator.evaluation_model.evaluation import MemoryEvaluation
+from src.simulator.task_rabbit.task_checker.checker import TaskChecker
+from src.simulator.resource_simulator.st_model.st_coord import MLCoord
 
 
 

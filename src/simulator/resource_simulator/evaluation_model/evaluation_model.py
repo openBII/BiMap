@@ -5,11 +5,11 @@
 EvaluationModel 类负责各种评估的响应
 """
 
-from resource_simulator.evaluation_model.evaluation import MemoryEvaluation
-from resource_simulator.st_model.st_matrix import STMatrix
-from task_rabbit.task_model.task_graph import TaskGraph
-from resource_simulator.st_context import STContext
-from resource_simulator.evaluation_model.memory_evaluator import MemoryEvaluator
+from src.simulator.resource_simulator.evaluation_model.evaluation import MemoryEvaluation
+from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
+from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
+from src.simulator.resource_simulator.st_context import STContext
+from src.simulator.resource_simulator.evaluation_model.memory_evaluator import MemoryEvaluator
 
 
 class EvaluationModel():

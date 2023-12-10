@@ -4,10 +4,10 @@
 # See: https://spdx.org/licenses/
 
 
-from task_rabbit.task_model.ctask_block import CTaskBlock
-from task_rabbit.task_model.stask_block import STaskBlock
-from task_rabbit.task_model.task_block_type import TaskBlockType
-from task_rabbit.task_model.task_visitor import TaskVisitor
+from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
+from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
+from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
+from src.simulator.task_rabbit.task_model.task_visitor import TaskVisitor
 
 
 class SCSChecker(TaskVisitor):

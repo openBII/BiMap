@@ -5,7 +5,7 @@
 EvaluationModel 类负责各种评估的响应,
 """
 
-from resource_simulator.evaluation_model.evaluation import MemoryEvaluation
+from src.simulator.resource_simulator.evaluation_model.evaluation import MemoryEvaluation
 
 # TODO: pipeline加在哪
 

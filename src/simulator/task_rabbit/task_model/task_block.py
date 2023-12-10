@@ -8,12 +8,12 @@ from abc import ABC, abstractmethod
 from copy import copy
 from typing import List, Set, Tuple
 
-from task_rabbit.task_model.edge import Edge
-from task_rabbit.task_model.precision import Precision
-from task_rabbit.task_model.shape import Shape
-from task_rabbit.task_model.task_block_state import TaskState
-from task_rabbit.task_model.task_block_type import TaskBlockType
-from resource_simulator.st_model.tick import Tick
+from src.simulator.task_rabbit.task_model.edge import Edge
+from src.simulator.task_rabbit.task_model.precision import Precision
+from src.simulator.task_rabbit.task_model.shape import Shape
+from src.simulator.task_rabbit.task_model.task_block_state import TaskState
+from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
+from src.simulator.resource_simulator.st_model.tick import Tick
 
 
 
@@ -160,8 +160,7 @@ class TaskBlock(ABC):
         """
         tasks = set()
         for edge in self._output_edges:
-            for task in edge.out_task:
-                tasks.add(task)
+            tasks.add(edge.out_task)
         return tasks
 
     @property

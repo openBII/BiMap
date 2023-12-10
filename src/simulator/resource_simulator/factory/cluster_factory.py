@@ -1,7 +1,7 @@
 from top.config import GlobalConfig
-from resource_simulator.st_model.st_matrix import STMatrix
-from resource_simulator.st_model.st_point import DDRPoint, ChipPoint
-from resource_simulator.st_model.st_coord import Coord
+from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
+from src.simulator.resource_simulator.st_model.st_point import DDRPoint, ChipPoint
+from src.simulator.resource_simulator.st_model.st_coord import Coord
 
 
 class ClusterFactory(object):

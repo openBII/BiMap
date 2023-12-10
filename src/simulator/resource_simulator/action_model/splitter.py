@@ -5,16 +5,16 @@ import logging
 from typing import List, Union
 from copy import deepcopy
 from math import ceil, inf, floor
-from task_rabbit.task_model.bias_type import BiasType
-from task_rabbit.task_model.task_block import TaskBlock
-from task_rabbit.task_model.shape import Shape
-from task_rabbit.task_model.ctask_block import CTaskBlock
-from task_rabbit.task_model.stask_block import STaskBlock
-from task_rabbit.task_model.task_graph import TaskGraph
-from task_rabbit.task_model.id_generator import IDGenerator
-from task_rabbit.task_model.edge import Edge
+from src.simulator.task_rabbit.task_model.bias_type import BiasType
+from src.simulator.task_rabbit.task_model.task_block import TaskBlock
+from src.simulator.task_rabbit.task_model.shape import Shape
+from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
+from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
+from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
+from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
+from src.simulator.task_rabbit.task_model.edge import Edge
 from enum import Enum
-from task_rabbit.task_model.task_block_type import TaskBlockType
+from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 
 
 class SplitType(Enum):

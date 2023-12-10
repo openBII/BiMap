@@ -1,9 +1,9 @@
 from collections import OrderedDict
 from typing import Dict, List, Set, Union
 
-from task_rabbit.task_model.edge import Edge, RearrangeInfo
-from task_rabbit.task_model.shape import Shape
-from task_rabbit.task_model.task_block import (TaskBlock, TaskBlockType)
+from src.simulator.task_rabbit.task_model.edge import Edge, RearrangeInfo
+from src.simulator.task_rabbit.task_model.shape import Shape
+from src.simulator.task_rabbit.task_model.task_block import (TaskBlock, TaskBlockType)
 
 
 class TaskGraph():
@@ -267,10 +267,11 @@ class TaskGraph():
 
     def input(self, tick_num: int) -> Set[TaskBlock]:
         enabled_task = set()
-        for input_task in self._inputs:
+        for input_task_id in self._inputs:
+            input_task = self._nodes[input_task_id]
             input_task.fire(tick_num)
             for next_task in input_task.out_tasks:
-                if next_task.activate:
+                if next_task.activated:
                     enabled_task.add(next_task)
         return enabled_task
             

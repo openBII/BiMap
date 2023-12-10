@@ -8,18 +8,18 @@ ActionModel 类负责各种动作的响应
 from copy import deepcopy
 import logging
 from typing import List, Union
-from task_rabbit.task_model.bias_type import BiasType
-from task_rabbit.task_model.ctask_block import CTaskBlock
-from task_rabbit.task_model.shape import Shape
-from task_rabbit.task_model.stask_block import STaskBlock
-from resource_simulator.st_context import STContext
-from resource_simulator.st_model.st_matrix import STMatrix
-from task_rabbit.task_model.task_graph import TaskGraph
-from resource_simulator.action_model.splitter import Splitter, SplitType
-from resource_simulator.action_model.replicater import Replicater
-from resource_simulator.action_model.column_merger import ColumnMerger
-from resource_simulator.action_model.column_deleter import ColumnDeleter
-from resource_simulator.st_model.st_coord import MLCoord, Coord
+from src.simulator.task_rabbit.task_model.bias_type import BiasType
+from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
+from src.simulator.task_rabbit.task_model.shape import Shape
+from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
+from src.simulator.resource_simulator.st_context import STContext
+from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
+from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
+from src.simulator.resource_simulator.action_model.splitter import Splitter, SplitType
+from src.simulator.resource_simulator.action_model.replicater import Replicater
+from src.simulator.resource_simulator.action_model.column_merger import ColumnMerger
+from src.simulator.resource_simulator.action_model.column_deleter import ColumnDeleter
+from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
 
 
 

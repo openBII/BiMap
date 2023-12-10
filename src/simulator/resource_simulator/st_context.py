@@ -6,7 +6,7 @@ STContext类记录TaskModel和STMatrix之间的一些关系
 比如一个task当前放到了STMatrix中的哪个位置
 """
 
-from resource_simulator.st_model.st_coord import MLCoord
+from src.simulator.resource_simulator.st_model.st_coord import MLCoord
 
 
 class STContext():
