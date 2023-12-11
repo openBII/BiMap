@@ -13,7 +13,7 @@ from top.config import GlobalConfig
 from src.simulator.resource_simulator.st_model.st_coord import Coord, MLCoord
 
 
-
+# Construct a task graph
 task_graph = TaskGraph()
 shape = Shape(2048, 4096)
 input_task = InputTaskBlock(-1, shape, Precision.FLOAT_16)
@@ -31,12 +31,13 @@ task_graph.connect(compute_task.id, output_task.id)
 
 task_graph.topologize()
 
+# Construct a hardware
 cluster = ClusterFactory.create_st_matrix()
 
+# Construct a simulation environment
 st_env = STEnv(task_graph, cluster)
 
-# map procedure
-
+# Map the task graph onto the hardware
 for level3_count in range(GlobalConfig.GroupLevel3['GROUP2_NUM']):
     server_coord = Coord(level3_count)
     card_x, card_y, card_z = 0, 0, 0
@@ -62,8 +63,8 @@ for level3_count in range(GlobalConfig.GroupLevel3['GROUP2_NUM']):
             chip_ml_coord = MLCoord(server_coord, card_coord, coord)
             st_env.put_in(chip_ml_coord, storage_task.id)
 
-
-st_env.simulate(100)
+# Simulate
+st_env.simulate(2)
 
 print(task_graph)
 

@@ -101,7 +101,7 @@ class TaskBlock(ABC):
     @shape.setter
     def shape(self, shape: Shape) -> None:
         self._shape = shape
-        self._check_shape()
+        self._check_shape()  # FIXME
         self._construct_storage()
         self._construct_computation()
 
@@ -109,7 +109,6 @@ class TaskBlock(ABC):
     def precision(self) -> Precision:
         return self._precision
 
-    # ID
     @property
     def id(self) -> int:
         return self._id
@@ -123,7 +122,6 @@ class TaskBlock(ABC):
     def task_type(self) -> TaskBlockType:
         return self._type
 
-    # edges
     @property
     def input_edges(self) -> List[Edge]:
         return self._input_edges
@@ -165,6 +163,8 @@ class TaskBlock(ABC):
 
     @property
     def activated(self):
+        """If all the input edges of this task block are activated, this task block will be activated.
+        """
         return all(map(lambda x: x.activated, self._input_edges))
 
     # @property
@@ -258,12 +258,16 @@ class TaskBlock(ABC):
 
     def fire(self, tick_num: int):
         for i in range(tick_num):
+            start_time = 0
             for edge in self._input_edges:
-                edge.consume_tick()
+                received_tick = edge.consume_tick()
+                # find the time of the latest input as the start time of this task
+                if received_tick.time > start_time:
+                    start_time = received_tick.time
+            end_time = start_time + self.get_computation()
             for edge in self._output_edges:
-                tick = Tick(self._id, i)
+                tick = Tick(self._id, i, end_time)
                 edge.add_tick(tick)
-        
         
     def destroy(self) -> None:
         '''

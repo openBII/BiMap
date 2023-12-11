@@ -1,8 +1,8 @@
 class Tick():
-    def __init__(self, task_id, iteration = 0) -> None:
+    def __init__(self, task_id, iteration=0, time=0) -> None:
         self.task_id = task_id
         self.iteration = iteration
-        self.time = 0
+        self.time = time
         
     def __str__(self):
         return 'tick' + str(self.task_id) + '.' + str(self.iteration)

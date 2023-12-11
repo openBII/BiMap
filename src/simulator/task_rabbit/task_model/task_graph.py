@@ -295,6 +295,22 @@ class TaskGraph():
                 if next_task.activated:
                     activated_tasks.add(next_task)
         return activated_tasks
+    
+    def get_activated_tasks(self, fired_tasks: Set[TaskBlock]) -> Set[TaskBlock]:
+        """Returns the activated tasks after the firing of given tasks.
+
+        Args:
+            fired_tasks: Set[TaskBlock], input fired tasks.
+
+        Returns:
+            activated_tasks: Set[TaskBlock], tasks activated after the firing of input tasks.
+        """
+        activated_tasks = set()
+        for fired_task in fired_tasks:
+            for next_task in fired_task.out_tasks:
+                if next_task.activated:
+                    activated_tasks.add(next_task)
+        return activated_tasks
             
     def __contains__(self, node_id: str):
         if node_id in self._nodes:

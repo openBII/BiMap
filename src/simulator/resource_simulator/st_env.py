@@ -312,7 +312,11 @@ class STEnv():
                             dst_index, dst_info)
 
     def simulate(self, tick_num: int):
-        self._task_graph.input(tick_num)
+        activated_tasks = self._task_graph.input(tick_num)
+        while activated_tasks:
+            for activated_task in activated_tasks:
+                activated_task.fire(tick_num)
+            activated_tasks = self._task_graph.get_activated_tasks(activated_tasks)
 
     # State control
     def undo(self):
@@ -338,7 +342,7 @@ class STEnv():
 
 
 def create_st_env(task_path, case_name) -> STEnv:
-    from task_rabbit.initial_pass import execute_initial_pass
+    from src.simulator.task_rabbit.initial_pass import execute_initial_pass
     init = execute_initial_pass(
         case_path=task_path, case_name=case_name, input_type='task')
     st_matrix = STMatrix()
