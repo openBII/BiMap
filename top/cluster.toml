@@ -18,14 +18,14 @@ CHIP_DDR_BANDWIDTH = 12 # GB/s
 [group-level-2]
 GROUP1_BANDWIDTH = 2 # GB/s
 CONNECTION = "x+1|y+1|z+1"
-GROUP1_NUM = 48
-GROUP1_X = 2
-GROUP1_Y = 2
-GROUP1_Z = 12
+GROUP1_NUM = 1
+GROUP1_X = 1
+GROUP1_Y = 1
+GROUP1_Z = 1
 
 # INTERFACE = ["to_ddr", "to_chip"]
 
 [group-level-3]
 GROUP2_BANDWIDTH = 10 # GB/s
 CONNECTION = "p2p"
-GROUP2_NUM = 100
+GROUP2_NUM = 1

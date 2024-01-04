@@ -22,6 +22,7 @@ from src.simulator.resource_simulator.action_model.splitter import SplitType
 from src.simulator.resource_simulator.evaluation_model.evaluation import MemoryEvaluation
 from src.simulator.task_rabbit.task_checker.checker import TaskChecker
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord
+from src.simulator.resource_simulator.scheduler import Scheduler
 
 
 
@@ -313,10 +314,10 @@ class STEnv():
 
     def simulate(self, tick_num: int):
         activated_tasks = self._task_graph.input(tick_num)
-        while activated_tasks:
-            for activated_task in activated_tasks:
-                activated_task.fire(tick_num)
-            activated_tasks = self._task_graph.get_activated_tasks(activated_tasks)
+        # 初始化scheduler，传入activated_tasks
+        scheduler = Scheduler(self._st_matrix, self._context, activated_tasks)
+        while not scheduler.completed():
+            scheduler.schedule()
 
     # State control
     def undo(self):

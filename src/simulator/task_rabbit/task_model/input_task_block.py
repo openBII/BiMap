@@ -7,6 +7,7 @@ from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.task_rabbit.task_model.storage import Storage
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
+from src.simulator.resource_simulator.st_model.tick import Tick
 
 
 class InputTaskBlock(TaskBlock):
@@ -23,6 +24,12 @@ class InputTaskBlock(TaskBlock):
 
     def accept(self, visitor):
         visitor.visit_INPUT(self)
+
+    def fire(self, tick_num: int):
+        for i in range(tick_num):
+            for edge in self._output_edges:
+                tick = Tick(self._id, i, 0)
+                edge.add_tick(tick)
 
     # def copy_like(self) -> TaskBlock:
     #     new_task_block = InputTaskBlock(copy(self.shape),

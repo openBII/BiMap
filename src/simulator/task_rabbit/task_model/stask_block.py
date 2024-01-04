@@ -3,6 +3,8 @@ from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.task_rabbit.task_model.storage import Storage
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
+from typing import Tuple, Callable
+from src.simulator.resource_simulator.st_model.tick import Tick
 
 
 class STaskBlock(TaskBlock):
@@ -38,6 +40,23 @@ class STaskBlock(TaskBlock):
 
     def accept(self, visitor):
         visitor.visit_S(self)
+
+    def fire(self, iteration: int, time: int, callback: Callable):
+        for edge in self._output_edges:
+            tick = Tick(self._id, iteration, time, callback)
+            edge.add_tick(tick)
+
+    def consume(self) -> Tuple[int, int, int]:
+        start_time = float("inf")
+        available_time = 0
+        for edge in self._input_edges:
+            received_tick = edge.consume_tick()
+            # find the time of the earliest input as the start time of this task
+            if received_tick.time < start_time:
+                start_time = received_tick.time
+            if received_tick.time > available_time:
+                available_time = received_tick.time
+        return start_time, available_time, received_tick.iteration
 
     # def copy_like(self) -> TaskBlock:
     #     data = deepcopy(self._data)

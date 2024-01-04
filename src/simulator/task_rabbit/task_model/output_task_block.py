@@ -1,5 +1,4 @@
-from copy import copy
-
+from typing import Tuple
 from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.task_rabbit.task_model.shape import Shape
@@ -22,6 +21,18 @@ class OutputTaskBlock(TaskBlock):
 
     def accept(self, visitor):
         visitor.visit_OUTPUT(self)
+
+    def consume(self) -> Tuple[int, int, int]:
+        start_time = float("inf")
+        available_time = 0
+        for edge in self._input_edges:
+            received_tick = edge.consume_tick()
+            # find the time of the earliest input as the start time of this task
+            if received_tick.time < start_time:
+                start_time = received_tick.time
+            if received_tick.time > available_time:
+                available_time = received_tick.time
+        return start_time, available_time - start_time, received_tick.iteration
 
     # def copy_like(self) -> TaskBlock:
     #     new_task_block = OutputTaskBlock(copy(self.shape),

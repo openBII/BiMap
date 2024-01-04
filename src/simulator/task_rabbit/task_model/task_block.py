@@ -13,7 +13,6 @@ from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.task_rabbit.task_model.task_block_state import TaskState
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
-from src.simulator.resource_simulator.st_model.tick import Tick
 
 
 
@@ -256,18 +255,11 @@ class TaskBlock(ABC):
     def get_image(self):
         return ImageTaskBlock(self._type)
 
-    def fire(self, tick_num: int):
-        for i in range(tick_num):
-            start_time = 0
-            for edge in self._input_edges:
-                received_tick = edge.consume_tick()
-                # find the time of the latest input as the start time of this task
-                if received_tick.time > start_time:
-                    start_time = received_tick.time
-            end_time = start_time + self.get_computation()
-            for edge in self._output_edges:
-                tick = Tick(self._id, i, end_time)
-                edge.add_tick(tick)
+    def fire(self):
+        raise NotImplementedError
+
+    def consume(self):
+        raise NotImplementedError
         
     def destroy(self) -> None:
         '''

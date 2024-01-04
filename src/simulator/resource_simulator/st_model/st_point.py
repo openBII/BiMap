@@ -6,12 +6,14 @@ STPoint类描述STMatrix中的一个点
 具体的说，在tianjicX架构中，表示一个Core model的一个Phase
 """
 
+from src.simulator.task_rabbit.task_model.output_task_block import OutputTaskBlock
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
+from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
 from src.simulator.resource_simulator.evaluation_model.recorder import ComputationRecorder, MemoryRecorder, RouterRecorder
 from src.simulator.resource_simulator.st_model.tick import Tick
 
-from typing import List
+from typing import List, Set
 
 
 class STPoint():
@@ -19,8 +21,6 @@ class STPoint():
         #TODO: Slots
         self._tasks: List[TaskBlock] = []
         self._pc = 0
-        
-        
         
     def add_task(self, task: TaskBlock):
         self._tasks.append(task)
@@ -69,7 +69,7 @@ class ChipPoint(STPoint):
         
         # 计算任务放入到self._tasks中，其他任务另单独创造容器
         # 存储任务
-        self._memory = {}
+        self._memory: Set[STaskBlock] = {}
 
         # 路由任务，也可以考虑删掉
         self._router_send = {}
@@ -77,6 +77,7 @@ class ChipPoint(STPoint):
         
         # 定义Recorder
         self.compute_recorder = ComputationRecorder()
+        self.memory_recorder = MemoryRecorder()
         # 双工，分开记
         self.router_recieve_recorder = RouterRecorder()
         self.router_send_recorder = RouterRecorder()
@@ -133,26 +134,31 @@ class ChipPoint(STPoint):
     def router_send(self):
         self._router_send = {}
         
-    def proceed(self, task_id: int, timer):
-        
-        if task_id in self._tasks:
+    def proceed(self, task_id: int):
+        # Computational task
+        if task_id in [task.id for task in self._tasks]:
             if self._tasks[self._pc].id == task_id:
                 task = self._tasks[self._pc]
-                self.compute_recorder.record(task_id, 0, 10, timer)
+                # TODO: evaluate
+                duration = 10
+                # The start time is obtained considering data dependencies
+                start_time, iteration, consumed_ticks = task.consume()
+                self.compute_recorder.record(task_id, iteration, start_time, duration)
                 self._pc += 1
                 if self._pc >= len(self._tasks):
                     self._pc = 0
-                task.fire(1)
-                activated_tasks = set()
-                for activated_task in task.out_tasks:
-                    if activated_task.activated:
-                        activated_tasks.add(activated_task.id)
-                return True, activated_tasks
+                task.fire(iteration, self.compute_recorder.max_time, consumed_ticks)
+                return True, task
             else:
                 return False, None
-    
-        if task_id in self._memory:
-            pass
+            
+        # Storage task
+        for memory in self._memory:
+            if task_id == memory.id:
+                start_time, available_time, iteration = memory.consume()
+                self.memory_recorder.record(task_id, iteration, start_time, 0)
+                memory.fire(iteration, available_time, self.memory_recorder.update)
+                return True, memory
         
         return False, None
 
@@ -167,10 +173,23 @@ class DDRPoint(STPoint):
         
         # 定义Recorder
         self.compute_recorder = ComputationRecorder()
+        self.memory_recorder = MemoryRecorder()
         self.router_recieve_recorder = RouterRecorder()
         self.router_send_recorder = RouterRecorder()
-        
-    
+
+    def proceed(self, task_id: int):
+        for task in self._tasks:
+            if task_id == task.id:
+                if isinstance(task, OutputTaskBlock):
+                    start_time, duration, iteration = task.consume()
+                    self.memory_recorder.record(task_id, iteration, start_time, duration)
+                    return True, task
+                else:
+                    start_time, available_time, iteration = task.consume()
+                    self.memory_recorder.record(task_id, iteration, start_time, 0)
+                    task.fire(iteration, available_time, self.memory_recorder.update)
+                    return True, task 
+        return False, None
         
 
 # st_point = STPoint()

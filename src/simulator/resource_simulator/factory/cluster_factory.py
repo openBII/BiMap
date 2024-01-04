@@ -21,7 +21,7 @@ class ClusterFactory(object):
                 card = STMatrix(dim = 1, space_level=1)
                 card.config.bandwidth = GlobalConfig.GroupLevel1['CHIP_DDR_BANDWIDTH']
                 point_count = 0
-                for _ in range(GlobalConfig.GroupLevel1['DDR_NUM']):
+                for _ in range(GlobalConfig.GroupLevel1['CHIP_NUM']):
                     chip = ChipPoint()
                     chip.core_num = GlobalConfig.Chip['CORE_NUM']
                     chip.int8_computation = GlobalConfig.Chip['INT8_COMPUTATION']
@@ -31,7 +31,7 @@ class ClusterFactory(object):
                     coord = Coord(point_count)
                     card.add_element(coord, chip)
                     point_count += 1
-                for _ in range(GlobalConfig.GroupLevel1['CHIP_NUM']):
+                for _ in range(GlobalConfig.GroupLevel1['DDR_NUM']):
                     ddr = DDRPoint()
                     ddr.capcity = GlobalConfig.DDR['DDR_CAPACITY']
                     coord = Coord(point_count)

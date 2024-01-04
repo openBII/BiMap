@@ -1,4 +1,3 @@
-from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
 from src.simulator.resource_simulator.st_env import STEnv
 from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
 from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
@@ -52,16 +51,17 @@ for level3_count in range(GlobalConfig.GroupLevel3['GROUP2_NUM']):
                 card_z += 1
                 
         point_count = 0
+        for _ in range(GlobalConfig.GroupLevel1['CHIP_NUM']):
+            coord = Coord(point_count)
+            point_count += 1
+            chip_ml_coord = MLCoord(server_coord, card_coord, coord)
+            st_env.put_in(chip_ml_coord, compute_task.id)
         for _ in range(GlobalConfig.GroupLevel1['DDR_NUM']):
             coord = Coord(point_count)
             point_count += 1
             ddr_ml_coord = MLCoord(server_coord, card_coord, coord)
             st_env.put_in(ddr_ml_coord, storage_task.id)
-        for _ in range(GlobalConfig.GroupLevel1['CHIP_NUM']):
-            coord = Coord(point_count)
-            point_count += 1
-            chip_ml_coord = MLCoord(server_coord, card_coord, coord)
-            st_env.put_in(chip_ml_coord, storage_task.id)
+            st_env.put_in(ddr_ml_coord, output_task.id)
 
 # Simulate
 st_env.simulate(2)
