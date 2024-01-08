@@ -25,11 +25,17 @@ class InputTaskBlock(TaskBlock):
     def accept(self, visitor):
         visitor.visit_INPUT(self)
 
-    def fire(self, tick_num: int):
-        for i in range(tick_num):
-            for edge in self._output_edges:
-                tick = Tick(self._id, i, 0)
-                edge.add_tick(tick)
+    def fire(self, tick_num: int, interval: int = None):
+        if interval is not None:
+            for i in range(tick_num):
+                for edge in self._output_edges:
+                    tick = Tick(self._id, i, 0 + i * interval)
+                    edge.add_tick(tick)
+        else:
+            for i in range(tick_num):
+                for edge in self._output_edges:
+                    tick = Tick(self._id, i, 0)
+                    edge.add_tick(tick)
 
     # def copy_like(self) -> TaskBlock:
     #     new_task_block = InputTaskBlock(copy(self.shape),

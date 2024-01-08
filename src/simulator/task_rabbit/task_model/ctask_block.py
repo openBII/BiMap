@@ -30,13 +30,15 @@ class CTaskBlock(TaskBlock):
     def accept(self, visitor):
         visitor.visit_C(self)
 
-    def fire(self, iteration: int, time: int, consumed_ticks: List[Tick]):
-        for tick in consumed_ticks:
-            if tick.callback is not None:
-                tick.callback(tick.task_id, iteration, time)
+    def fire(self, iteration: int, time: int):
         for edge in self._output_edges:
             tick = Tick(self._id, iteration, time)
             edge.add_tick(tick)
+
+    def callback(self, time: int, consumed_ticks: List[Tick]):
+        for tick in consumed_ticks:
+            if tick.callback is not None:
+                tick.callback(tick.task_id, tick.iteration, time)
 
     def consume(self) -> Tuple[int, int, List[Tick]]:
         # 处理一下没有输入边的情况

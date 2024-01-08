@@ -10,9 +10,12 @@ from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
 from src.simulator.resource_simulator.factory.cluster_factory import ClusterFactory
 from top.config import GlobalConfig
 from src.simulator.resource_simulator.st_model.st_coord import Coord, MLCoord
+from src.simulator.resource_simulator.input_type import InputType
 
 
 # Construct a task graph
+# TODO: 处理静态数据
+# TODO: 加入边映射
 task_graph = TaskGraph()
 shape = Shape(2048, 4096)
 input_task = InputTaskBlock(-1, shape, Precision.FLOAT_16)
@@ -55,6 +58,7 @@ for level3_count in range(GlobalConfig.GroupLevel3['GROUP2_NUM']):
             coord = Coord(point_count)
             point_count += 1
             chip_ml_coord = MLCoord(server_coord, card_coord, coord)
+            # TODO: 加入address
             st_env.put_in(chip_ml_coord, compute_task.id)
         for _ in range(GlobalConfig.GroupLevel1['DDR_NUM']):
             coord = Coord(point_count)
@@ -64,7 +68,8 @@ for level3_count in range(GlobalConfig.GroupLevel3['GROUP2_NUM']):
             st_env.put_in(ddr_ml_coord, output_task.id)
 
 # Simulate
-st_env.simulate(2)
-
+# TODO: 加个流水输入的开关
+# st_env.simulate(2, input_type=InputType.BATCH)
+st_env.simulate(2, input_type=InputType.PIPELINE, interval=10)
 print(task_graph)
 

@@ -278,7 +278,7 @@ class TaskGraph():
             if node.enable():
                 node.check()
 
-    def input(self, tick_num: int) -> Set[TaskBlock]:
+    def input(self, tick_num: int, interval: int = None) -> Set[TaskBlock]:
         """The task graph will accept tick_num ticks.
 
         Args:
@@ -290,7 +290,7 @@ class TaskGraph():
         activated_tasks = set()
         for input_task_id in self._inputs:
             input_task = self._nodes[input_task_id]
-            input_task.fire(tick_num)
+            input_task.fire(tick_num, interval)
             for next_task in input_task.out_tasks:
                 if next_task.activated:
                     activated_tasks.add(next_task)
