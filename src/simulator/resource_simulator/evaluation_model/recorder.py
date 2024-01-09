@@ -44,6 +44,11 @@ class MemoryRecorder(Recorder):
     def update(self, id: int, iteration: int, end_time: int):
         if end_time > self.recorder_time[(id, iteration)][1]:
             self.recorder_time[(id, iteration)][1] = end_time
+
+    def update_start_time(self, id: int, iteration: int, start_time: int):
+        # 如果当前存储块为直接从输入块获取数据，则开始时间为使用该存储的计算块开始计算的时间
+        if self.recorder_time[(id, iteration)][0] == 0:
+            self.recorder_time[(id, iteration)][0] = start_time
         
 
 class RouterRecorder(Recorder):

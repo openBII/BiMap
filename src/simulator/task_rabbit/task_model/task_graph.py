@@ -4,6 +4,7 @@ from typing import Dict, List, Set, Union
 from src.simulator.task_rabbit.task_model.edge import Edge, RearrangeInfo
 from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.task_rabbit.task_model.task_block import (TaskBlock, TaskBlockType)
+from src.simulator.task_rabbit.task_model.input_type import InputType
 
 
 class TaskGraph():
@@ -278,7 +279,7 @@ class TaskGraph():
             if node.enable():
                 node.check()
 
-    def input(self, tick_num: int, interval: int = None) -> Set[TaskBlock]:
+    def input(self, tick_num: int, input_type: InputType) -> Set[TaskBlock]:
         """The task graph will accept tick_num ticks.
 
         Args:
@@ -290,7 +291,7 @@ class TaskGraph():
         activated_tasks = set()
         for input_task_id in self._inputs:
             input_task = self._nodes[input_task_id]
-            input_task.fire(tick_num, interval)
+            input_task.fire(tick_num, input_type)
             for next_task in input_task.out_tasks:
                 if next_task.activated:
                     activated_tasks.add(next_task)

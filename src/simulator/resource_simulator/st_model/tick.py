@@ -2,11 +2,12 @@ from typing import Callable
 
 
 class Tick():
-    def __init__(self, task_id: int, iteration: int = 0, time: int = 0, callback: Callable = None) -> None:
+    def __init__(self, task_id: int, iteration: int = 0, time: int = 0, callback: Callable = None, start_callback: Callable = None) -> None:
         self.task_id = task_id
         self.iteration = iteration
         self.time = time
         self.callback = callback
+        self.start_callback = start_callback
         
     def __str__(self):
         return 'tick' + str(self.task_id) + '.' + str(self.iteration)

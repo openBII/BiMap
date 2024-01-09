@@ -35,10 +35,12 @@ class CTaskBlock(TaskBlock):
             tick = Tick(self._id, iteration, time)
             edge.add_tick(tick)
 
-    def callback(self, time: int, consumed_ticks: List[Tick]):
+    def callback(self, time: int, consumed_ticks: List[Tick], duration: int):
         for tick in consumed_ticks:
             if tick.callback is not None:
                 tick.callback(tick.task_id, tick.iteration, time)
+            if tick.start_callback is not None:
+                tick.start_callback(tick.task_id, tick.iteration, time - duration)
 
     def consume(self) -> Tuple[int, int, List[Tick]]:
         # 处理一下没有输入边的情况

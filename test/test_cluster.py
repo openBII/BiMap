@@ -10,7 +10,7 @@ from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
 from src.simulator.resource_simulator.factory.cluster_factory import ClusterFactory
 from top.config import GlobalConfig
 from src.simulator.resource_simulator.st_model.st_coord import Coord, MLCoord
-from src.simulator.resource_simulator.input_type import InputType
+from src.simulator.task_rabbit.task_model.input_type import InputType
 
 
 # Construct a task graph
@@ -68,8 +68,7 @@ for level3_count in range(GlobalConfig.GroupLevel3['GROUP2_NUM']):
             st_env.put_in(ddr_ml_coord, output_task.id)
 
 # Simulate
-# TODO: 加个流水输入的开关
 # st_env.simulate(2, input_type=InputType.BATCH)
-st_env.simulate(2, input_type=InputType.PIPELINE, interval=10)
+st_env.simulate(2, input_type=InputType.PIPELINE)
 print(task_graph)
 

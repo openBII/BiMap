@@ -148,7 +148,7 @@ class ChipPoint(STPoint):
                 if self._pc >= len(self._tasks):
                     self._pc = 0
                 # TODO: 计算如果可以和访存流水如何计算存储任务块的存活时间
-                task.callback(self.compute_recorder.max_time, consumed_ticks)
+                task.callback(self.compute_recorder.max_time, consumed_ticks, duration)
                 task.fire(iteration, self.compute_recorder.max_time)
                 return True, task
             else:
@@ -187,9 +187,12 @@ class DDRPoint(STPoint):
                     self.memory_recorder.record(task_id, iteration, start_time, duration)
                     return True, task
                 else:
-                    start_time, available_time, iteration = task.consume()
+                    start_time, available_time, iteration, input_flag = task.consume()
                     self.memory_recorder.record(task_id, iteration, start_time, 0)
-                    task.fire(iteration, available_time, self.memory_recorder.update)
+                    if input_flag:
+                        task.fire(iteration, available_time, self.memory_recorder.update, self.memory_recorder.update_start_time)
+                    else:
+                        task.fire(iteration, available_time, self.memory_recorder.update)
                     return True, task
         return False, None
         

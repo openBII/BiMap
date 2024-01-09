@@ -23,7 +23,7 @@ from src.simulator.resource_simulator.evaluation_model.evaluation import MemoryE
 from src.simulator.task_rabbit.task_checker.checker import TaskChecker
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord
 from src.simulator.resource_simulator.scheduler import Scheduler
-from src.simulator.resource_simulator.input_type import InputType
+from src.simulator.task_rabbit.task_model.input_type import InputType
 
 
 
@@ -313,14 +313,8 @@ class STEnv():
         self._actor.connect(src_task, src_index, src_info, dst_task,
                             dst_index, dst_info)
 
-    def simulate(self, tick_num: int, input_type: InputType, interval: int = None):
-        if input_type == InputType.BATCH:
-            assert interval is None
-        elif input_type == InputType.PIPELINE:
-            assert interval is not None
-        else:
-            raise ValueError("Unsupported input type")
-        activated_tasks = self._task_graph.input(tick_num, interval)
+    def simulate(self, tick_num: int, input_type: InputType):
+        activated_tasks = self._task_graph.input(tick_num, input_type)
         # 初始化scheduler，传入activated_tasks
         scheduler = Scheduler(self._st_matrix, self._context, activated_tasks)
         while not scheduler.completed():

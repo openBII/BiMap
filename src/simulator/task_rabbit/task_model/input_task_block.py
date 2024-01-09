@@ -1,6 +1,3 @@
-from copy import copy
-
-
 from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.task_rabbit.task_model.shape import Shape
@@ -8,6 +5,7 @@ from src.simulator.task_rabbit.task_model.storage import Storage
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from src.simulator.resource_simulator.st_model.tick import Tick
+from src.simulator.task_rabbit.task_model.input_type import InputType
 
 
 class InputTaskBlock(TaskBlock):
@@ -25,17 +23,13 @@ class InputTaskBlock(TaskBlock):
     def accept(self, visitor):
         visitor.visit_INPUT(self)
 
-    def fire(self, tick_num: int, interval: int = None):
-        if interval is not None:
-            for i in range(tick_num):
-                for edge in self._output_edges:
-                    tick = Tick(self._id, i, 0 + i * interval)
-                    edge.add_tick(tick)
-        else:
-            for i in range(tick_num):
-                for edge in self._output_edges:
-                    tick = Tick(self._id, i, 0)
-                    edge.add_tick(tick)
+    def fire(self, tick_num: int, input_type: InputType):
+        for i in range(tick_num):
+            for edge in self._output_edges:
+                tick = Tick(self._id, i, 0)
+                if input_type == InputType.PIPELINE and i != 0:
+                    tick.start_callback = True
+                edge.add_tick(tick)
 
     # def copy_like(self) -> TaskBlock:
     #     new_task_block = InputTaskBlock(copy(self.shape),
