@@ -28,7 +28,7 @@ class STPoint():
     def get_tasks(self):
         return self._tasks
 
-    def proceed(self, tick: Tick):
+    def process(self, tick: Tick):
         self._ticks.append(tick)
         
         # 如果第一个task没有触发
@@ -134,7 +134,7 @@ class ChipPoint(STPoint):
     def router_send(self):
         self._router_send = {}
         
-    def proceed(self, task_id: int):
+    def process(self, task_id: int):
         # Computational task
         if task_id in [task.id for task in self._tasks]:
             if self._tasks[self._pc].id == task_id:
@@ -179,7 +179,7 @@ class DDRPoint(STPoint):
         self.router_recieve_recorder = RouterRecorder()
         self.router_send_recorder = RouterRecorder()
 
-    def proceed(self, task_id: int):
+    def process(self, task_id: int):
         for task in self._tasks:
             if task_id == task.id:
                 if isinstance(task, OutputTaskBlock):

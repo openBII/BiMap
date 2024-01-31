@@ -51,8 +51,12 @@ class MLCoord(tuple):
         return MLCoord(*self[:-1])
 
     @property
-    def top_coord(self):
+    def top_coord(self) -> Coord:
         return self[0]
+    
+    @property
+    def bottom_coord(self) -> Coord:
+        return self[-1]
 
     def __str__(self) -> str:
         return super().__str__().replace(', ', '->')
@@ -76,4 +80,3 @@ class MLCoord(tuple):
     #         return self
 
     #     return self + (math.inf, ) * (target_level - self.level)
-

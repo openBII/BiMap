@@ -8,6 +8,7 @@ ActionModel 类负责各种动作的响应
 from copy import deepcopy
 import logging
 from typing import List, Union
+from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.task_rabbit.task_model.bias_type import BiasType
 from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
 from src.simulator.task_rabbit.task_model.shape import Shape
@@ -381,3 +382,7 @@ class ActionModel():
                                   source_position=src_info.position,
                                   destination_position=dst_info.position,
                                   packet_shape=src_info.size)
+
+    def map_edge(self, edge: Edge, path: List[MLCoord]):
+        self._st_matrix.add_edge(edge, path)
+        self._context.put_edge_to(path, edge)

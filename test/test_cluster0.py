@@ -27,9 +27,9 @@ task_graph.add_node(storage_task)
 task_graph.add_node(input_task)
 task_graph.add_node(output_task)
 
-task_graph.connect(storage_task.id, compute_task.id)
+edge0 = task_graph.connect(storage_task.id, compute_task.id)
 task_graph.connect(input_task.id, storage_task.id)
-task_graph.connect(compute_task.id, output_task.id)
+edge1 = task_graph.connect(compute_task.id, output_task.id)
 
 task_graph.topologize()
 
@@ -68,7 +68,7 @@ for level3_count in range(GlobalConfig.GroupLevel3['GROUP2_NUM']):
             st_env.put_in(ddr_ml_coord, output_task.id)
 
 # Simulate
-# st_env.simulate(2, input_type=InputType.BATCH)
-st_env.simulate(2, input_type=InputType.PIPELINE)
+st_env.simulate(2, input_type=InputType.BATCH)
+# st_env.simulate(2, input_type=InputType.PIPELINE)
 print(task_graph)
 

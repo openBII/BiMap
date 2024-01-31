@@ -5,26 +5,29 @@
 StMatrix类是一种自定义的list，表示一个时空矩阵，保存STPoint
 具体的说，在tianjicX架构中，表示一个Core model
 """
-
+import heapq
+from typing import Dict, List, Union
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
-
 from src.simulator.resource_simulator.st_model.st_point import STPoint
 from src.simulator.resource_simulator.st_model.matrix_config import MatrixConfig
+from src.simulator.task_rabbit.task_model.edge import Edge
+from src.simulator.resource_simulator.evaluation_model.evaluator import CommunicationEvaluator
 
 
 # 为什么不选择直接继承dict的方式
 class STMatrix():
-    
-    def __init__(self, dim,  space_level=0):
-
-        # {key : STMatrix} or {key : STPoint}
+    def __init__(self, dim, space_level=0, evaluator: CommunicationEvaluator = None):
+        # {key: STMatrix} or {key: STPoint}
         # TODO: 改成OrderedDict
-        self._container = {}
+        self._container: Dict[MLCoord, Union[STMatrix, STPoint]] = {}
 
         self.dim = dim  # 本层次的维度
         self._space_level = space_level
         
         self.config = MatrixConfig()
+
+        self._edge_map: Dict[Edge, List[MLCoord]] = {}
+        self.evaluator = evaluator
 
     def __getitem__(self, ml_coord: MLCoord):
         """
@@ -191,6 +194,45 @@ class STMatrix():
     def __iter__(self):
         for key, item in self._container.items():
             yield key, item
+
+    @property
+    def edge_map(self):
+        return self._edge_map
+
+    def add_edge(self, edge: Edge, path: List[MLCoord]):
+        assert len(path) != 0, "unmapped edge"
+        coord_level = path[0].level
+        if coord_level == 1:
+            self._edge_map.update({edge: path})
+        else:
+            inner_matrix = self._container[path[0].top_coord]
+            inner_path = []
+            for coord in path:
+                inner_path.append(coord.inner_coord)
+            inner_matrix.add_edge(edge, inner_path)
+
+    def process(self, edges: List[Edge]) -> List[Edge]:
+        # 每个iteration会将self.evaluator.edge_map中的hop信息消耗掉
+        # XXX(huanyu): 可以考虑用循环队列
+        if len(self.evaluator.edge_map) == 0:
+            self.evaluator.create_all_edge_map(self._edge_map)
+        for edge in edges:
+            if self.evaluator.edge_not_mapped(edge):
+                self.evaluator.create_edge_map(edge, self.edge_map[edge])
+        start_time_heap = []
+        tick_dict = {}
+        for edge in edges:
+            tick = edge.consume_tick()
+            tick_dict.update({edge: tick})
+            heapq.heappush(start_time_heap, (tick.time, (edge, tick.iteration)))
+        finished_edges, finish_time = self.evaluator.eval(start_time_heap)
+        for edge in edges:
+            tick = tick_dict[edge]
+            edge.fire(tick, finish_time)
+        for edge in finished_edges:
+            edges.remove(edge)
+        return edges
+
 
 # st_matrix = STMatrix()
 # s_coord = Coord((1, 2, 3, 4))

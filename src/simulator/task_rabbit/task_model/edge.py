@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import List
 from queue import Queue
+from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 
 from src.simulator.task_rabbit.task_model.task_block_state import TaskState
 from src.simulator.task_rabbit.task_model.shape import Shape
@@ -79,6 +80,14 @@ class Edge():
         return id(self)
 
     @property
+    def flux(self) -> int:
+        # TODO(huanyu): 当前的简化版本没有考虑索引
+        if TaskBlockType.is_storage_task(self._in_task.task_type):
+            return self._in_task.shape.volume
+        else:
+            return self._out_task.shape.volume
+
+    @property
     def in_task(self):
         return self._in_task
 
@@ -136,6 +145,15 @@ class Edge():
     def consume_tick(self) -> Tick:
         assert not self._ticks.empty()
         return self._ticks.get()
+
+    def fire(self, tick: Tick, time: int):
+        tick.time = time
+        # XXX(huanyu): 很麻烦需要把队列里的元素一个一个加回去
+        ticks = Queue()
+        ticks.put(tick)
+        while not self._ticks.empty():
+            ticks.put(self._ticks.get())
+        self._ticks = ticks
 
     def __str__(self):
         return str(self._in_task) + '-->' + str(self._out_task)

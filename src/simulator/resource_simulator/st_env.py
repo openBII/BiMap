@@ -24,7 +24,7 @@ from src.simulator.task_rabbit.task_checker.checker import TaskChecker
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord
 from src.simulator.resource_simulator.scheduler import Scheduler
 from src.simulator.task_rabbit.task_model.input_type import InputType
-
+from src.simulator.task_rabbit.task_model.edge import Edge
 
 
 class STEnv():
@@ -313,12 +313,14 @@ class STEnv():
         self._actor.connect(src_task, src_index, src_info, dst_task,
                             dst_index, dst_info)
 
+    def map_edge(self, edge: Edge, path: List[MLCoord]):
+        self._actor.map_edge(edge, path)
+
     def simulate(self, tick_num: int, input_type: InputType):
         activated_tasks = self._task_graph.input(tick_num, input_type)
         # 初始化scheduler，传入activated_tasks
-        scheduler = Scheduler(self._st_matrix, self._context, activated_tasks)
-        while not scheduler.completed():
-            scheduler.schedule()
+        scheduler = Scheduler(self._st_matrix, self._context, self._task_graph, activated_tasks)
+        scheduler.schedule()
 
     # State control
     def undo(self):
