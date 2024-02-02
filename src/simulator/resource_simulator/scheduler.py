@@ -4,6 +4,7 @@ from ordered_set import OrderedSet
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
 from src.simulator.resource_simulator.st_context import STContext
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
+from src.simulator.task_rabbit.task_model.vtask_block import VTaskBlock
 from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
 
 
@@ -61,7 +62,13 @@ class Scheduler():
                     if st_point is None:
                         raise Exception("st_point is None")
                     # 硬件处理当前任务
-                    state, task = st_point.process(task_id)
+                    task = self._task_graph.get_node(task_id)
+                    if isinstance(task, VTaskBlock):
+                        ticks = task.consume()
+                        task.fire(ticks)
+                        state = True
+                    else:
+                        state, task = st_point.process(task_id)
                     self._activated_task_id.update({task_id: state})
                     if state:
                         FLAG = True

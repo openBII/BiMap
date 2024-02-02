@@ -200,7 +200,6 @@ class STMatrix():
         return self._edge_map
 
     def add_edge(self, edge: Edge, path: List[MLCoord]):
-        assert len(path) != 0, "unmapped edge"
         coord_level = path[0].level
         if coord_level == 1:
             self._edge_map.update({edge: path})

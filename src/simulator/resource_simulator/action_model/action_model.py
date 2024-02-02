@@ -10,9 +10,12 @@ import logging
 from typing import List, Union
 from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.task_rabbit.task_model.bias_type import BiasType
+from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
 from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
+from src.simulator.task_rabbit.task_model.vtask_block import VTaskBlock
+from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
 from src.simulator.resource_simulator.st_context import STContext
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
 from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
@@ -384,5 +387,94 @@ class ActionModel():
                                   packet_shape=src_info.size)
 
     def map_edge(self, edge: Edge, path: List[MLCoord]):
-        self._st_matrix.add_edge(edge, path)
-        self._context.put_edge_to(path, edge)
+        # 加入虚拟任务结点保证每条边上的所有坐标都在同一空间层次
+        assert len(path) != 0, "Unmapped edge"
+        if len(path) == 1:
+            self._st_matrix.add_edge(edge, path)
+            self._context.put_edge_to(path, edge)
+        else:
+            IDGenerator.set_base_task_id(self._task_graph)
+            task0: TaskBlock = edge.in_task
+            task1 = None
+            new_path = []
+            for i in range(len(path) - 1):
+                ml_coord0 = path[i]
+                ml_coord1 = path[i + 1]
+                new_path.append(ml_coord0)
+                if ml_coord1.level != ml_coord0.level:
+                    task1 = VTaskBlock(IDGenerator.get_next_task_id())
+                    new_edge = Edge(in_task=task0, out_task=task1)
+                    self._task_graph.add_node(task1)
+                    task1.add_input_edge(new_edge)
+                    if edge in task0.output_edges:
+                        task0.output_edges.remove(edge)
+                    task0.add_output_edge(new_edge)
+                    task0 = task1
+                    # 低级到高级
+                    if ml_coord1.level < ml_coord0.level:
+                        self._st_matrix.add_edge(new_edge, new_path)
+                        self._context.put_edge_to(new_path, new_edge)
+                        new_ml_coord = ml_coord0
+                        while new_ml_coord.level != ml_coord1.level:
+                            new_ml_coord = new_ml_coord.outer_coord
+                        new_path = [new_ml_coord]
+                    # 高级到低级
+                    else:
+                        new_ml_coord = ml_coord1
+                        while new_ml_coord.level != ml_coord0.level:
+                            new_ml_coord = new_ml_coord.outer_coord
+                        new_path.append(new_ml_coord)
+                        self._st_matrix.add_edge(new_edge, new_path)
+                        self._context.put_edge_to(new_path, new_edge)
+                        new_path = []
+            if task1 is not None:
+                new_edge = Edge(in_task=task1, out_task=edge.out_task)
+                task1.add_output_edge(new_edge)
+                new_path.append(ml_coord1)
+                out_task: TaskBlock = edge.out_task
+                out_task.input_edges.remove(edge)
+                out_task.add_input_edge(new_edge)
+                self._st_matrix.add_edge(new_edge, new_path)
+                self._context.put_edge_to(new_path, new_edge)
+                del edge
+                del path
+            # 说明path上所有坐标都在同一层级
+            else:
+                self._st_matrix.add_edge(edge, path)
+                self._context.put_edge_to(path, edge)
+
+
+if __name__ == "__main__":
+    from src.simulator.resource_simulator.st_model.st_point import STPoint
+
+
+    task_graph = TaskGraph()
+    task0 = VTaskBlock(0)
+    task1 = VTaskBlock(1)
+    edge = Edge(task0, task1)
+    task0.add_output_edge(edge)
+    task1.add_input_edge(edge)
+    task_graph.add_node(task0)
+    task_graph.add_node(task1)
+    st_matrix = STMatrix(dim=2, space_level=2)
+    st_matrix_0_0 = STMatrix(dim=1, space_level=1)
+    st_matrix_0_1 = STMatrix(dim=1, space_level=1)
+    st_matrix_1_1 = STMatrix(dim=1, space_level=1)
+    st_matrix_1_0 = STMatrix(dim=1, space_level=1)
+    st_point_0_0_0 = STPoint()
+    st_point_0_0_1 = STPoint()
+    st_point_1_0_0 = STPoint()
+    st_point_1_0_1 = STPoint()
+    st_matrix_0_0.add_element(coord=Coord(0), element=st_point_0_0_0)
+    st_matrix_0_0.add_element(coord=Coord(1), element=st_point_0_0_1)
+    st_matrix_1_0.add_element(coord=Coord(0), element=st_point_1_0_0)
+    st_matrix_1_0.add_element(coord=Coord(1), element=st_point_1_0_1)
+    st_matrix.add_element(coord=Coord((0, 0)), element=st_matrix_0_0)
+    st_matrix.add_element(coord=Coord((0, 1)), element=st_matrix_0_1)
+    st_matrix.add_element(coord=Coord((1, 1)), element=st_matrix_1_1)
+    st_matrix.add_element(coord=Coord((1, 0)), element=st_matrix_1_0)
+    st_context = STContext()
+    actor = ActionModel(task_graph, st_matrix, st_context)
+    path = [MLCoord(Coord((0, 0)), Coord(0)), MLCoord(Coord((0, 0)), Coord(1)), MLCoord(Coord((0, 1))), MLCoord(Coord((1, 1))), MLCoord(Coord((1, 0)), Coord(1)), MLCoord(Coord((1, 0)), Coord(0))]
+    actor.map_edge(edge=edge, path=path)
+    
