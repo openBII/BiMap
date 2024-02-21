@@ -164,7 +164,7 @@ class TaskBlock(ABC):
     def activated(self):
         """If all the input edges of this task block are activated, this task block will be activated.
         """
-        return all(map(lambda x: x.activated, self._input_edges))
+        return all(map(lambda x: x.output_activated, self._input_edges))
 
     # @property
     # def all_in_tasks(self) -> Set:

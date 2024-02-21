@@ -30,6 +30,7 @@ class InputTaskBlock(TaskBlock):
                 if input_type == InputType.PIPELINE and i != 0:
                     tick.start_callback = True
                 edge.add_tick(tick)
+                edge._fire(edge._consume())
 
     # def copy_like(self) -> TaskBlock:
     #     new_task_block = InputTaskBlock(copy(self.shape),

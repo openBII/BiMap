@@ -12,6 +12,7 @@ from src.simulator.resource_simulator.st_model.st_point import STPoint
 from src.simulator.resource_simulator.st_model.matrix_config import MatrixConfig
 from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.resource_simulator.evaluation_model.evaluator import CommunicationEvaluator
+from src.simulator.resource_simulator.st_model.tick import Tick
 
 
 # 为什么不选择直接继承dict的方式
@@ -211,25 +212,30 @@ class STMatrix():
             inner_matrix.add_edge(edge, inner_path)
 
     def process(self, edges: List[Edge]) -> List[Edge]:
-        # 每个iteration会将self.evaluator.edge_map中的hop信息消耗掉
-        # XXX(huanyu): 可以考虑用循环队列
-        if len(self.evaluator.edge_map) == 0:
-            self.evaluator.create_all_edge_map(self._edge_map)
-        for edge in edges:
-            if self.evaluator.edge_not_mapped(edge):
-                self.evaluator.create_edge_map(edge, self.edge_map[edge])
         start_time_heap = []
-        tick_dict = {}
+        tick_dict: Dict[Edge, List[Tick]] = {}
         for edge in edges:
-            tick = edge.consume_tick()
-            tick_dict.update({edge: tick})
+            tick = edge._consume()  # 同一条边的不同iteration会在edges中多次出现
+            if edge in tick_dict:
+                tick_dict[edge].append(tick)
+            else:
+                tick_dict.update({edge: [tick]})
             heapq.heappush(start_time_heap, (tick.time, (edge, tick.iteration)))
+        for edge in tick_dict:
+            ticks = tick_dict[edge]
+            for tick in ticks:
+                if self.evaluator.edge_not_mapped((edge, tick.iteration)):
+                    self.evaluator.create_edge_map((edge, tick.iteration), self.edge_map[edge])
         finished_edges, finish_time = self.evaluator.eval(start_time_heap)
         for edge in edges:
-            tick = tick_dict[edge]
-            edge.fire(tick, finish_time)
+            ticks = tick_dict[edge]
+            tick = ticks.pop(0)
+            if (edge, tick.iteration) in finished_edges:
+                edge._fire(tick, finish_time)
+            else:
+                edge._put_back(tick, finish_time)
         for edge in finished_edges:
-            edges.remove(edge)
+            edges.remove(edge[0])
         return edges
 
 

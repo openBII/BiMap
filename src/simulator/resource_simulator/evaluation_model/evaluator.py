@@ -1,7 +1,7 @@
 from typing import Dict, Tuple, List
 from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
-from src.simulator.resource_simulator.st_model.hop import Hop
+from src.simulator.resource_simulator.st_model.hop import Hop, HopDict
 import heapq
 from enum import Enum
 from src.simulator.resource_simulator.evaluation_model.recorder import CommunicationRecorder, CommunicationRecord
@@ -32,25 +32,22 @@ class Evaluator():
 
 
 class CommunicationEvaluator(Evaluator):
-    def __init__(self, bandwidth: float, edge_map: Dict[Edge, List[MLCoord]] = None) -> None:
+    def __init__(self, bandwidth: float) -> None:
         super().__init__()
         self.bandwidth = bandwidth
-        self.edge_map: Dict[Edge, List[Hop]] = {}
-        if edge_map is not None:
-            self.create_edge_map(edge_map)
+        self.edge_map: Dict[Tuple[Edge, int], List[Hop]] = {}
         # results: {(Edge, iteration, Hop): CommunicationRecord}
         self.recorder = CommunicationRecorder()
 
-    def edge_not_mapped(self, edge: Edge):
-        path = self.edge_map[edge]
-        return len(path) == 0
+    def edge_not_mapped(self, edge: Tuple[Edge, int]):
+        return not edge in self.edge_map
 
     def create_all_edge_map(self, edge_map: Dict[Edge, List[MLCoord]]):
         for edge in edge_map:
             ml_coords = edge_map[edge]
             self.create_edge_map(edge, ml_coords)
 
-    def create_edge_map(self, edge: Edge, ml_coords: List[MLCoord]):
+    def create_edge_map(self, edge: Tuple[Edge, int], ml_coords: List[MLCoord]):
         src_ml_coord = ml_coords[0]
         for i in range(1, len(ml_coords)):
             dst_ml_coord = ml_coords[i]
@@ -105,7 +102,7 @@ class CommunicationEvaluator(Evaluator):
         - finished_edges: [Edge]
         - finish_time: float
         '''
-        finished_edges: List[Edge] = []
+        finished_edges: List[Tuple[Edge, int]] = []
         while len(finished_edges) == 0:  # 每次评估一个hop
             min_start_time, min_edge = heapq.heappop(edge_heap)  # 最先可以开始的边
             if len(edge_heap) != 0:
@@ -116,11 +113,18 @@ class CommunicationEvaluator(Evaluator):
             min_edges = [min_edge]  # 所有同一时间且最先开始的边
             while second_min_start_time == min_start_time:
                 min_edges.append(second_min_edge)
-                second_min_start_time, second_min_edge = heapq.heappop(edge_heap)
+                if len(edge_heap) != 0:
+                    second_min_start_time, second_min_edge = heapq.heappop(edge_heap)
+                else:
+                    break
+            if second_min_start_time != min_start_time:
+                heapq.heappush(edge_heap, (second_min_start_time, second_min_edge))
+            else:
+                second_min_start_time = float('inf')
             # 对找到的最先开始的边根据第一个Hop是否重合进行分组
-            hop_dict: Dict[Hop, List[Tuple[Edge, int]]] = {}
+            hop_dict = HopDict()
             for edge in min_edges:
-                first_hop = self.edge_map[edge[0]].pop(0)
+                first_hop = self.edge_map[edge].pop(0)
                 if not first_hop in hop_dict:
                     hop_dict[first_hop] = [edge]
                 else:
@@ -156,13 +160,11 @@ class CommunicationEvaluator(Evaluator):
                         record.percent = 1
                     # 真正的评估结果
                     self.recorder.update((*edge, hop), record)
-                    if record.percent == 1 and len(self.edge_map[edge[0]]) == 0:  # 某edge评估结束
-                        finished_edges.append(edge[0])
+                    if record.percent == 1 and len(self.edge_map[edge]) == 0:  # 某edge评估结束
+                        finished_edges.append(edge)
                         # 评估的结束时间
                         finish_time = record.end_time
                     else:
                         # 将未完成的边重新加入堆中
                         heapq.heappush(edge_heap, (record.end_time, edge))
-            if second_min_edge is not None:
-                heapq.heappush(edge_heap, (second_min_start_time, second_min_edge))
         return finished_edges, finish_time

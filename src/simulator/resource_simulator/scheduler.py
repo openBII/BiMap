@@ -1,18 +1,18 @@
 from collections import OrderedDict
 from typing import Set
-from ordered_set import OrderedSet
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
 from src.simulator.resource_simulator.st_context import STContext
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.task_rabbit.task_model.vtask_block import VTaskBlock
 from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
+from src.simulator.task_rabbit.task_model.input_type import InputType
 
 
 class Scheduler():
     def __init__(self, st_matrix: STMatrix, st_context: STContext, task_graph: TaskGraph, initial_tasks: Set[TaskBlock] = None) -> None:
         self._activated_task_id = OrderedDict()
         self.init(initial_tasks)
-        self._activated_edges = OrderedSet()
+        self._activated_edges = []
         self._st_matrix = st_matrix
         self._st_context = st_context
         self._task_graph = task_graph
@@ -41,15 +41,30 @@ class Scheduler():
     
     def add_activated_edges(self, task: TaskBlock):
         for edge in task.output_edges:
-            if edge.activated:
-                self._activated_edges.add(edge)
+            if edge.input_activated:
+                self._activated_edges.append(edge)
 
-    def schedule(self):
+    def schedule(self, input_type: InputType):
         # 每次处理完所有激活的任务后处理边
+        if input_type == InputType.BATCH:
+            self.schedule_initial_tasks()
+        self.schedule_edges()
+        self.add_activated_tasks()
         while len(self._activated_task_id) != 0:
             self.schedule_tasks()
             self.schedule_edges()
             self.add_activated_tasks()
+
+    def schedule_initial_tasks(self):
+        for task_id in self._activated_task_id:
+            ml_coord = self._st_context.get_ml_coord(task_id)
+            st_point = self._st_matrix.get_element(ml_coord)
+            while True:
+                _, task = st_point.process(task_id)
+                self.add_activated_edges(task)
+                if not task.activated:
+                    break
+            self._activated_task_id.update({task_id: True})
 
     def schedule_tasks(self):
         # 对所有activated的任务不断遍历直到没有任务可以被完成
@@ -88,7 +103,7 @@ class Scheduler():
                     edges = edge_dict[coord]
                     hardware = self._st_matrix.get_element(coord)
                     unfinished_edges.extend(hardware.process(edges))
-        self._activated_edges = OrderedSet(unfinished_edges)
+        self._activated_edges = unfinished_edges
 
     def classify_edges(self):
         '''

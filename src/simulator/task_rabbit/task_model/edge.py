@@ -72,7 +72,8 @@ class Edge():
         if out_position is None:
             out_position = out_task.shape
             
-        self._ticks: Queue[Tick] = Queue()
+        self._input_ticks: Queue[Tick] = Queue()
+        self._output_ticks: Queue[Tick] = Queue()
 
 
     @property
@@ -112,8 +113,12 @@ class Edge():
         self._rearrange_info = other
 
     @property
-    def activated(self):
-        return not self._ticks.empty()
+    def input_activated(self):
+        return not self._input_ticks.empty()
+
+    @property
+    def output_activated(self):
+        return not self._output_ticks.empty()
         
     def is_enable(self) -> bool:
         return self._state == TaskState.ENABLE
@@ -140,20 +145,28 @@ class Edge():
         self._state = TaskState.DISABLE
         
     def add_tick(self, tick: Tick):
-        self._ticks.put(tick)
+        self._input_ticks.put(tick)
         
     def consume_tick(self) -> Tick:
-        assert not self._ticks.empty()
-        return self._ticks.get()
+        assert not self._output_ticks.empty()
+        return self._output_ticks.get()
+    
+    def _consume(self) -> Tick:
+        assert not self._input_ticks.empty()
+        return self._input_ticks.get()
 
-    def fire(self, tick: Tick, time: int):
+    def _fire(self, tick: Tick, time: int = None):
+        if time is not None:
+            tick.time = time
+        self._output_ticks.put(tick)
+
+    def _put_back(self, tick: Tick, time: int = None):
         tick.time = time
-        # XXX(huanyu): 很麻烦需要把队列里的元素一个一个加回去
         ticks = Queue()
         ticks.put(tick)
-        while not self._ticks.empty():
-            ticks.put(self._ticks.get())
-        self._ticks = ticks
+        while not self._input_ticks.empty():
+            ticks.put(self._input_ticks.get())
+        self._input_ticks = ticks
 
     def __str__(self):
         return str(self._in_task) + '-->' + str(self._out_task)

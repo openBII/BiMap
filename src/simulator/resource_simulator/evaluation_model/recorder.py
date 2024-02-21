@@ -63,11 +63,17 @@ class CommunicationRecorder(Recorder):
         # recorder: {(Edge, iteration, Hop): CommunicationRecord}
         self.recorder_time: Dict[Tuple, CommunicationRecord] = {}
 
-    def __contains__(self, key: Tuple):
-        return key in self.recorder_time
+    def __contains__(self, __key: Tuple):
+        for key in self.recorder_time:
+            if __key[0] == key[0] and __key[1] == key[1] and __key[2].src == key[2].src and __key[2].dst == key[2].dst:
+                return True
+        return False
     
-    def __getitem__(self, key: Tuple):
-        return self.recorder_time[key]
+    def __getitem__(self, __key: Tuple):
+        for key in self.recorder_time:
+            if __key[0] == key[0] and __key[1] == key[1] and __key[2].src == key[2].src and __key[2].dst == key[2].dst:
+                return self.recorder_time[key]
+        return self.recorder_time[__key]
     
     def update(self, key: Tuple, value: CommunicationRecord):
         self.recorder_time.update({key: value})
