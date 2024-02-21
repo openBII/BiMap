@@ -320,7 +320,7 @@ class STEnv():
         activated_tasks = self._task_graph.input(tick_num, input_type)
         # 初始化scheduler，传入activated_tasks
         scheduler = Scheduler(self._st_matrix, self._context, self._task_graph, activated_tasks)
-        scheduler.schedule(input_type)
+        scheduler.schedule()
 
     # State control
     def undo(self):

@@ -44,27 +44,12 @@ class Scheduler():
             if edge.input_activated:
                 self._activated_edges.append(edge)
 
-    def schedule(self, input_type: InputType):
+    def schedule(self):
         # 每次处理完所有激活的任务后处理边
-        if input_type == InputType.BATCH:
-            self.schedule_initial_tasks()
-        self.schedule_edges()
-        self.add_activated_tasks()
         while len(self._activated_task_id) != 0:
             self.schedule_tasks()
             self.schedule_edges()
             self.add_activated_tasks()
-
-    def schedule_initial_tasks(self):
-        for task_id in self._activated_task_id:
-            ml_coord = self._st_context.get_ml_coord(task_id)
-            st_point = self._st_matrix.get_element(ml_coord)
-            while True:
-                _, task = st_point.process(task_id)
-                self.add_activated_edges(task)
-                if not task.activated:
-                    break
-            self._activated_task_id.update({task_id: True})
 
     def schedule_tasks(self):
         # 对所有activated的任务不断遍历直到没有任务可以被完成
@@ -76,18 +61,23 @@ class Scheduler():
                     st_point = self._st_matrix.get_element(ml_coord)
                     if st_point is None:
                         raise Exception("st_point is None")
-                    # 硬件处理当前任务
+                    # 硬件处理当前任务的所有能被处理的iteration
                     task = self._task_graph.get_node(task_id)
-                    if isinstance(task, VTaskBlock):
-                        ticks = task.consume()
-                        task.fire(ticks)
-                        state = True
-                    else:
-                        state, task = st_point.process(task_id)
-                    self._activated_task_id.update({task_id: state})
-                    if state:
-                        FLAG = True
-                        self.add_activated_edges(task)
+                    while True:
+                        if isinstance(task, VTaskBlock):
+                            ticks = task.consume()
+                            task.fire(ticks)
+                            state = True
+                        else:
+                            state, task = st_point.process(task_id)
+                        self._activated_task_id.update({task_id: state})
+                        if state:
+                            FLAG = True
+                            self.add_activated_edges(task)
+                        else:  # 当前任务后续iteration无法被处理
+                            break
+                        if not task.activated:  # 当前任务所有iteration均被处理完成
+                            break
             if not FLAG:
                 break
 
