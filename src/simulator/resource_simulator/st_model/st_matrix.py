@@ -231,7 +231,7 @@ class STMatrix():
             ticks = tick_dict[edge]
             tick = ticks.pop(0)
             if (edge, tick.iteration) in finished_edges:
-                edge._fire(tick, finish_time)
+                edge._fire(tick, finish_time, self.evaluator.recorder.correct_time)
             else:
                 edge._put_back(tick, finish_time)
         for edge in finished_edges:

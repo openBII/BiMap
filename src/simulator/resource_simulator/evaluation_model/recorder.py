@@ -1,5 +1,5 @@
 from typing import Dict, List, Tuple
-from src.simulator.task_rabbit.task_model.edge import Edge
+from src.simulator.resource_simulator.st_model.tick import Tick
 
 
 class Recorder():
@@ -46,7 +46,7 @@ class MemoryRecorder(Recorder):
 
     def update_start_time(self, id: int, iteration: int, start_time: int):
         # 如果当前存储块为直接从输入块获取数据，则开始时间为使用该存储的计算块开始计算的时间
-        if self.recorder_time[(id, iteration)][0] == 0:
+        if self.recorder_time[(id, iteration)][0] < start_time:
             self.recorder_time[(id, iteration)][0] = start_time
 
 
@@ -77,7 +77,18 @@ class CommunicationRecorder(Recorder):
     
     def update(self, key: Tuple, value: CommunicationRecord):
         self.recorder_time.update({key: value})
-        
+
+    def correct_time(self, tick: Tick, time: float):
+        assert time >= 0
+        start_time = float("inf")
+        for key in self.recorder_time:
+            if key[0] == tick.edge and key[1] == tick.iteration:
+                self.recorder_time[key].start_time += time
+                self.recorder_time[key].end_time += time
+                if start_time > self.recorder_time[key].start_time:
+                    start_time = self.recorder_time[key].start_time
+        tick.start_callback(tick.task_id, tick.iteration, start_time)
+
 
 class RouterRecorder(Recorder):
     def __init__(self, slot=1):

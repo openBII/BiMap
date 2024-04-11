@@ -8,6 +8,8 @@ class Tick():
         self.time = time
         self.callback = callback
         self.start_callback = start_callback
+        self.edge_callback: Callable = None
+        self.edge = None
         
     def __str__(self):
         return 'tick' + str(self.task_id) + '.' + str(self.iteration)

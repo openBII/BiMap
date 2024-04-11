@@ -15,7 +15,6 @@ from src.simulator.task_rabbit.task_model.input_type import InputType
 
 # Construct a task graph
 # TODO: 处理静态数据
-# TODO: 加入边映射
 task_graph = TaskGraph()
 shape = Shape(2048, 4096)
 input_task = InputTaskBlock(-1, Shape(nr=2048), Precision.FLOAT_16)
@@ -52,7 +51,6 @@ st_env.map_edge(edge0, [ddr_ml_coord1, chip_ml_coord0])
 st_env.map_edge(edge1, [chip_ml_coord0, ddr_ml_coord2])
 
 # Simulate
-st_env.simulate(2, input_type=InputType.BATCH)
-# st_env.simulate(2, input_type=InputType.PIPELINE)
+# st_env.simulate(2, input_type=InputType.BATCH)
+st_env.simulate(2, input_type=InputType.PIPELINE)
 print(task_graph)
-

@@ -39,8 +39,8 @@ class CTaskBlock(TaskBlock):
         for tick in consumed_ticks:
             if tick.callback is not None:
                 tick.callback(tick.task_id, tick.iteration, time)
-            if tick.start_callback is not None:
-                tick.start_callback(tick.task_id, tick.iteration, time - duration)
+            if tick.edge_callback is not None:
+                tick.edge_callback(tick, time - duration - tick.time)
 
     def consume(self) -> Tuple[int, int, List[Tick]]:
         # 处理一下没有输入边的情况

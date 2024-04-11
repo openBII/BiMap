@@ -1,8 +1,7 @@
 from enum import Enum
-from typing import List
+from typing import List, Callable
 from queue import Queue
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
-
 from src.simulator.task_rabbit.task_model.task_block_state import TaskState
 from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.resource_simulator.st_model.tick import Tick
@@ -155,9 +154,12 @@ class Edge():
         assert not self._input_ticks.empty()
         return self._input_ticks.get()
 
-    def _fire(self, tick: Tick, time: int = None):
+    def _fire(self, tick: Tick, time: int = None, callback: Callable = None):
         if time is not None:
             tick.time = time
+        if tick.start_callback is not None:
+            tick.edge_callback = callback
+            tick.edge = self
         self._output_ticks.put(tick)
 
     def _put_back(self, tick: Tick, time: int = None):
