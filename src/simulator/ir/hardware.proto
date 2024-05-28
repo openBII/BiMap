@@ -1,0 +1,112 @@
+// Copyright (C) OpenBII
+// Team: CBICR
+// SPDX-License-Identifier: Apache-2.0
+// See: https://spdx.org/licenses/
+
+syntax = "proto2";
+
+package tianjic_ir.hardware;
+
+
+message SpaceMatrix {
+  optional SpaceMatrixType type = 1;
+  repeated int32 dims = 2;  // dimensions of the container
+  repeated SpaceMatrixMapping matrix_dict = 2;
+  repeated SpacePointMapping point_dict = 3;
+  optional CommunicationNetwork network = 4;
+}
+
+message SpacePoint {
+  optional SpacePointType type = 1;
+  // attributes for various SpacePoints
+  repeated int32 array_dims = 2;  // dimensions of MAC array
+  optional SystolicArrayDataFlow dataflow = 3;  // dataflow on the systolic array
+  optional int32 vector_dim = 4;  // dimension of vector unit
+  optional int32 capacity = 5;  // memory capacity
+}
+
+message CommunicationNetwork {
+  optional Topology type = 1;
+  optional float bandwidth = 2;
+  optional AdjacencyMatrix matrix = 3;
+  repeated FlowControl flow_control = 4;
+  repeated RoutingAlgorithm routing = 5;
+  optional int32 num_virtual_channel = 6 [default = 1];
+}
+
+message SpaceMatrixMapping {
+  optional Coordinate coordinate = 1;
+  optional SpaceMatrix matrix = 2;
+}
+
+message SpacePointMapping {
+  optional Coordinate coordinate = 1;
+  optional SpacePoint point = 2;
+}
+
+message Coordinate {
+  repeated int32 values = 1;
+}
+
+message AdjacencyMatrix {
+  repeated int32 dims = 1;
+  repeated float values = 2;  // 0: no connection; Otherwise: bandwidth
+}
+
+enum SpaceMatrixType {
+  CORE = 0;
+  CHIPLET = 1;
+  PACKAGE = 2;
+  PCB = 3;
+  SERVER = 4;
+  CLUSTER = 5;
+}
+
+enum SpacePointType {
+  SYSTOLIC_ARRAY = 0;
+  CROSSBAR = 1;
+  CACHE = 2;
+  SCRATCHPAD = 3;
+  DRAM = 4;
+  VECTOR_UNIT = 5;
+  LOAD_STORE_UNIT = 6;
+  CORE = 7;
+  CHIPLET = 8;
+  PACKAGE = 9;
+  PCB = 10;
+  SERVER = 11;
+  CLUSTER = 12;
+}
+
+enum SystolicArrayDataFlow {
+  INPUT_STATIONARY = 0;
+  WEIGHT_STATIONARY = 1;
+  OUTPUT_STATIONARY = 2;
+  ROW_STATIONARY = 3;
+}
+
+enum Topology {
+  MESH = 0;
+  TORUS = 1;
+  CROSSBAR = 2;
+  RING = 3;
+  BUTTERFLY = 4;
+  CLOS = 5;
+  FATTREE = 6;
+}
+
+enum FlowControl {
+  CIRCUIT_SWITCHING = 0;
+  STORE_AND_FORWARD = 1;
+  VIRTUAL_CUT_THROUGH = 2;
+  WORMHOLE = 3;
+  BUBBLE = 4;  // bubble flow control + virtual cut through = deadlock-free
+}
+
+enum RoutingAlgorithm {
+  DIMENSION_ORDER_X_Y = 0;  // deterministic and deadlock-free
+  DIMENSION_ORDER_Y_X = 1;
+  VALIANT = 2;  // oblivious, can be used with dimension order routing
+  ADAPTIVE = 3;
+  MINIMAL = 4;  // minimal routing or not
+}
