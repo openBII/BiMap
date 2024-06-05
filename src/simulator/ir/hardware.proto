@@ -13,7 +13,7 @@ message SpaceMatrix {
   repeated int32 dims = 2;  // dimensions of the container
   repeated SpaceMatrixMapping matrix_dict = 2;
   repeated SpacePointMapping point_dict = 3;
-  optional CommunicationNetwork network = 4;
+  repeated CommunicationNetwork networks = 4;  // for heterogenous networks
 }
 
 message SpacePoint {
@@ -60,6 +60,7 @@ enum SpaceMatrixType {
   PCB = 3;
   SERVER = 4;
   CLUSTER = 5;
+  CONTAINER = 6;
 }
 
 enum SpacePointType {
@@ -93,6 +94,7 @@ enum Topology {
   BUTTERFLY = 4;
   CLOS = 5;
   FATTREE = 6;
+  STAR = 7;
 }
 
 enum FlowControl {
