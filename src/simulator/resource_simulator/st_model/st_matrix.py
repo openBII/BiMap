@@ -5,30 +5,41 @@
 StMatrix类是一种自定义的list，表示一个时空矩阵，保存STPoint
 具体的说，在tianjicX架构中，表示一个Core model
 """
-import heapq
 from typing import Dict, List, Union
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
 from src.simulator.resource_simulator.st_model.st_point import STPoint
-from src.simulator.resource_simulator.st_model.matrix_config import MatrixConfig
 from src.simulator.task_rabbit.task_model.edge import Edge
-from src.simulator.resource_simulator.evaluation_model.evaluator import CommunicationEvaluator
-from src.simulator.resource_simulator.st_model.tick import Tick
+from src.simulator.resource_simulator.st_model.space_point.communication_point import CommunicationPoint
 
 
 # 为什么不选择直接继承dict的方式
 class STMatrix():
-    def __init__(self, dim, space_level=0, evaluator: CommunicationEvaluator = None):
-        # {key: STMatrix} or {key: STPoint}
+    def __init__(self, dim: int, space_level: int, communication_networks: List[CommunicationPoint] = None):
         # TODO: 改成OrderedDict
         self._container: Dict[MLCoord, Union[STMatrix, STPoint]] = {}
 
-        self.dim = dim  # 本层次的维度
+        self.dim = dim  # Dimension of this level
         self._space_level = space_level
-        
-        self.config = MatrixConfig()
 
-        self._edge_map: Dict[Edge, List[MLCoord]] = {}
-        self.evaluator = evaluator
+        if communication_networks is None:
+            self.communication_networks = []
+        else:
+            self.communication_networks = communication_networks
+        # self.config = MatrixConfig()
+        # self.bandwidth = bandwidth
+        # self._edge_map: Dict[Edge, List[MLCoord]] = {}
+        # self.evaluator = CommunicationEvaluator(bandwidth)
+
+    def __repr__(self):
+        string = ''
+        for ml_coord in self._container:
+            string += repr(ml_coord) + ': ' + self._container[ml_coord].__class__.__name__ + ' {\n'
+            string += repr(self._container[ml_coord]) + '}\n'
+        for i, network in enumerate(self.communication_networks):
+            string += 'Communication Network {:d}'.format(i) + ': ' + network.__class__.__name__ + ' {\n'
+            string += repr(network) + '}\n'
+        return string
+        
 
     def __getitem__(self, ml_coord: MLCoord):
         """
@@ -109,6 +120,12 @@ class STMatrix():
         """
 
         pass
+
+    def add_communication_network(self, communication_network: CommunicationPoint):
+        """
+        Add a CommunicationPoint into communication_networks
+        """
+        self.communication_networks.append(communication_network)
         
     def add_task(self, ml_coord: MLCoord, task):
         """
@@ -196,48 +213,48 @@ class STMatrix():
         for key, item in self._container.items():
             yield key, item
 
-    @property
-    def edge_map(self):
-        return self._edge_map
+    # @property
+    # def edge_map(self):
+    #     return self._edge_map
 
-    def add_edge(self, edge: Edge, path: List[MLCoord]):
+    def add_edge(self, edge: Edge, path: List[MLCoord], network_id: int):
         coord_level = path[0].level
         if coord_level == 1:
-            self._edge_map.update({edge: path})
+            self.communication_networks[network_id]._edge_map.update({edge: path})
         else:
             inner_matrix = self._container[path[0].top_coord]
             inner_path = []
             for coord in path:
                 inner_path.append(coord.inner_coord)
-            inner_matrix.add_edge(edge, inner_path)
+            inner_matrix.add_edge(edge, inner_path, network_id)
 
-    def process(self, edges: List[Edge]) -> List[Edge]:
-        start_time_heap = []
-        tick_dict: Dict[Edge, List[Tick]] = {}
-        for edge in edges:
-            tick = edge._consume()  # 同一条边的不同iteration会在edges中多次出现
-            if edge in tick_dict:
-                tick_dict[edge].append(tick)
-            else:
-                tick_dict.update({edge: [tick]})
-            heapq.heappush(start_time_heap, (tick.time, (edge, tick.iteration)))
-        for edge in tick_dict:
-            ticks = tick_dict[edge]
-            for tick in ticks:
-                if self.evaluator.edge_not_mapped((edge, tick.iteration)):
-                    self.evaluator.create_edge_map((edge, tick.iteration), self.edge_map[edge])
-        finished_edges, finish_time = self.evaluator.eval(start_time_heap)
-        for edge in edges:
-            ticks = tick_dict[edge]
-            tick = ticks.pop(0)
-            if (edge, tick.iteration) in finished_edges:
-                edge._fire(tick, finish_time, self.evaluator.recorder.correct_time)
-            else:
-                edge._put_back(tick, finish_time)
-        for edge in finished_edges:
-            edges.remove(edge[0])
-        return edges
-
+    # def process(self, edges: List[Edge]) -> List[Edge]:
+    #     start_time_heap = []
+    #     tick_dict: Dict[Edge, List[Tick]] = {}
+    #     for edge in edges:
+    #         tick = edge._consume()  # 同一条边的不同iteration会在edges中多次出现
+    #         if edge in tick_dict:
+    #             tick_dict[edge].append(tick)
+    #         else:
+    #             tick_dict.update({edge: [tick]})
+    #         heapq.heappush(start_time_heap, (tick.time, (edge, tick.iteration)))
+    #     for edge in tick_dict:
+    #         ticks = tick_dict[edge]
+    #         for tick in ticks:
+    #             if self.evaluator.edge_not_mapped((edge, tick.iteration)):
+    #                 self.evaluator.create_edge_map((edge, tick.iteration), self.edge_map[edge])
+    #     finished_edges, finish_time = self.evaluator.eval(start_time_heap)
+    #     for edge in edges:
+    #         ticks = tick_dict[edge]
+    #         tick = ticks.pop(0)
+    #         if (edge, tick.iteration) in finished_edges:
+    #             edge._fire(tick, finish_time, self.evaluator.recorder.correct_time)
+    #         else:
+    #             edge._put_back(tick, finish_time)
+    #     for edge in finished_edges:
+    #         edges.remove(edge[0])
+    #     return edges
+    
 
 # st_matrix = STMatrix()
 # s_coord = Coord((1, 2, 3, 4))

@@ -1,0 +1,42 @@
+size = [2, 2]
+
+[network]
+topology = "mesh"
+bandwidth = 40
+
+[PCB.DRAM]
+capacity = 16  # GB
+
+[PCB.network]
+bandwidth = 100  # GB/s
+
+[PCB.chiplet]
+size = [2, 2]
+
+[PCB.chiplet.network]
+topology = "star"
+bandwidth = 2000  # GB/s
+
+[PCB.chiplet.shared_memory]
+capacity = 4096  # KB
+
+[PCB.chiplet.core.network]
+buffer2array_input = 10000  # GB/s
+buffer2array_weight = 10000
+array2buffer = 10000
+array2vector = 10000
+buffer2vector_input = 10000
+buffer2vector_params = 10000
+vector2buffer = 10000
+
+[PCB.chiplet.core.mac_array]  # for mixed-precision, [[mac_array]] for multiple units
+fp16 = [4, 64]
+fp32 = [4, 32]
+
+[PCB.chiplet.core.vector_unit]
+ReLU = 32
+BN = 32
+SoftMax = 32
+
+[PCB.chiplet.core.local_memory]
+capacity = 128  # KB

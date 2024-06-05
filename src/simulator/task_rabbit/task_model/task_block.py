@@ -107,6 +107,13 @@ class TaskBlock(ABC):
     @property
     def precision(self) -> Precision:
         return self._precision
+    
+    @property
+    def in_precision(self):
+        precision_set: Set[Precision] = {}
+        for task in self.in_tasks:
+            precision_set.add(task.precision)
+        return precision_set
 
     @property
     def id(self) -> int:

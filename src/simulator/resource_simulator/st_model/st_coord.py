@@ -80,3 +80,14 @@ class MLCoord(tuple):
     #         return self
 
     #     return self + (math.inf, ) * (target_level - self.level)
+
+
+class LinkCoord:
+    def __init__(self, src: Coord, dst: Coord, id: int = 0) -> None:
+        self.src = src
+        self.dst = dst
+        self.id = id
+
+    def __repr__(self) -> str:
+        string = 'ID: {:d} from '.format(self.id) + repr(self.src) + ' to ' + repr(self.dst)  
+        return string

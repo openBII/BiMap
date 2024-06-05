@@ -1,6 +1,8 @@
 from enum import Enum
+from functools import total_ordering
 
 
+@total_ordering
 class Precision(Enum):
     """
     Precision 类负责描述精度
@@ -60,3 +62,14 @@ class Precision(Enum):
             return True
         else:
             return False
+
+    # FIXME(huanyu)
+    def __lt__(self, other):
+        if isinstance(other, Precision):
+            return self.value < other.value
+        raise TypeError("Cannot compare Precision with non-Precision type")
+    
+
+if __name__ == "__main__":
+    min_precision = min(Precision.FLOAT_16, Precision.FLOAT_32)
+    print(min_precision)

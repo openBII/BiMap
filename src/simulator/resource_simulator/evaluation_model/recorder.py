@@ -13,7 +13,7 @@ class Recorder():
         self.slot = slot
     
     # Input the time duration of certain recorder
-    def recorder(self, time_duration):
+    def record(self, time_duration):
         pass
 
     def reset(self):
