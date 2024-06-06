@@ -5,10 +5,7 @@
 MLCoord类表示一个时空坐标，第一维表示空间坐标，第二维表示时间坐标
 包含_space_coord和_time_coord
 """
-
-import math
 from typing import Tuple
-
 
 
 # 一个层级中的元素坐标，可以为多维坐标
@@ -59,7 +56,7 @@ class MLCoord(tuple):
         return self[-1]
 
     def __str__(self) -> str:
-        return super().__str__().replace(', ', '->')
+        return super().__str__().replace('), (', ')->(')
 
     # def down_to_level(self, target_level):
     #     '''
@@ -91,3 +88,8 @@ class LinkCoord:
     def __repr__(self) -> str:
         string = 'ID: {:d} from '.format(self.id) + repr(self.src) + ' to ' + repr(self.dst)  
         return string
+
+
+if __name__ == "__main__":
+    coord = MLCoord(Coord(0), Coord((0, 0)))
+    print(coord)
