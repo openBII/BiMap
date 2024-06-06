@@ -54,6 +54,10 @@ class MLCoord(tuple):
     @property
     def bottom_coord(self) -> Coord:
         return self[-1]
+    
+    @property
+    def empty(self) -> bool:
+        return len(self) == 0
 
     def __str__(self) -> str:
         return super().__str__().replace('), (', ')->(')
@@ -92,4 +96,4 @@ class LinkCoord:
 
 if __name__ == "__main__":
     coord = MLCoord(Coord(0), Coord((0, 0)))
-    print(coord)
+    print(coord.inner_coord.empty)

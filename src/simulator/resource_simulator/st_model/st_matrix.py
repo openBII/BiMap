@@ -129,18 +129,19 @@ class STMatrix():
         
     def add_task(self, ml_coord: MLCoord, task):
         """
-        在最低层次中的位置加入一个task
+        在最低层次中的位置加入一个task (Fixed: SpacePoint不一定是最低层次)
         """
-        if ml_coord.level != self._space_level:
-            raise ValueError('The space level of the task is not the same as the space level of the matrix.')
+        # if ml_coord.level != self._space_level:
+        #     raise ValueError('The space level of the task is not the same as the space level of the matrix.')
         
         if ml_coord.top_coord not in self._container:
-            raise ValueError('The coord is not in the matrix.')
+            raise ValueError('Coord {:s} is not in the matrix.'.format(ml_coord.top_coord))
         
-
         next_matrix = self._container[ml_coord.top_coord]
         # 递归调用
         if isinstance(next_matrix, STPoint):
+            if not ml_coord.inner_coord.empty:
+                raise ValueError('Wrong MLCoord due to inseparable {:s}'.format(next_matrix.__class__.__name__))
             next_matrix.add_task(task)
         else:
             next_matrix.add_task(ml_coord.inner_coord, task)
