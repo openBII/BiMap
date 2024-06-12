@@ -1,9 +1,10 @@
 from collections import OrderedDict
-from typing import Dict, List, Set, Union
+from typing import Dict, List, Set, Union, Iterable
 
 from src.simulator.task_rabbit.task_model.edge import Edge, RearrangeInfo
 from src.simulator.task_rabbit.task_model.shape import Shape
-from src.simulator.task_rabbit.task_model.task_block import (TaskBlock, TaskBlockType)
+from src.simulator.task_rabbit.task_model.task_block import TaskBlock, TaskBlockType
+from src.simulator.task_rabbit.task_model.input_task_block import InputTaskBlock
 from src.simulator.task_rabbit.task_model.input_type import InputType
 
 
@@ -77,6 +78,10 @@ class TaskGraph():
             self._inputs.add(id)
         if task_node.task_type == TaskBlockType.OUTPUT:
             self._outputs.add(id)
+
+    def add_nodes(self, task_nodes: Iterable[TaskBlock]) -> None:
+        for node in task_nodes:
+            self.add_node(node)
 
     def connect(self, source_id: int, destination_id: int,
                  source_position: Shape = None, source_size: Shape = None,
@@ -279,7 +284,7 @@ class TaskGraph():
             if node.enable():
                 node.check()
 
-    def input(self, tick_num: int, input_type: InputType) -> Set[TaskBlock]:
+    def input(self, tick_num: int, input_type: InputType):
         """The task graph will accept tick_num ticks.
 
         Args:
@@ -288,10 +293,11 @@ class TaskGraph():
         Returns:
             activated_tasks: Set[TaskBlock], which tasks will be activated after injecting the input ticks.
         """
-        activated_tasks = set()
+        activated_tasks: Set[TaskBlock] = set()
         for input_task_id in self._inputs:
-            input_task = self._nodes[input_task_id]
+            input_task: InputTaskBlock = self._nodes[input_task_id]
             input_task.fire(tick_num, input_type)
+            next_task: TaskBlock
             for next_task in input_task.out_tasks:
                 if next_task.activated:
                     activated_tasks.add(next_task)

@@ -1,16 +1,18 @@
-from collections import OrderedDict
-from typing import Set
+from typing import Set, Union, List, Dict, Tuple
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
+from src.simulator.resource_simulator.st_model.space_point.computation_point import ComputationPoint
+from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint
 from src.simulator.resource_simulator.st_context import STContext
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.task_rabbit.task_model.vtask_block import VTaskBlock
 from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
-from src.simulator.task_rabbit.task_model.input_type import InputType
+from src.simulator.resource_simulator.st_model.st_coord import MLCoord
+from src.simulator.task_rabbit.task_model.edge import Edge
 
 
 class Scheduler():
     def __init__(self, st_matrix: STMatrix, st_context: STContext, task_graph: TaskGraph, initial_tasks: Set[TaskBlock] = None) -> None:
-        self._activated_task_id = OrderedDict()
+        self._activated_task_id = set()
         self.init(initial_tasks)
         self._activated_edges = []
         self._st_matrix = st_matrix
@@ -19,32 +21,38 @@ class Scheduler():
 
     def init(self, tasks: Set[TaskBlock]):
         for task in tasks:
-            self._activated_task_id.update({task.id: False})
+            self._activated_task_id.add(task.id)
         
     def add_activated_tasks(self):
-        finished_tasks = []
+        new_activated_tasks = set()
         for task_id in self._activated_task_id:
-            if self._activated_task_id[task_id]:
-                task = self._task_graph.get_node(task_id)
-                if task.activated:
-                    self._activated_task_id.update({task.id: False})
-                else:
-                    finished_tasks.append(task_id)
-                for out_task in task.out_tasks:
-                    if out_task.activated:
-                        self._activated_task_id.update({out_task.id: False})
-        for task_id in finished_tasks:
-            del self._activated_task_id[task_id]
-
-    def get_next_activated_task(self) -> int:
-        return self._activated_task_id.pop()
+            task = self._task_graph.get_node(task_id)
+            if task.activated:
+                new_activated_tasks.add(task_id)
+            out_task: TaskBlock
+            for out_task in task.out_tasks:
+                if out_task.activated:
+                    new_activated_tasks.add(out_task.id)
+        self._activated_task_id = new_activated_tasks
+        # for task_id in self._activated_task_id:
+        #     if self._activated_task_id[task_id]:
+        #         task = self._task_graph.get_node(task_id)
+        #         if task.activated:
+        #             self._activated_task_id.update({task.id: False})
+        #         else:
+        #             finished_tasks.append(task_id)
+        #         for out_task in task.out_tasks:
+        #             if out_task.activated:
+        #                 self._activated_task_id.update({out_task.id: False})
+        # for task_id in finished_tasks:
+        #     del self._activated_task_id[task_id]
     
     def add_activated_edges(self, task: TaskBlock):
         for edge in task.output_edges:
             if edge.input_activated:
                 self._activated_edges.append(edge)
 
-    def schedule(self, input_type: InputType):
+    def schedule(self):
         # 每次处理完所有激活的任务后处理边
         while len(self._activated_task_id) != 0:
             self.schedule_tasks()
@@ -53,46 +61,69 @@ class Scheduler():
 
     def schedule_tasks(self):
         # 对所有activated的任务不断遍历直到没有任务可以被完成
-        while True:
-            FLAG = False
+        flag = True
+        while flag:
+            flag = False
             for task_id in self._activated_task_id:
                 # if not self._activated_task_id[task_id]:
-                ml_coord = self._st_context.get_ml_coord(task_id)
-                st_point = self._st_matrix.get_element(ml_coord)
-                if st_point is None:
-                    raise Exception("st_point is None")
-                # 硬件处理当前任务的所有能被处理的iteration
                 task = self._task_graph.get_node(task_id)
-                while True:
-                    if isinstance(task, VTaskBlock):
-                        ticks = task.consume()
-                        task.fire(ticks)
-                        state = True
-                    else:
-                        state, task = st_point.process(task_id)
-                    # self._activated_task_id.update({task_id: state})
-                    if state:
-                        FLAG = True
-                        self.add_activated_edges(task)
-                    else:  # 当前任务后续iteration无法被处理
-                        break
-                    if not task.activated:  # 当前任务所有iteration均被处理完成
-                        break
-            if not FLAG:
-                break
+                if isinstance(task, VTaskBlock):
+                    self.process_virtual_task(task)
+                else:
+                    ml_coord = self._st_context.get_ml_coord(task_id)
+                    space_point = self._st_matrix.get_element(ml_coord)
+                    # assert space_point is not None, "Space Point is None"
+                    # 硬件处理当前任务的所有能被处理的iteration
+                    flag = self.process_all_iterations(task, space_point)
+                    # while True:
+                    #     if isinstance(task, VTaskBlock):
+                    #         ticks = task.consume()
+                    #         task.fire(ticks)
+                    #         state = True
+                    #     else:
+                    #         state, task = st_point.process(task_id)
+                    #     # self._activated_task_id.update({task_id: state})
+                    #     if state:
+                    #         FLAG = True
+                    #         self.add_activated_edges(task)
+                    #     else:  # 当前任务后续iteration无法被处理
+                    #         break
+                    #     if not task.activated:  # 当前任务所有iteration均被处理完成
+                    #         break
+            # if not :
+            #     break
+
+    def process_virtual_task(self, task: VTaskBlock):
+        task.transfer_ticks()
+        self.add_activated_edges(task)
+
+    def process_all_iterations(self, task: TaskBlock, space_point: Union[ComputationPoint, MemoryPoint]):
+        flag = False
+        state = True
+        # state = False 当前任务后续iteration无法被处理
+        # task.activated = False 当前任务所有iteration均被处理完成
+        while state and task.activated:
+            state, _ = space_point.process(task.id)
+            if state:
+                flag = True
+                self.add_activated_edges(task)
+        return flag
 
     def schedule_edges(self):
         classified_edges = self.classify_edges()
         unfinished_edges = []
         for i, edge_dict in enumerate(classified_edges):
             if i == 0:
-                if 0 in edge_dict:
-                    unfinished_edges.extend(self._st_matrix.process(edge_dict[0]))
+                network_id: int
+                for network_id in edge_dict:
+                    edges = edge_dict[network_id]
+                    unfinished_edges.extend(self._st_matrix.communication_networks[network_id].process(edges))
             else:
-                for coord in edge_dict:
-                    edges = edge_dict[coord]
-                    hardware = self._st_matrix.get_element(coord)
-                    unfinished_edges.extend(hardware.process(edges))
+                for network_coord in edge_dict:
+                    container_coord, network_id = network_coord
+                    edges = edge_dict[network_coord]
+                    container: STMatrix = self._st_matrix.get_element(container_coord)
+                    unfinished_edges.extend(container.communication_networks[network_id].process(edges))
         self._activated_edges = unfinished_edges
 
     def classify_edges(self):
@@ -105,19 +136,20 @@ class Scheduler():
         - classified_edges: [{0: [edge0, edge1, ...]}, {MLCoord0: [edge2, edge3, ...]; MLCoord1: [edge4, edge5, ...]}, ...]
         '''
         space_level = self._st_matrix._space_level
-        classified_edges = [{} for _ in range(space_level)]
+        classified_edges: List[Dict[Union[Tuple[MLCoord, int], int], List[Edge]]] = [{} for _ in range(space_level)]
         for edge in self._activated_edges:
-            first_coord = self._st_context.get_first_ml_coord(edge)
-            level = first_coord.level
+            level = self._st_context.get_level(edge)
+            network_id = self._st_context.get_network_id(edge)
+            container_coord = self._st_context.get_container_coord(edge)
+            network_coord = (container_coord, network_id)
             if level == 1:
-                if not 0 in classified_edges[0]:
-                    classified_edges[0].update({0: [edge]})
+                if not network_id in classified_edges[0]:
+                    classified_edges[0].update({network_id: [edge]})
                 else:
-                    classified_edges[0][0].append(edge)
+                    classified_edges[0][network_id].append(edge)
             else:
-                if not first_coord.outer_coord in classified_edges[level - 1]:
-                    classified_edges[level - 1].update({first_coord.outer_coord: [edge]})
+                if not network_coord in classified_edges[level - 1]:
+                    classified_edges[level - 1].update({network_coord: [edge]})
                 else:
-                    classified_edges[level - 1][first_coord.outer_coord].append(edge)
+                    classified_edges[level - 1][network_coord].append(edge)
         return classified_edges
-            

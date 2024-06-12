@@ -316,11 +316,11 @@ class STEnv():
     def map_edge(self, edge: Edge, path: List[MLCoord]):
         self._actor.map_edge(edge, path)
 
-    def simulate(self, tick_num: int, input_type: InputType):
+    def simulate(self, tick_num: int, input_type: InputType = InputType.BATCH):
         activated_tasks = self._task_graph.input(tick_num, input_type)
         # 初始化scheduler，传入activated_tasks
         scheduler = Scheduler(self._st_matrix, self._context, self._task_graph, activated_tasks)
-        scheduler.schedule(input_type)
+        scheduler.schedule()
 
     # State control
     def undo(self):

@@ -74,6 +74,8 @@ class Edge():
         self._input_ticks: Queue[Tick] = Queue()
         self._output_ticks: Queue[Tick] = Queue()
 
+    def __repr__(self):
+        return "From Task {:d} to Task {:d}".format(self.in_task.id, self.out_task.id)
 
     @property
     def edge_id(self) -> int:
@@ -144,17 +146,30 @@ class Edge():
         self._state = TaskState.DISABLE
         
     def add_tick(self, tick: Tick):
+        """Add a tick into the input tick queue of this edge.
+        """
         self._input_ticks.put(tick)
         
     def consume_tick(self) -> Tick:
-        assert not self._output_ticks.empty()
+        """Consume a tick from the output tick queue of this edge.
+        """
+        assert not self._output_ticks.empty(), "No tick can be consumed due to empty output queue"
         return self._output_ticks.get()
     
+    def transfer_tick(self):
+        """Move a tick from the input tick queue to the output tick queue.
+        """
+        self._fire(self._consume())
+    
     def _consume(self) -> Tick:
+        """Consume a tick from the input tick queue of this edge.
+        """
         assert not self._input_ticks.empty()
         return self._input_ticks.get()
 
     def _fire(self, tick: Tick, time: int = None, callback: Callable = None):
+        """Add a tick into the output tick queue of this edge.
+        """
         if time is not None:
             tick.time = time
         if tick.start_callback is not None:
