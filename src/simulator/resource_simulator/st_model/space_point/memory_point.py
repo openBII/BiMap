@@ -1,5 +1,6 @@
 from src.simulator.resource_simulator.st_model.st_point import STPoint
 from src.simulator.resource_simulator.evaluation_model.recorder import MemoryRecorder
+from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
 from src.simulator.task_rabbit.task_model.output_task_block import OutputTaskBlock
 
 class MemoryPoint(STPoint):
@@ -12,6 +13,7 @@ class MemoryPoint(STPoint):
         return 'capacity: ' + repr(self.capacity) + '\n'
 
     def process(self, task_id: int):
+        task: STaskBlock
         for task in self._tasks:
             if task_id == task.id:
                 if isinstance(task, OutputTaskBlock):

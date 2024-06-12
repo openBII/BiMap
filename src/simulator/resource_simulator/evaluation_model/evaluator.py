@@ -1,3 +1,4 @@
+from __future__ import annotations
 from enum import Enum
 
 
@@ -11,7 +12,7 @@ class Evaluator():
         self.mode = mode
 
     def __call__(self, input):
-        self.eval(input)
+        return self.eval(input)
 
     def eval(self, input):
         if self.mode == EvaluationMode.STATIC:
@@ -21,8 +22,8 @@ class Evaluator():
         else:
             raise ValueError('Unsupported evaluation mode')
     
-    def eval_by_model(self):
+    def eval_by_model(self, input):
         raise NotImplementedError
     
-    def eval_by_execution(self):
+    def eval_by_execution(self, input):
         raise NotImplementedError

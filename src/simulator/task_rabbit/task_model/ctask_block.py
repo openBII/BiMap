@@ -27,6 +27,10 @@ class CTaskBlock(TaskBlock):
     def _construct_computation(self) -> None:
         self._computation = 0
 
+    @property
+    def out_shape(self):
+        return Shape(ny=self.shape.ny, nx=self.shape.nx, nf=self.shape.nf)
+
     def accept(self, visitor):
         visitor.visit_C(self)
 

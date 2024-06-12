@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Dict, Tuple, List
 from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
@@ -5,6 +6,26 @@ from src.simulator.resource_simulator.st_model.hop import Hop, HopDict
 import heapq
 from src.simulator.resource_simulator.evaluation_model.recorder import CommunicationRecorder, CommunicationRecord
 from src.simulator.resource_simulator.evaluation_model.evaluator import Evaluator, EvaluationMode
+
+
+class BandwidthDict:
+    def __init__(self) -> None:
+        self.dict: Dict[Hop, float] = {}
+
+    def __setitem__(self, hop: Hop, bandwidth: float):
+        self.dict[hop] = bandwidth
+
+    def __getitem__(self, hop: Hop):
+        for key in self.dict:
+            if key.src == hop.src and key.dst == hop.dst and key.link_id == hop.link_id:
+                return self.dict[key]
+    
+    def __repr__(self) -> str:
+        string = '\n'
+        for hop in self.dict:
+            string += repr(hop) + ': ' + repr(self.dict[hop]) + '\n'
+        string = string[:-1]
+        return string
 
 
 class CommunicationEvaluator(Evaluator):
@@ -15,48 +36,93 @@ class CommunicationEvaluator(Evaluator):
         # results: {(Edge, iteration, Hop): CommunicationRecord}
         self.recorder = CommunicationRecorder()
 
-    def edge_not_mapped(self, edge: Tuple[Edge, int]):
-        return not edge in self.edge_map
+    def is_edge_mapped(self, edge: Edge, iteration: int):
+        return (edge, iteration) in self.edge_map
 
-    def create_all_edge_map(self, edge_map: Dict[Edge, List[MLCoord]]):
-        for edge in edge_map:
-            ml_coords = edge_map[edge]
-            self.create_edge_map(edge, ml_coords)
-
-    def create_edge_map(self, edge: Tuple[Edge, int], ml_coords: List[MLCoord]):
+    def create_edge_path(self, edge: Edge, iteration: int, ml_coords: List[Tuple[MLCoord, int]]):
+        """
+        Link ID规定由dst coord中指明
+        两个坐标之间默认Link ID相同
+        """
+        self.edge_map[(edge, iteration)] = []
         src_ml_coord = ml_coords[0]
         for i in range(1, len(ml_coords)):
             dst_ml_coord = ml_coords[i]
-            assert src_ml_coord.level == dst_ml_coord.level
-            assert src_ml_coord.outer_coord == dst_ml_coord.outer_coord
-            src_bottom_coord = src_ml_coord.bottom_coord
-            dst_bottom_coord = dst_ml_coord.bottom_coord
+            assert src_ml_coord[0].level == dst_ml_coord[0].level
+            assert src_ml_coord[0].outer_coord == dst_ml_coord[0].outer_coord
+            src_bottom_coord = src_ml_coord[0].bottom_coord
+            dst_bottom_coord = dst_ml_coord[0].bottom_coord
             assert src_bottom_coord.dim == dst_bottom_coord.dim
-            self.edge_map[edge] = []
-            index = 0
-            dim = src_bottom_coord.dim
-            for i in range(dim):
-                if src_bottom_coord[i] != dst_bottom_coord[i]:
-                    index = i
-                    break
-            if src_bottom_coord[index] > dst_bottom_coord[index]:
-                for i in range(src_bottom_coord[index], dst_bottom_coord[index], -1):
-                    src_coord_list = list(src_bottom_coord)
-                    dst_coord_list = list(src_bottom_coord)
-                    src_coord_list[index] = i
-                    dst_coord_list[index] = i - 1
-                    hop = Hop(src=Coord(src_coord_list), dst=Coord(dst_coord_list))
-                    self.edge_map[edge].append(hop)
-            else:
-                for i in range(src_bottom_coord[index], dst_bottom_coord[index]):
-                    src_coord_list = list(src_bottom_coord)
-                    dst_coord_list = list(src_bottom_coord)
-                    src_coord_list[index] = i
-                    dst_coord_list[index] = i + 1
-                    hop = Hop(src=Coord(src_coord_list), dst=Coord(dst_coord_list))
-                    self.edge_map[edge].append(hop)
+            self.generate_hops(edge, iteration, src_bottom_coord, dst_bottom_coord, dst_ml_coord[1])
+            # index = 0
+            # dim = src_bottom_coord.dim
+            # for i in range(dim):
+            #     if src_bottom_coord[i] != dst_bottom_coord[i]:
+            #         index = i
+            #         break
+            # if src_bottom_coord[index] > dst_bottom_coord[index]:
+            #     for i in range(src_bottom_coord[index], dst_bottom_coord[index], -1):
+            #         src_coord_list = list(src_bottom_coord)
+            #         dst_coord_list = list(src_bottom_coord)
+            #         src_coord_list[index] = i
+            #         dst_coord_list[index] = i - 1
+            #         hop = Hop(src=Coord(src_coord_list), dst=Coord(dst_coord_list))
+            #         self.edge_map[(edge, iteration)].append(hop)
+            # else:
+            #     for i in range(src_bottom_coord[index], dst_bottom_coord[index]):
+            #         src_coord_list = list(src_bottom_coord)
+            #         dst_coord_list = list(src_bottom_coord)
+            #         src_coord_list[index] = i
+            #         dst_coord_list[index] = i + 1
+            #         hop = Hop(src=Coord(src_coord_list), dst=Coord(dst_coord_list))
+            #         self.edge_map[(edge, iteration)].append(hop)
             src_ml_coord = dst_ml_coord
 
+    def append_hop(self, edge: Edge, iteration: int, hop: Hop):
+        self.edge_map[(edge, iteration)].append(hop)
+
+    def generate_hops(self, edge: Edge, iteration: int, src: Coord, dst: Coord, link_id: int):
+        """
+        This method may need to be overriden in custom communication evaluators.
+        The default method is for MESH topology.
+
+        Args:
+            src: Coord, source coordinate
+            dst: Coord, destination coordinate
+
+        Returns:
+            hops: List[Hop], a list of hops between src and dst 
+        """
+        index = 0
+        dim = src.dim
+        for i in range(dim):
+            if src[i] != dst[i]:
+                index = i
+                break
+        if src[index] > dst[index]:
+            for i in range(src[index], dst[index], -1):
+                src_coord_list = list(src)
+                dst_coord_list = list(src)
+                src_coord_list[index] = i
+                dst_coord_list[index] = i - 1
+                hop = Hop(src=Coord(src_coord_list), dst=Coord(dst_coord_list), id=link_id)
+                self.append_hop(edge, iteration, hop)
+        else:
+            for i in range(src[index], dst[index]):
+                src_coord_list = list(src)
+                dst_coord_list = list(src)
+                src_coord_list[index] = i
+                dst_coord_list[index] = i + 1
+                hop = Hop(src=Coord(src_coord_list), dst=Coord(dst_coord_list), id=link_id)
+                self.append_hop(edge, iteration, hop)
+
+    def get_bandwidth(self, hop: Hop):
+        if type(self.bandwidth) in [float, int]:
+            return self.bandwidth
+        elif isinstance(self.bandwidth, BandwidthDict):
+            return self.bandwidth[hop]
+        else:
+            raise TypeError("Unsupported type of Attribute: bandwidth")
 
     def eval_by_model(self, edge_heap: List[Tuple[int, Tuple[Edge, int]]]) -> Tuple[List[Edge], int]:
         '''
@@ -110,7 +176,7 @@ class CommunicationEvaluator(Evaluator):
             for hop in hop_dict:
                 edges = hop_dict[hop]
                 num_edges = len(edges)
-                real_bandwidth = self.bandwidth / num_edges
+                real_bandwidth = self.get_bandwidth(hop) / num_edges
                 for edge in edges:
                     if (*edge, hop) in self.recorder:
                         start_time = self.recorder[(*edge, hop)].start_time
@@ -123,9 +189,12 @@ class CommunicationEvaluator(Evaluator):
                     if end_time < min_end_time:
                         min_end_time = end_time
                     self.recorder.update((*edge, hop), CommunicationRecord(start_time, end_time, last_percent))
+            deadline = min_end_time if min_end_time < second_min_start_time else second_min_start_time
             for hop in hop_dict:
-                for edge in hop_dict[hop]:
-                    deadline = min_end_time if min_end_time < second_min_start_time else second_min_start_time
+                edges = hop_dict[hop]
+                num_edges = len(edges)
+                real_bandwidth = self.get_bandwidth(hop) / num_edges
+                for edge in edges:
                     record = self.recorder[(*edge, hop)]
                     if record.end_time > deadline:
                         record.end_time = deadline
@@ -144,3 +213,51 @@ class CommunicationEvaluator(Evaluator):
                         # 将未完成的边重新加入堆中
                         heapq.heappush(edge_heap, (record.end_time, edge))
         return finished_edges, finish_time
+
+
+class CoreCommunicationEvaluator(CommunicationEvaluator):
+    def __init__(self, bandwidth: BandwidthDict, mode: EvaluationMode = EvaluationMode.STATIC) -> None:
+        super().__init__(bandwidth, mode)
+
+    def generate_hops(self, edge: Edge, iteration: int, src: Coord, dst: Coord, link_id: int):
+        if (Coord(3) in [src, dst]) and (Coord(0) not in [src, dst]):
+            self.append_hop(edge, iteration, Hop(src, Coord(0), link_id))
+            self.append_hop(edge, iteration, Hop(Coord(0), dst, link_id))
+        else:
+            self.append_hop(edge, iteration, Hop(src, dst, link_id))
+    
+
+class SharedMemoryCommunicationEvaluator(CommunicationEvaluator):
+    def __init__(self, bandwidth: float, shared_memory_coord: Coord, arbitrator_coord: Coord, mode: EvaluationMode = EvaluationMode.STATIC) -> None:
+        super().__init__(bandwidth, mode)
+        self.shared_memory_coord = shared_memory_coord
+        self.arbitrator_coord = arbitrator_coord
+
+    def generate_hops(self, edge: Edge, iteration: int, src: Coord, dst: Coord, link_id: int):
+        if self.arbitrator_coord in [src, dst]:
+            self.append_hop(edge, iteration, Hop(src, dst, link_id))
+        else:
+            if self.shared_memory_coord in [src, dst]:
+                self.append_hop(edge, iteration, Hop(src, self.arbitrator_coord, link_id))
+                self.append_hop(edge, iteration, Hop(self.arbitrator_coord, dst, link_id))
+            else:
+                self.append_hop(edge, iteration, Hop(src, self.arbitrator_coord, link_id))
+                self.append_hop(edge, iteration, Hop(self.arbitrator_coord, self.shared_memory_coord, link_id))
+                self.append_hop(edge, iteration, Hop(self.shared_memory_coord, self.arbitrator_coord, link_id))
+                self.append_hop(edge, iteration, Hop(self.arbitrator_coord, dst, link_id))
+
+
+class BoardCommunicationEvaluator(CommunicationEvaluator):
+    def __init__(self, bandwidth: float, mode: EvaluationMode = EvaluationMode.STATIC) -> None:
+        super().__init__(bandwidth, mode)
+
+
+class ServerCommunicationEvaluator(CommunicationEvaluator):
+    def __init__(self, bandwidth: float, mode: EvaluationMode = EvaluationMode.STATIC) -> None:
+        super().__init__(bandwidth, mode)
+
+
+if __name__ == "__main__":
+    a = Coord(2)
+    b = Coord(3)
+    print((Coord(3) in [a, b]) and (Coord(0) not in [a, b]))

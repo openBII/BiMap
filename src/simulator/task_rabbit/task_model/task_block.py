@@ -23,8 +23,8 @@ class TaskBlock(ABC):
 
     def __init__(self, task_id: int, shape: Shape, precision: Precision):
         # 基础属性
-        self._id = task_id
-        self._type = None
+        self._id: int = task_id
+        self._type: TaskBlockType = None
         self._state = TaskState.ENABLE
         self._shape = shape
         self._precision = precision
@@ -39,6 +39,12 @@ class TaskBlock(ABC):
 
         # 构建任务结点信息
         self.construct()
+
+    def __repr__(self):
+        string = "ID: {:d}\n".format(self._id)
+        string += "Type: " + self._type.name + "\n"
+        string += "From Task " + repr(self.in_tasks_ids) + " to Task " + repr(self.out_tasks_ids)
+        return string
 
     def construct(self) -> None:
         self._construct_computation()
@@ -105,12 +111,16 @@ class TaskBlock(ABC):
         self._construct_computation()
 
     @property
+    def out_shape(self):
+        return self.shape
+
+    @property
     def precision(self) -> Precision:
         return self._precision
     
     @property
     def in_precision(self):
-        precision_set: Set[Precision] = {}
+        precision_set: Set[Precision] = set()
         for task in self.in_tasks:
             precision_set.add(task.precision)
         return precision_set
@@ -122,7 +132,6 @@ class TaskBlock(ABC):
     @id.setter
     def id(self, task_id: int) -> None:
         self._id = task_id
-
 
     @property
     def task_type(self) -> TaskBlockType:
@@ -153,9 +162,15 @@ class TaskBlock(ABC):
         """
         tasks = set()
         for edge in self._input_edges:
-            for task in edge.in_task:
-                tasks.add(task)
+            tasks.add(edge.in_task)
         return tasks
+    
+    @property
+    def in_tasks_ids(self) -> Set[int]:
+        tasks_ids = set()
+        for task in self.in_tasks:
+            tasks_ids.add(task.id)
+        return tasks_ids
 
     @property
     def out_tasks(self) -> Set:
@@ -166,6 +181,13 @@ class TaskBlock(ABC):
         for edge in self._output_edges:
             tasks.add(edge.out_task)
         return tasks
+    
+    @property
+    def out_tasks_ids(self) -> Set[int]:
+        tasks_ids = set()
+        for task in self.out_tasks:
+            tasks_ids.add(task.id)
+        return tasks_ids
 
     @property
     def activated(self):
