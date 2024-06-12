@@ -2,7 +2,7 @@ from src.simulator.resource_simulator.config.matrix_config import ComputeChiplet
 from src.simulator.resource_simulator.st_model.space_matrix.core_factory import CoreFactory
 from src.simulator.resource_simulator.st_model.space_matrix.factory import Factory
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
-from src.simulator.resource_simulator.st_model.space_point.communication_point import ChipStarCommunicationPoint
+from src.simulator.resource_simulator.st_model.space_point.communication_point import SharedMemoryCommunicationPoint
 from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint
 from src.simulator.resource_simulator.config.communication_config import CommunicationConfig
 from src.simulator.resource_simulator.st_model.st_coord import Coord
@@ -22,9 +22,12 @@ class ComputeChipletFactory(Factory):
                 core = CoreFactory.create_matrix(config.core)
                 chiplet.add_element(coord=Coord((i, j)), element=core)
 
+        shared_memory_coord = Coord((size_x + 1, size_y // 2))
+        arbitrator_coord = Coord((size_x + 1, size_y // 2))
+
         if config.network["topology"] == "star":
             communication_config = CommunicationConfig(config.network["bandwidth"])
-            communication_network = ChipStarCommunicationPoint(communication_config)
+            communication_network = SharedMemoryCommunicationPoint(communication_config, shared_memory_coord, arbitrator_coord)
         elif config.network["topology"] == "crossbar":
             raise NotImplementedError
         elif config.network["topology"] == "mesh":
@@ -34,7 +37,7 @@ class ComputeChipletFactory(Factory):
         chiplet.add_communication_network(communication_network)
 
         shared_memory = MemoryPoint(config.shared_memory["capacity"])
-        chiplet.add_element(coord=Coord((size_x, size_y // 2)), element=shared_memory)
+        chiplet.add_element(coord=Coord((size_x + 1, size_y // 2)), element=shared_memory)
 
         return chiplet
 

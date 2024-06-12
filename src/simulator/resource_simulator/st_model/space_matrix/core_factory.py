@@ -25,7 +25,9 @@ class CoreFactory(Factory):
             array2vector=config.network['array2vector'],
             buffer2vector_input=config.network['buffer2vector_input'],
             buffer2vector_params=config.network['buffer2vector_params'],
-            vector2buffer=config.network['vector2buffer']
+            vector2buffer=config.network['vector2buffer'],
+            buffer2router=config.network['buffer2router'],
+            router2buffer=config.network['router2buffer']
         )
         communication_network = CoreCommunicationPoint(communication_config)
         core.add_communication_network(communication_network)
@@ -34,17 +36,17 @@ class CoreFactory(Factory):
         mac_array_config[Precision.FLOAT_16] = config.mac_array['fp16']
         mac_array_config[Precision.FLOAT_32] = config.mac_array['fp32']
         mac_array = MACArrayPoint(mac_array_config)
-        core.add_element(coord=Coord(0), element=mac_array)
+        core.add_element(coord=Coord(1), element=mac_array)
 
         vector_unit_config = VectorUnitConfig()
         vector_unit_config['ReLU'] = config.vector_unit['ReLU']
         vector_unit_config['BN'] = config.vector_unit['BN']
         vector_unit_config['SoftMax'] = config.vector_unit['SoftMax']
         vector_unit = VectorPoint(vector_unit_config)
-        core.add_element(coord=Coord(1), element=vector_unit)
+        core.add_element(coord=Coord(2), element=vector_unit)
 
         sram_point = MemoryPoint(config.local_memory['capacity'])
-        core.add_element(coord=Coord(2), element=sram_point)
+        core.add_element(coord=Coord(0), element=sram_point)
 
         return core
 

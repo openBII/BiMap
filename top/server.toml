@@ -28,6 +28,8 @@ array2vector = 10000
 buffer2vector_input = 10000
 buffer2vector_params = 10000
 vector2buffer = 10000
+buffer2router = 10000
+router2buffer = 10000
 
 [PCB.chiplet.core.mac_array]  # for mixed-precision, [[mac_array]] for multiple units
 fp16 = [4, 64]
