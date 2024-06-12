@@ -1,11 +1,16 @@
-from typing import Any
+from typing import Any, List, Tuple
+from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.resource_simulator.st_model.st_coord import Coord
 
 
 class Hop():
-    def __init__(self, src: Coord, dst: Coord) -> None:
+    def __init__(self, src: Coord, dst: Coord, id: int = 0) -> None:
         self.src = src
         self.dst = dst
+        self.link_id = id  # Link ID
+
+    def __repr__(self) -> str:
+        return "Link ID: {:d}  From ".format(self.link_id) + repr(self.src) + " to " + repr(self.dst) 
 
 
 class HopDict(dict):
@@ -20,14 +25,14 @@ class HopDict(dict):
                 return super().__setitem__(hop, __value)
         return super().__setitem__(__hop, __value)
             
-    def __getitem__(self, __hop: Hop) -> Any:
+    def __getitem__(self, __hop: Hop) -> List[Tuple[Edge, int]]:
         for hop in self.keys():
             if hop.src == __hop.src and hop.dst == __hop.dst:
                 return super().__getitem__(hop)
             
 
 if __name__ == "__main__":
-    hop0 = Hop(Coord(0), Coord(1))
+    hop0 = Hop(Coord(0), Coord(1), 1)
     hop1 = Hop(Coord(0), Coord(1))
     d = {hop0: 0}
     hd = HopDict()

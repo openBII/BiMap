@@ -7,7 +7,7 @@ ActionModel 类负责各种动作的响应
 
 from copy import deepcopy
 import logging
-from typing import List, Union
+from typing import List, Union, Tuple
 from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.task_rabbit.task_model.bias_type import BiasType
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
@@ -23,8 +23,7 @@ from src.simulator.resource_simulator.action_model.splitter import Splitter, Spl
 from src.simulator.resource_simulator.action_model.replicater import Replicater
 from src.simulator.resource_simulator.action_model.column_merger import ColumnMerger
 from src.simulator.resource_simulator.action_model.column_deleter import ColumnDeleter
-from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
-
+from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord, PathCoord
 
 
 class ActionModel():
@@ -386,62 +385,125 @@ class ActionModel():
                                   destination_position=dst_info.position,
                                   packet_shape=src_info.size)
 
-    def map_edge(self, edge: Edge, path: List[MLCoord]):
-        # 加入虚拟任务结点保证每条边上的所有坐标都在同一空间层次
-        assert len(path) != 0, "Unmapped edge"
-        if len(path) == 1:
-            self._st_matrix.add_edge(edge, path)
-            self._context.put_edge_to(path, edge)
-        else:
-            IDGenerator.set_base_task_id(self._task_graph)
-            task0: TaskBlock = edge.in_task
-            task1 = None
-            new_path = []
-            for i in range(len(path) - 1):
-                ml_coord0 = path[i]
-                ml_coord1 = path[i + 1]
-                new_path.append(ml_coord0)
-                if ml_coord1.level != ml_coord0.level:
-                    task1 = VTaskBlock(IDGenerator.get_next_task_id())
-                    new_edge = Edge(in_task=task0, out_task=task1)
-                    self._task_graph.add_node(task1)
-                    task1.add_input_edge(new_edge)
-                    if edge in task0.output_edges:
-                        task0.output_edges.remove(edge)
-                    task0.add_output_edge(new_edge)
-                    task0 = task1
-                    # 低级到高级
-                    if ml_coord1.level < ml_coord0.level:
-                        self._st_matrix.add_edge(new_edge, new_path)
-                        self._context.put_edge_to(new_path, new_edge)
-                        new_ml_coord = ml_coord0
-                        while new_ml_coord.level != ml_coord1.level:
-                            new_ml_coord = new_ml_coord.outer_coord
-                        new_path = [new_ml_coord]
-                    # 高级到低级
+    def map_edge(self, edge: Edge, path: List[Union[MLCoord, Tuple[MLCoord, int], Tuple[MLCoord, int, int]]]):
+        """
+        对path的要求: 必须包含跳出当前层次的坐标, 跨域的坐标也必须包含, 跨域的ID默认为当前域的ID
+        跨域说明: 1 -> 1 -> 2, 则1 -> 1在域1中, 1 -> 2在域2中; 2 -> 2 -> 1, 则2 -> 2在域2中, 2 -> 1在域1中
+        假设chiplet -> chiplet -> DRAM, 则写入数据到DRAM为1 -> 1 -> 2, 从DRAM读数据为2 -> 2 -> 1
+        """
+        # 加入虚拟任务结点保证每条边上的所有坐标都在同一空间层次, 且在同一个互联域中
+        path: PathCoord = PathCoord(path)
+        assert not path.illegal, "Illegal edge path"
+        IDGenerator.set_base_task_id(self._task_graph)
+        task0: TaskBlock = edge.in_task
+        task1 = None
+        new_path = PathCoord()
+        for i in range(len(path) - 1):
+            ml_coord0 = path[i]
+            ml_coord1 = path[i + 1]
+            new_path.append(ml_coord0)
+            if ml_coord1.ml_coord.level != ml_coord0.ml_coord.level:
+                task1, new_edge = self.add_virtual_task(task0, edge)
+                # task1 = VTaskBlock(
+                #     task_id=IDGenerator.get_next_task_id(),
+                #     shape=task0.out_shape,
+                #     precision=task0.precision
+                #     )
+                # new_edge = Edge(in_task=task0, out_task=task1)
+                # self._task_graph.add_node(task1)
+                # task1.add_input_edge(new_edge)
+                # if edge in task0.output_edges:
+                #     task0.output_edges.remove(edge)
+                # task0.add_output_edge(new_edge)
+                task0 = task1
+                # 低级到高级
+                if ml_coord1.ml_coord.level < ml_coord0.ml_coord.level:
+                    self.split_same_level_edges(new_edge, new_path)
+                    new_ml_coord = deepcopy(ml_coord0)
+                    while new_ml_coord.ml_coord.level != ml_coord1.ml_coord.level:
+                        new_ml_coord.ml_coord = new_ml_coord.ml_coord.outer_coord
+                    new_ml_coord.network_id = ml_coord1.network_id  # 一定与dst所在的域相同
+                    new_ml_coord.link_id = ml_coord1.link_id  # 一定与dst的Link ID相同
+                    new_path = PathCoord([new_ml_coord])
+                # 高级到低级
+                else:
+                    new_ml_coord = deepcopy(ml_coord1)
+                    while new_ml_coord.ml_coord.level != ml_coord0.ml_coord.level:
+                        new_ml_coord.ml_coord = new_ml_coord.ml_coord.outer_coord
+                    if new_ml_coord.ml_coord in new_path:
+                        assert (new_path[new_ml_coord.ml_coord].network_id == new_ml_coord.network_id and 
+                                new_path[new_ml_coord.ml_coord].link_id == new_ml_coord.link_id), "Illegal edge coordinate"
+                        self.split_same_level_edges(new_edge, new_path)
                     else:
-                        new_ml_coord = ml_coord1
-                        while new_ml_coord.level != ml_coord0.level:
-                            new_ml_coord = new_ml_coord.outer_coord
                         new_path.append(new_ml_coord)
-                        self._st_matrix.add_edge(new_edge, new_path)
-                        self._context.put_edge_to(new_path, new_edge)
-                        new_path = []
-            if task1 is not None:
-                new_edge = Edge(in_task=task1, out_task=edge.out_task)
-                task1.add_output_edge(new_edge)
-                new_path.append(ml_coord1)
-                out_task: TaskBlock = edge.out_task
-                out_task.input_edges.remove(edge)
-                out_task.add_input_edge(new_edge)
+                        self.split_same_level_edges(new_edge, new_path)
+                    new_path = PathCoord()
+        if task1 is not None:
+            new_edge = Edge(in_task=task1, out_task=edge.out_task)
+            task1.add_output_edge(new_edge)
+            new_path.append(ml_coord1)
+            out_task: TaskBlock = edge.out_task
+            out_task.input_edges.remove(edge)
+            out_task.add_input_edge(new_edge)
+            self.split_same_level_edges(new_edge, new_path)
+            del edge
+            del path
+        # 说明path上所有坐标都在同一层级
+        else:
+            self.split_same_level_edges(edge, path)
+
+    def add_virtual_task(self, task0: TaskBlock, edge: Edge):
+        task1 = VTaskBlock(
+            task_id=IDGenerator.get_next_task_id(),
+            shape=task0.out_shape,
+            precision=task0.precision
+            )
+        new_edge = Edge(in_task=task0, out_task=task1)
+        self._task_graph.add_node(task1)
+        task1.add_input_edge(new_edge)
+        if edge in task0.output_edges:
+            task0.output_edges.remove(edge)
+        task0.add_output_edge(new_edge) 
+        return task1, new_edge
+
+    def split_same_level_edges(self, edge: Edge, path: PathCoord):
+        """
+        拆分同一层次的edge: 坐标所在的容器不同
+        """
+        assert path.same_level, "All coordinates on this path should be at the same level"
+        # IDGenerator.set_base_task_id(self._task_graph)
+        task0: TaskBlock = edge.in_task
+        task1 = None
+        new_path = PathCoord()
+        for i in range(len(path) - 1):
+            element0 = path[i]
+            element1 = path[i + 1]
+            new_path.append(element0)
+            # 同容器跨互联域
+            if element0.network_id != element1.network_id:
+                task1, new_edge = self.add_virtual_task(task0, edge)
                 self._st_matrix.add_edge(new_edge, new_path)
                 self._context.put_edge_to(new_path, new_edge)
-                del edge
-                del path
-            # 说明path上所有坐标都在同一层级
-            else:
-                self._st_matrix.add_edge(edge, path)
-                self._context.put_edge_to(path, edge)
+                new_element = deepcopy(element0)
+                new_element.network_id = element1.network_id
+                new_path = PathCoord([new_element])
+                task0 = task1
+
+        if task1 is not None:
+            new_edge = Edge(in_task=task1, out_task=edge.out_task)
+            task1.add_output_edge(new_edge)
+            new_path.append(element1)
+            out_task: TaskBlock = edge.out_task
+            out_task.input_edges.remove(edge)
+            out_task.add_input_edge(new_edge)
+            self._st_matrix.add_edge(new_edge, new_path)
+            self._context.put_edge_to(new_path, new_edge)
+            del edge
+            del path
+        # 说明path上所有hop都在同一domain
+        else:
+            self._st_matrix.add_edge(edge, path)
+            self._context.put_edge_to(path, edge)
 
 
 if __name__ == "__main__":

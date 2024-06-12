@@ -15,6 +15,8 @@ class TaskBlockType(Enum):
     SWFC = 6
     SW2D = 7
 
+    VIRTUAL = 15
+
     SEPERATOR = 20
 
     CADD = 21

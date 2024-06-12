@@ -6,7 +6,7 @@ StMatrix类是一种自定义的list，表示一个时空矩阵，保存STPoint
 具体的说，在tianjicX架构中，表示一个Core model
 """
 from typing import Dict, List, Union
-from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
+from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord, PathCoord
 from src.simulator.resource_simulator.st_model.st_point import STPoint
 from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.resource_simulator.st_model.space_point.communication_point import CommunicationPoint
@@ -133,15 +133,17 @@ class STMatrix():
         """
         # if ml_coord.level != self._space_level:
         #     raise ValueError('The space level of the task is not the same as the space level of the matrix.')
+        if ml_coord.empty:
+            raise ValueError("Wrong MLCoord: the lowest level is not a SpacePoint")
         
         if ml_coord.top_coord not in self._container:
-            raise ValueError('Coord {:s} is not in the matrix.'.format(ml_coord.top_coord))
+            raise ValueError("Coord {:s} is not in the matrix.".format(repr(ml_coord.top_coord)))
         
         next_matrix = self._container[ml_coord.top_coord]
         # 递归调用
         if isinstance(next_matrix, STPoint):
             if not ml_coord.inner_coord.empty:
-                raise ValueError('Wrong MLCoord due to inseparable {:s}'.format(next_matrix.__class__.__name__))
+                raise ValueError("Wrong MLCoord due to inseparable {:s}".format(next_matrix.__class__.__name__))
             next_matrix.add_task(task)
         else:
             next_matrix.add_task(ml_coord.inner_coord, task)
@@ -218,16 +220,16 @@ class STMatrix():
     # def edge_map(self):
     #     return self._edge_map
 
-    def add_edge(self, edge: Edge, path: List[MLCoord], network_id: int):
-        coord_level = path[0].level
+    def add_edge(self, edge: Edge, path: PathCoord):
+        coord_level = path.level
+        network_id = path.network_id
         if coord_level == 1:
-            self.communication_networks[network_id]._edge_map.update({edge: path})
+            assert path.same_domain, "All hops on this path should be in the same interconnection domain"
+            self.communication_networks[network_id]._edge_map.update({edge: path.extract()})
         else:
-            inner_matrix = self._container[path[0].top_coord]
-            inner_path = []
-            for coord in path:
-                inner_path.append(coord.inner_coord)
-            inner_matrix.add_edge(edge, inner_path, network_id)
+            inner_matrix = self._container[path.top_coord]
+            inner_path = path.inner_coord
+            inner_matrix.add_edge(edge, inner_path)
 
     # def process(self, edges: List[Edge]) -> List[Edge]:
     #     start_time_heap = []
