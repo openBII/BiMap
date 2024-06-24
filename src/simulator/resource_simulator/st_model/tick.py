@@ -1,4 +1,10 @@
+from enum import Enum
 from typing import Callable
+
+
+class CallbackType(Enum):
+    STORAGE = 0
+    STATIC = 1
 
 
 class Tick():
@@ -6,6 +12,7 @@ class Tick():
         self.task_id = task_id
         self.iteration = iteration
         self.time = time
+        # TODO(huanyu): 改成字典 Dict[CallbackType, Callable]
         self.callback = callback
         self.start_callback = start_callback
         self.edge_callback: Callable = None

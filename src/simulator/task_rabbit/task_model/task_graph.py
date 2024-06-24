@@ -6,6 +6,7 @@ from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock, TaskBlockType
 from src.simulator.task_rabbit.task_model.input_task_block import InputTaskBlock
 from src.simulator.task_rabbit.task_model.input_type import InputType
+from src.simulator.task_rabbit.task_model.static_task_block import StaticTaskBlock
 
 
 class TaskGraph():
@@ -19,6 +20,17 @@ class TaskGraph():
 
         self._inputs: Set[int] = set()
         self._outputs: Set[int] = set()
+
+    def __iter__(self):
+        self._iter_keys = iter(self._nodes.keys())
+        return self
+
+    def __next__(self):
+        try:
+            key = next(self._iter_keys)
+            return key, self._nodes[key]
+        except StopIteration:
+            raise StopIteration
 
     @property
     def groups(self):
@@ -55,6 +67,15 @@ class TaskGraph():
             for id in self._outputs:
                 return id
         return self._outputs
+    
+    @property
+    def static_nodes(self):
+        static_nodes: Set[StaticTaskBlock] = set()
+        for task_id in self._nodes:
+            node = self._nodes[task_id]
+            if isinstance(node, StaticTaskBlock):
+                static_nodes.add(node)
+        return static_nodes
 
     def add_node(self, task_node: TaskBlock) -> None:
         """Add node into the task graph.

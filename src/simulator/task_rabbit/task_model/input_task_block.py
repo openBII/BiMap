@@ -1,6 +1,5 @@
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.task_rabbit.task_model.shape import Shape
-from src.simulator.task_rabbit.task_model.storage import Storage
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from src.simulator.resource_simulator.st_model.tick import Tick
