@@ -3,6 +3,7 @@ from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
 from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
 from src.simulator.task_rabbit.task_model.input_task_block import InputTaskBlock
 from src.simulator.task_rabbit.task_model.output_task_block import OutputTaskBlock
+from src.simulator.task_rabbit.task_model.static_task_block import StaticTaskBlock
 from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
@@ -17,11 +18,13 @@ task_graph = TaskGraph()
 input_task = InputTaskBlock(-1, Shape(nr=2048), Precision.FLOAT_16)
 storage_task = STaskBlock(0, Shape(nr=2048), Precision.FLOAT_16)
 compute_task = CTaskBlock(1, Shape(nr=2048, nf=4096), TaskBlockType.CVM, Precision.FLOAT_16)
+weight_task = StaticTaskBlock(2, Shape(nr=2048, nf=4096), Precision.FLOAT_16)
 output_task = OutputTaskBlock(100, Shape(nr=4096), Precision.FLOAT_16)
-task_graph.add_nodes([compute_task, storage_task, input_task, output_task])
+task_graph.add_nodes([compute_task, storage_task, input_task, output_task, weight_task])
 edge0 = task_graph.connect(storage_task.id, compute_task.id)
 task_graph.connect(input_task.id, storage_task.id)
 edge1 = task_graph.connect(compute_task.id, output_task.id)
+edge2 = task_graph.connect(weight_task.id, compute_task.id)
 task_graph.topologize()
 
 # Construct a hardware
@@ -38,12 +41,16 @@ mac_array_coord = MLCoord(Coord((0, 1)), Coord(0), Coord((0, 0)), Coord(1))
 st_env.put_in(mac_array_coord, compute_task.id)
 dram_coord1 = MLCoord(Coord((1, 1)), Coord(1))
 st_env.put_in(dram_coord1, output_task.id)
+weight_coord = MLCoord(Coord((0, 1)), Coord(1))
+st_env.put_in(weight_coord, weight_task.id)
 pciephy_coord0 = MLCoord(Coord((0, 0)), Coord(2))
 board_coord0 = MLCoord(Coord((0, 1)))
 pciephy_coord1 = MLCoord(Coord((0, 1)), Coord(2))
 router_coord = MLCoord(Coord((0, 1)), Coord(0), Coord((0, 0)), Coord(3))
 board_coord1 = MLCoord(Coord((1, 1)))
 pciephy_coord2 = MLCoord(Coord((1, 1)), Coord(2))
+core_coord = MLCoord(Coord((0, 1)), Coord(0), Coord((0, 1)))
+buffer_coord = MLCoord(Coord((0, 1)), Coord(0), Coord((0, 0)), Coord(0))
 # level = min(ml_coord0.level, ml_coord1.level)
 # if ml_coord0[level - 1] != ml_coord1[level - 1]: 需要在中间加入后一个坐标的container坐标
 # 必须包含某一层次的跳出坐标或跳入坐标
@@ -51,6 +58,8 @@ st_env.map_edge(edge0, [dram_coord0, pciephy_coord0, board_coord0, pciephy_coord
 # Also OK: [dram_coord0, pciephy_coord0, board_coord0, router_coord, mac_array_coord]
 st_env.map_edge(edge1, [mac_array_coord, router_coord, pciephy_coord1, board_coord1, pciephy_coord2, dram_coord1])
 # Also OK: [mac_array_coord, router_coord, board_coord1, pciephy_coord2, dram_coord1]
+st_env.map_edge(edge2, [weight_coord, core_coord, router_coord, buffer_coord, (mac_array_coord, 0, 1)])
 
 # Simulate
 st_env.simulate(1)
+st_env.show_overall_time(1)

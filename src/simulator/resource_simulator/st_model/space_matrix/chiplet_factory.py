@@ -23,7 +23,7 @@ class ComputeChipletFactory(Factory):
                 chiplet.add_element(coord=Coord((i, j)), element=core)
 
         shared_memory_coord = Coord((size_x + 1, size_y // 2))
-        arbitrator_coord = Coord((size_x + 1, size_y // 2))
+        arbitrator_coord = Coord((size_x, size_y // 2))
 
         if config.network["topology"] == "star":
             communication_config = CommunicationConfig(config.network["bandwidth"])
