@@ -10,6 +10,7 @@ from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.resource_simulator.st_model.tick import Tick
 from typing import List
 from src.simulator.resource_simulator.evaluation_model.evaluator import Evaluator
+from src.simulator.resource_simulator.evaluation_model.recorder import Recorder
 
 
 class STPoint():
@@ -18,6 +19,7 @@ class STPoint():
         self._tasks: List[TaskBlock] = []
         self._pc = 0
         self.evaluator = Evaluator()
+        self.recorder = Recorder()
         
     def add_task(self, task: TaskBlock):
         self._tasks.append(task)

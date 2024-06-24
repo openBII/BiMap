@@ -7,7 +7,7 @@ STEnv类描述性能级仿真环境
 """
 
 from copy import deepcopy
-from typing import List, Union
+from typing import List, Union, Dict, Tuple
 from top.config import GlobalConfig
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
@@ -25,6 +25,9 @@ from src.simulator.resource_simulator.st_model.st_coord import MLCoord
 from src.simulator.resource_simulator.scheduler import Scheduler
 from src.simulator.task_rabbit.task_model.input_type import InputType
 from src.simulator.task_rabbit.task_model.edge import Edge
+from src.simulator.resource_simulator.st_model.hop import Hop
+from src.simulator.resource_simulator.evaluation_model.recorder import CommunicationRecord
+from src.simulator.task_rabbit.task_model.vtask_block import VTaskBlock
 
 
 class STEnv():
@@ -126,8 +129,45 @@ class STEnv():
     def get_memory(self, ml_coord) -> MemoryEvaluation:
         return self._evaluator.get_memory(ml_coord)
 
-    def get_clock(self, ml_coord):
-        pass
+    def get_task_time(self, task: TaskBlock, iteration: int):
+        if self._context.is_task_in_matrix(task.id):
+            ml_coord = self._context.get_ml_coord(task)
+            space_point = self.st_matrix.get_element(ml_coord)
+            start, end = space_point.recorder.get_record(task.id, iteration)
+            return start, end
+        else:
+            return None, None
+    
+    def get_edge_time(self, edge: Edge, iteration: int):
+        container_coord = self._context.get_container_coord(edge)
+        network_id = self._context.get_network_id(edge)
+        if container_coord.empty:
+            space_matrix = self.st_matrix
+        else:
+            space_matrix = self.st_matrix.get_element(container_coord)
+        recorder = space_matrix.communication_networks[network_id].evaluator.recorder
+        time_dict: Dict[Hop, CommunicationRecord] = {}
+        for key, record in recorder:
+            if key[0] == edge and key[1] == iteration:
+                time_dict[key[2]] = record
+        return container_coord, network_id, time_dict
+    
+    def show_overall_time(self, tick_num: int = 1):
+        for iteration in range(tick_num):
+            for task_id, task in self._task_graph:
+                start, end = self.get_task_time(task, iteration)
+                if not (start is None or end is None):
+                    print("Task {:d}: [{:2f}, {:2f}]".format(task_id, start, end))
+                    for edge in task.output_edges:
+                        while True:
+                            container_coord, network_id, time_dict = self.get_edge_time(edge, iteration)
+                            for hop in time_dict:
+                                assert time_dict[hop].percent == 1, "Unfinished edge"
+                                print("From Task {:d} to {:d} Network {:s} Hop {:s}: [{:2f}, {:2f}]".format(edge.in_task.id, edge.out_task.id, repr(container_coord) + '.' + str(network_id), repr(hop), time_dict[hop].start_time, time_dict[hop].end_time))
+                            if isinstance(edge.out_task, VTaskBlock):
+                                edge = edge.out_task.output_edges[0]
+                            else:
+                                break
 
     def get_computation(self, ml_coord):
         pass
@@ -313,11 +353,14 @@ class STEnv():
         self._actor.connect(src_task, src_index, src_info, dst_task,
                             dst_index, dst_info)
 
-    def map_edge(self, edge: Edge, path: List[MLCoord]):
+    def map_edge(self, edge: Edge, path: List[Union[MLCoord, Tuple[MLCoord, int], Tuple[MLCoord, int, int]]]):
         self._actor.map_edge(edge, path)
 
     def simulate(self, tick_num: int, input_type: InputType = InputType.BATCH):
         activated_tasks = self._task_graph.input(tick_num, input_type)
+        for node in self._task_graph.static_nodes:
+            node.init_ticks(tick_num)
+        activated_tasks = activated_tasks | self._task_graph.static_nodes
         # 初始化scheduler，传入activated_tasks
         scheduler = Scheduler(self._st_matrix, self._context, self._task_graph, activated_tasks)
         scheduler.schedule()

@@ -103,7 +103,7 @@ class Scheduler():
         # state = False 当前任务后续iteration无法被处理
         # task.activated = False 当前任务所有iteration均被处理完成
         while state and task.activated:
-            state, _ = space_point.process(task.id)
+            state = space_point.process(task.id)
             if state:
                 flag = True
                 self.add_activated_edges(task)

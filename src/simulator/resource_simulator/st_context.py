@@ -8,6 +8,7 @@ STContext类记录TaskModel和STMatrix之间的一些关系
 from typing import Dict, List, Union
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord, PathCoord
 from src.simulator.task_rabbit.task_model.edge import Edge
+from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 
 
 class STContext():
@@ -15,11 +16,15 @@ class STContext():
         self.task_to_coord: Dict[int, MLCoord] = {}
         self.edge_to_coords: Dict[Edge, PathCoord] = {}
 
-    def get_ml_coord(self, element: Union[int, Edge]):
+    def get_ml_coord(self, element: Union[int, TaskBlock, Edge]):
         if type(element) is int:
             return self.get_task_ml_coord(element)
-        else:
+        elif isinstance(element, TaskBlock):
+            return self.get_task_ml_coord(element.id)
+        elif isinstance(element, Edge):
             return self.get_edge_ml_coord(element)
+        else:
+            raise TypeError("Unsupported element type")
     
     def get_level(self, edge: Edge):
         return self.get_edge_ml_coord(edge).level
