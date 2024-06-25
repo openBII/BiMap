@@ -49,17 +49,17 @@ pciephy_coord1 = MLCoord(Coord((0, 1)), Coord(2))
 router_coord = MLCoord(Coord((0, 1)), Coord(0), Coord((0, 0)), Coord(3))
 board_coord1 = MLCoord(Coord((1, 1)))
 pciephy_coord2 = MLCoord(Coord((1, 1)), Coord(2))
-core_coord = MLCoord(Coord((0, 1)), Coord(0), Coord((0, 1)))
 buffer_coord = MLCoord(Coord((0, 1)), Coord(0), Coord((0, 0)), Coord(0))
+llc_coord = MLCoord(Coord((0, 1)), Coord(0), Coord((3, 1)))
 # level = min(ml_coord0.level, ml_coord1.level)
 # if ml_coord0[level - 1] != ml_coord1[level - 1]: 需要在中间加入后一个坐标的container坐标
 # 必须包含某一层次的跳出坐标或跳入坐标
-st_env.map_edge(edge0, [dram_coord0, pciephy_coord0, board_coord0, pciephy_coord1, router_coord, mac_array_coord])
+st_env.map_edge(edge0, [dram_coord0, pciephy_coord0, board_coord0, pciephy_coord1, llc_coord, router_coord, mac_array_coord])
 # Also OK: [dram_coord0, pciephy_coord0, board_coord0, router_coord, mac_array_coord]
-st_env.map_edge(edge1, [mac_array_coord, router_coord, pciephy_coord1, board_coord1, pciephy_coord2, dram_coord1])
+st_env.map_edge(edge1, [mac_array_coord, router_coord, llc_coord, pciephy_coord1, board_coord1, pciephy_coord2, dram_coord1])
 # Also OK: [mac_array_coord, router_coord, board_coord1, pciephy_coord2, dram_coord1]
-st_env.map_edge(edge2, [weight_coord, core_coord, router_coord, buffer_coord, (mac_array_coord, 0, 1)])
+st_env.map_edge(edge2, [weight_coord, llc_coord, router_coord, buffer_coord, (mac_array_coord, 0, 1)])
 
 # Simulate
 st_env.simulate(1)
-st_env.show_overall_time(1)
+st_env.show_overall_time()

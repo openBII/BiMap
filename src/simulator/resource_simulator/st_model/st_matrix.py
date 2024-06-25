@@ -16,7 +16,7 @@ from src.simulator.resource_simulator.st_model.space_point.communication_point i
 class STMatrix():
     def __init__(self, dim: int, space_level: int, communication_networks: List[CommunicationPoint] = None):
         # TODO: 改成OrderedDict
-        self._container: Dict[MLCoord, Union[STMatrix, STPoint]] = {}
+        self._container: Dict[Coord, Union[STMatrix, STPoint]] = {}
 
         self.dim = dim  # Dimension of this level
         self._space_level = space_level
@@ -168,12 +168,11 @@ class STMatrix():
             return self._container.pop(top_coord)
         return self._container[top_coord].pop(coord, item_id)
 
-    def exist(self, ml_coord: MLCoord):
+    def exist(self, coord: Coord):
         """
         判断ml_coord指定的位置该位置是否存在
-        不着急实现
         """
-        pass
+        return coord in self.container
 
     def create(self, ml_coord: MLCoord):
         """
@@ -224,12 +223,25 @@ class STMatrix():
         coord_level = path.level
         network_id = path.network_id
         if coord_level == 1:
-            assert path.same_domain, "All hops on this path should be in the same interconnection domain"
+            assert self.check_edge_path(path)
+            # TODO(huanyu): 这个地方写的有点麻烦了, 实际上path上的坐标都只有一个层次
             self.communication_networks[network_id]._edge_map.update({edge: path.extract()})
         else:
             inner_matrix = self._container[path.top_coord]
             inner_path = path.inner_coord
             inner_matrix.add_edge(edge, inner_path)
+
+    def check_edge_path(self, path: PathCoord) -> bool:
+        if not path.same_domain:
+            return False
+        for edge_coord in path:
+            if not edge_coord.ml_coord.single_level:
+                return False
+            # else:
+            #     if not self.exist(edge_coord.ml_coord.top_coord):
+            #         return False
+        return True
+
 
     # def process(self, edges: List[Edge]) -> List[Edge]:
     #     start_time_heap = []

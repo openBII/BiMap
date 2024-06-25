@@ -58,6 +58,10 @@ class MLCoord(tuple):
     @property
     def empty(self) -> bool:
         return len(self) == 0
+    
+    @property
+    def single_level(self) -> bool:
+        return len(self) == 1
 
     def __str__(self) -> str:
         return super().__str__().replace('), (', ')->(')
@@ -117,6 +121,9 @@ class PathCoord:
                 ml_coord, network_id, link_id = element
             self.path.append(EdgeCoord(ml_coord, network_id, link_id))
 
+    def __iter__(self):
+        return iter(self.path)
+
     def __contains__(self, ml_coord: MLCoord):
         for element in self.path:
             if element.ml_coord == ml_coord:
@@ -142,7 +149,7 @@ class PathCoord:
         return string
     
     def extract(self):
-        path: List[MLCoord] = []
+        path: List[Tuple[MLCoord, int]] = []
         for element in self.path:
             path.append((element.ml_coord, element.link_id))
         return path
