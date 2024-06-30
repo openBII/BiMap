@@ -76,6 +76,9 @@ class Edge():
 
     def __repr__(self):
         return "From Task {:d} to Task {:d}".format(self.in_task.id, self.out_task.id)
+    
+    def __lt__(self, other):
+        return self.edge_id < other.edge_id
 
     @property
     def edge_id(self) -> int:

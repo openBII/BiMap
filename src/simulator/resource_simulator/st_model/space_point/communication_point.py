@@ -26,7 +26,7 @@ class CommunicationPoint(STPoint):
     def edge_map(self):
         return self._edge_map
 
-    def process(self, edges: List[Edge]) -> List[Edge]:
+    def process(self, edges: List[Edge]) -> Tuple[List[Edge], List[Edge]]:
         start_time_heap = []
         tick_dict: Dict[Edge, List[Tick]] = {}
         for edge in edges:
@@ -52,7 +52,7 @@ class CommunicationPoint(STPoint):
                 edge._put_back(tick, finish_time)
         for edge in finished_edges:
             edges.remove(edge[0])
-        return edges
+        return edges, [edge[0] for edge in finished_edges]
     
 
 class CoreCommunicationPoint(CommunicationPoint):

@@ -8,44 +8,47 @@ from src.simulator.task_rabbit.task_model.vtask_block import VTaskBlock
 from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord
 from src.simulator.task_rabbit.task_model.edge import Edge
+from src.simulator.resource_simulator.sync.sync_table import SyncTable
+from copy import deepcopy
 
 
 class Scheduler():
-    def __init__(self, st_matrix: STMatrix, st_context: STContext, task_graph: TaskGraph, initial_tasks: Set[TaskBlock] = None) -> None:
+    def __init__(self, st_matrix: STMatrix, st_context: STContext, task_graph: TaskGraph, sync_table: SyncTable, initial_tasks: Set[TaskBlock] = None) -> None:
         self._activated_task_id = set()
         self.init(initial_tasks)
         self._activated_edges = []
         self._st_matrix = st_matrix
         self._st_context = st_context
         self._task_graph = task_graph
+        self._sync_table = sync_table
 
     def init(self, tasks: Set[TaskBlock]):
         for task in tasks:
             self._activated_task_id.add(task.id)
         
-    def add_activated_tasks(self):
-        new_activated_tasks = set()
-        for task_id in self._activated_task_id:
-            task = self._task_graph.get_node(task_id)
-            if task.activated:
-                new_activated_tasks.add(task_id)
-            out_task: TaskBlock
-            for out_task in task.out_tasks:
-                if out_task.activated:
-                    new_activated_tasks.add(out_task.id)
-        self._activated_task_id = new_activated_tasks
-        # for task_id in self._activated_task_id:
-        #     if self._activated_task_id[task_id]:
-        #         task = self._task_graph.get_node(task_id)
-        #         if task.activated:
-        #             self._activated_task_id.update({task.id: False})
-        #         else:
-        #             finished_tasks.append(task_id)
-        #         for out_task in task.out_tasks:
-        #             if out_task.activated:
-        #                 self._activated_task_id.update({out_task.id: False})
-        # for task_id in finished_tasks:
-        #     del self._activated_task_id[task_id]
+    # def add_activated_tasks(self):
+    #     new_activated_tasks = set()
+    #     for task_id in self._activated_task_id:
+    #         task = self._task_graph.get_node(task_id)
+    #         if task.activated:
+    #             new_activated_tasks.add(task_id)
+    #         out_task: TaskBlock
+    #         for out_task in task.out_tasks:
+    #             if out_task.activated:
+    #                 new_activated_tasks.add(out_task.id)
+    #     self._activated_task_id = new_activated_tasks
+    #     for task_id in self._activated_task_id:
+    #         if self._activated_task_id[task_id]:
+    #             task = self._task_graph.get_node(task_id)
+    #             if task.activated:
+    #                 self._activated_task_id.update({task.id: False})
+    #             else:
+    #                 finished_tasks.append(task_id)
+    #             for out_task in task.out_tasks:
+    #                 if out_task.activated:
+    #                     self._activated_task_id.update({out_task.id: False})
+    #     for task_id in finished_tasks:
+    #         del self._activated_task_id[task_id]
     
     def add_activated_edges(self, task: TaskBlock):
         for edge in task.output_edges:
@@ -57,7 +60,14 @@ class Scheduler():
         while len(self._activated_task_id) != 0:
             self.schedule_tasks()
             self.schedule_edges()
-            self.add_activated_tasks()
+            self.remove_finished_tasks()
+
+    def remove_finished_tasks(self):
+        task_set = deepcopy(self._activated_task_id)
+        for task_id in task_set:
+            task = self._task_graph.get_node(task_id)
+            if not task.activated:
+                self._activated_task_id.remove(task_id)
 
     def schedule_tasks(self):
         # 对所有activated的任务不断遍历直到没有任务可以被完成
@@ -103,7 +113,10 @@ class Scheduler():
         # state = False 当前任务后续iteration无法被处理
         # task.activated = False 当前任务所有iteration均被处理完成
         while state and task.activated:
-            state = space_point.process(task.id)
+            if isinstance(space_point, ComputationPoint):
+                state = space_point.process(task.id, self._sync_table)
+            else:
+                state = space_point.process(task.id)
             if state:
                 flag = True
                 self.add_activated_edges(task)
@@ -117,14 +130,24 @@ class Scheduler():
                 network_id: int
                 for network_id in edge_dict:
                     edges = edge_dict[network_id]
-                    unfinished_edges.extend(self._st_matrix.communication_networks[network_id].process(edges))
+                    unfinished, finished = self._st_matrix.communication_networks[network_id].process(edges)
+                    self.add_activated_tasks(finished)
+                    unfinished_edges.extend(unfinished)
             else:
                 for network_coord in edge_dict:
                     container_coord, network_id = network_coord
                     edges = edge_dict[network_coord]
                     container: STMatrix = self._st_matrix.get_element(container_coord)
-                    unfinished_edges.extend(container.communication_networks[network_id].process(edges))
+                    unfinished, finished = container.communication_networks[network_id].process(edges)
+                    self.add_activated_tasks(finished)
+                    unfinished_edges.extend(unfinished)
         self._activated_edges = unfinished_edges
+
+    def add_activated_tasks(self, edges: Edge):
+        for edge in edges:
+            out_task: TaskBlock = edge.out_task
+            if out_task.activated:
+                self._activated_task_id.add(out_task.id)
 
     def classify_edges(self):
         '''

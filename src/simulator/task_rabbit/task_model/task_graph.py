@@ -31,6 +31,9 @@ class TaskGraph():
             return key, self._nodes[key]
         except StopIteration:
             raise StopIteration
+        
+    def __getitem__(self, task_id: int):
+        return self.get_node(task_id)
 
     @property
     def groups(self):
