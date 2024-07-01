@@ -144,7 +144,7 @@ class PathCoord:
     def __repr__(self) -> str:
         string = ''
         for element in self.path:
-            string += ' ->' + repr(element.link_id) + ' ' + repr(element.ml_coord)
+            string += ' -' + repr(element.link_id) + '-> ' + repr(element.ml_coord)
         string = string[5:]
         return string
     

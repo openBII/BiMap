@@ -56,7 +56,7 @@ class CommunicationPoint(STPoint):
                 if (edge, tick.iteration) in finished_edges:
                     edge._fire(tick, finish_time, self.evaluator.recorder.correct_time)
                 else:
-                    edge._put_back(tick, finish_time)
+                    edge._put_back(tick, tick.time if tick.time > finish_time else finish_time)
         unfinished_edges = copy(edges)
         for edge in finished_edges:
             unfinished_edges.remove(edge[0])

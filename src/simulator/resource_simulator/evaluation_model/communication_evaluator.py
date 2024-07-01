@@ -183,6 +183,9 @@ class CommunicationEvaluator(Evaluator):
             if self.all_edges_reach_deadline(edge_heap, extern_deadline):
                 break
             min_start_time, min_edge = heapq.heappop(edge_heap)  # 最先可以开始的边
+            if extern_deadline is not None:
+                if min_start_time > extern_deadline:
+                    return [], extern_deadline
             if len(edge_heap) != 0:
                 second_min_start_time, second_min_edge = heapq.heappop(edge_heap)  # 第二先可以开始的边
             else:
@@ -255,7 +258,10 @@ class CommunicationEvaluator(Evaluator):
         if extern_deadline is None:
             self.recorder.recorder_time = recorder
         else:
-            finish_time = deadline
+            if len(finished_edges) != 0:
+                assert finish_time == extern_deadline
+            else:
+                finish_time = extern_deadline
         return finished_edges, finish_time
 
 
