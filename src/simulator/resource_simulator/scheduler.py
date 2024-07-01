@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Set, Union, List, Dict, Tuple
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
 from src.simulator.resource_simulator.st_model.space_point.computation_point import ComputationPoint
@@ -57,7 +58,7 @@ class Scheduler():
 
     def schedule(self):
         # 每次处理完所有激活的任务后处理边
-        while len(self._activated_task_id) != 0:
+        while (len(self._activated_task_id) != 0 or len(self._activated_edges) != 0):
             self.schedule_tasks()
             self.schedule_edges()
             self.remove_finished_tasks()
@@ -123,14 +124,33 @@ class Scheduler():
         return flag
 
     def schedule_edges(self):
+        # XXX(huanyu): 现在的实现方式是评估两次, 第一次获得最短时间
+        min_finish_time = float("inf")
         classified_edges = self.classify_edges()
-        unfinished_edges = []
         for i, edge_dict in enumerate(classified_edges):
             if i == 0:
                 network_id: int
                 for network_id in edge_dict:
                     edges = edge_dict[network_id]
-                    unfinished, finished = self._st_matrix.communication_networks[network_id].process(edges)
+                    _, _, finish_time = self._st_matrix.communication_networks[network_id].process(edges)
+                    min_finish_time = min(finish_time, min_finish_time)
+            else:
+                for network_coord in edge_dict:
+                    container_coord, network_id = network_coord
+                    edges = edge_dict[network_coord]
+                    container: STMatrix = self._st_matrix.get_element(container_coord)
+                    _, _, finish_time = container.communication_networks[network_id].process(edges)
+                    min_finish_time = min(finish_time, min_finish_time)
+        self.correct_edge_evaluation(classified_edges, min_finish_time)
+
+    def correct_edge_evaluation(self, edges: List[Dict[Tuple[MLCoord, int] | int, List[Edge]]], time: float):
+        unfinished_edges = []
+        for i, edge_dict in enumerate(edges):
+            if i == 0:
+                network_id: int
+                for network_id in edge_dict:
+                    edges = edge_dict[network_id]
+                    unfinished, finished, _ = self._st_matrix.communication_networks[network_id].process(edges, time)
                     self.add_activated_tasks(finished)
                     unfinished_edges.extend(unfinished)
             else:
@@ -138,7 +158,7 @@ class Scheduler():
                     container_coord, network_id = network_coord
                     edges = edge_dict[network_coord]
                     container: STMatrix = self._st_matrix.get_element(container_coord)
-                    unfinished, finished = container.communication_networks[network_id].process(edges)
+                    unfinished, finished, _ = container.communication_networks[network_id].process(edges, time)
                     self.add_activated_tasks(finished)
                     unfinished_edges.extend(unfinished)
         self._activated_edges = unfinished_edges

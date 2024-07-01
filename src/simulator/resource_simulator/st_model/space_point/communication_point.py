@@ -1,4 +1,5 @@
 import heapq
+from copy import copy
 from typing import List, Dict, Union, Tuple
 from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
@@ -26,7 +27,7 @@ class CommunicationPoint(STPoint):
     def edge_map(self):
         return self._edge_map
 
-    def process(self, edges: List[Edge]) -> Tuple[List[Edge], List[Edge]]:
+    def process(self, edges: List[Edge], deadline: float = None) -> Tuple[List[Edge], List[Edge], float]:
         start_time_heap = []
         tick_dict: Dict[Edge, List[Tick]] = {}
         for edge in edges:
@@ -42,17 +43,26 @@ class CommunicationPoint(STPoint):
                 if not self.evaluator.is_edge_mapped(edge, tick.iteration):
                     self.evaluator.create_edge_path(edge, tick.iteration, self.edge_map[edge])
         finished_edges: List[Tuple[Edge, int]]
-        finished_edges, finish_time = self.evaluator(start_time_heap)
-        for edge in edges:
-            ticks = tick_dict[edge]
-            tick = ticks.pop()  # 后进先出, 因为put_back时每次都是在队首放一个tick
-            if (edge, tick.iteration) in finished_edges:
-                edge._fire(tick, finish_time, self.evaluator.recorder.correct_time)
-            else:
-                edge._put_back(tick, finish_time)
+        finished_edges, finish_time = self.evaluator(start_time_heap, deadline)
+        if deadline is None:
+            for edge in edges:
+                ticks = tick_dict[edge]
+                tick = ticks.pop()  # 后进先出, 因为put_back时每次都是在队首放一个tick
+                edge._put_back(tick, tick.time)
+        else:
+            for edge in edges:
+                ticks = tick_dict[edge]
+                tick = ticks.pop()  # 后进先出, 因为put_back时每次都是在队首放一个tick
+                if (edge, tick.iteration) in finished_edges:
+                    edge._fire(tick, finish_time, self.evaluator.recorder.correct_time)
+                else:
+                    edge._put_back(tick, finish_time)
+        unfinished_edges = copy(edges)
         for edge in finished_edges:
-            edges.remove(edge[0])
-        return edges, [edge[0] for edge in finished_edges]
+            unfinished_edges.remove(edge[0])
+        if deadline is not None:
+            assert finish_time == deadline
+        return unfinished_edges, [edge[0] for edge in finished_edges], finish_time
     
 
 class CoreCommunicationPoint(CommunicationPoint):

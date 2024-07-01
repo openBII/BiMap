@@ -4,6 +4,7 @@ from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
 from src.simulator.resource_simulator.st_model.hop import Hop, HopDict
 import heapq
+from copy import deepcopy
 from src.simulator.resource_simulator.evaluation_model.recorder import CommunicationRecorder, CommunicationRecord
 from src.simulator.resource_simulator.evaluation_model.evaluator import Evaluator, EvaluationMode
 
@@ -36,8 +37,25 @@ class CommunicationEvaluator(Evaluator):
         # results: {(Edge, iteration, Hop): CommunicationRecord}
         self.recorder = CommunicationRecorder()
 
+    def __call__(self, input, deadline=None):
+        return self.eval(input, deadline)
+
+    def eval(self, input, deadline=None):
+        if self.mode == EvaluationMode.STATIC:
+            return self.eval_by_model(input, deadline)
+        elif self.mode == EvaluationMode.DYNAMIC:
+            return self.eval_by_execution(input, deadline)
+        else:
+            raise ValueError('Unsupported evaluation mode')
+
     def is_edge_mapped(self, edge: Edge, iteration: int):
-        return (edge, iteration) in self.edge_map
+        if (edge, iteration) in self.edge_map:
+            if len(self.edge_map[(edge, iteration)]) == 0:
+                return False
+            else:
+                return True
+        else:
+            return False
 
     def create_edge_path(self, edge: Edge, iteration: int, ml_coords: List[Tuple[MLCoord, int]]):
         """
@@ -123,8 +141,22 @@ class CommunicationEvaluator(Evaluator):
             return self.bandwidth[hop]
         else:
             raise TypeError("Unsupported type of Attribute: bandwidth")
+        
+    def all_edges_reach_deadline(self, edge_heap: List[Tuple[int, Tuple[Edge, int]]], deadline: float):
+        if deadline is None:
+            return False
+        for entry in edge_heap:
+            if entry[0] != deadline:
+                return False
+        return True
+    
+    def copy_recorder(self):
+        recorder = {}
+        for key, record in self.recorder:
+            recorder[key] = deepcopy(record)
+        return recorder
 
-    def eval_by_model(self, edge_heap: List[Tuple[int, Tuple[Edge, int]]]) -> Tuple[List[Edge], int]:
+    def eval_by_model(self, edge_heap: List[Tuple[int, Tuple[Edge, int]]], extern_deadline: float = None) -> Tuple[List[Edge], int]:
         '''
         Pseudo-code:
         while not SOME_EDGE_FINISHED:
@@ -145,7 +177,11 @@ class CommunicationEvaluator(Evaluator):
         - finish_time: float
         '''
         finished_edges: List[Tuple[Edge, int]] = []
+        if extern_deadline is None:
+            recorder = self.copy_recorder()
         while len(finished_edges) == 0:  # 每次评估一个hop
+            if self.all_edges_reach_deadline(edge_heap, extern_deadline):
+                break
             min_start_time, min_edge = heapq.heappop(edge_heap)  # 最先可以开始的边
             if len(edge_heap) != 0:
                 second_min_start_time, second_min_edge = heapq.heappop(edge_heap)  # 第二先可以开始的边
@@ -159,7 +195,7 @@ class CommunicationEvaluator(Evaluator):
                     second_min_start_time, second_min_edge = heapq.heappop(edge_heap)
                 else:
                     break
-            if second_min_start_time != min_start_time:
+            if second_min_start_time != min_start_time and second_min_edge is not None:
                 heapq.heappush(edge_heap, (second_min_start_time, second_min_edge))
             else:
                 second_min_start_time = float('inf')
@@ -189,7 +225,11 @@ class CommunicationEvaluator(Evaluator):
                     if end_time < min_end_time:
                         min_end_time = end_time
                     self.recorder.update((*edge, hop), CommunicationRecord(start_time, end_time, last_percent))
-            deadline = min_end_time if min_end_time < second_min_start_time else second_min_start_time
+            # deadline = min_end_time if min_end_time < second_min_start_time else second_min_start_time
+            if extern_deadline is not None:
+                deadline = min(min_end_time, second_min_start_time, extern_deadline)
+            else:
+                deadline = min(min_end_time, second_min_start_time)
             for hop in hop_dict:
                 edges = hop_dict[hop]
                 num_edges = len(edges)
@@ -212,6 +252,10 @@ class CommunicationEvaluator(Evaluator):
                     else:
                         # 将未完成的边重新加入堆中
                         heapq.heappush(edge_heap, (record.end_time, edge))
+        if extern_deadline is None:
+            self.recorder.recorder_time = recorder
+        else:
+            finish_time = deadline
         return finished_edges, finish_time
 
 

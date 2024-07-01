@@ -91,8 +91,12 @@ class CommunicationRecorder(Recorder):
                 return self.recorder_time[key]
         return self.recorder_time[__key]
     
-    def update(self, key: Tuple, value: CommunicationRecord):
-        self.recorder_time.update({key: value})
+    def update(self, __key: Tuple[Edge, int, Hop], value: CommunicationRecord):
+        for key in self.recorder_time:
+            if __key[0] == key[0] and __key[1] == key[1] and __key[2].src == key[2].src and __key[2].dst == key[2].dst and __key[2].link_id == key[2].link_id:
+                self.recorder_time.update({key: value})
+                return
+        self.recorder_time.update({__key: value})
 
     def correct_time(self, tick: Tick, time: float):
         assert time >= 0
