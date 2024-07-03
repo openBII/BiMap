@@ -11,6 +11,8 @@ from src.simulator.resource_simulator.st_model.tick import Tick
 from typing import List
 from src.simulator.resource_simulator.evaluation_model.evaluator import Evaluator
 from src.simulator.resource_simulator.evaluation_model.recorder import Recorder
+from src.simulator.resource_simulator.sync.sync_task import SyncTask
+from src.simulator.resource_simulator.sync.sync_table import SyncTable
 
 
 class STPoint():
@@ -29,20 +31,37 @@ class STPoint():
     
     def get_task_ids(self):
         return [task.id for task in self._tasks]
-
-    def process(self, tick: Tick):
-        self._ticks.append(tick)
-        
-        # 如果第一个task没有触发
-        # return 
     
-        new_tick = Tick(0)
-        return new_tick
+    def get_last_task(self):
+        if self.empty:
+            return None
+        else:
+            return self._tasks[-1]
+
+    def process(self, sync_table: SyncTable):
+        sync_task = self._tasks[self._pc]
+        if isinstance(sync_task, SyncTask):
+            sync_task.time = self.recorder.max_time
+            if sync_task.task_info[0] is None:
+                assert sync_task.time == 0
+            else:
+                sync_table.update(sync_task)
+            if sync_table.synchronized(sync_task.sync_id):
+                self.increment_pc()
+                self.recorder.max_time = sync_table.get_time(sync_task.sync_id)
+                return True
+            else:
+                return False
+        else:
+            return True
     
     def increment_pc(self):
         self._pc += 1
         if self._pc >= len(self._tasks):
             self._pc = 0
+
+    def decrement_pc(self):
+        self._pc -= 1
 
     def __getitem__(self, item):
         return self._tasks[item]
@@ -61,6 +80,10 @@ class STPoint():
 
     def __repr__(self):
         return str(self._tasks)
+    
+    @property
+    def empty(self):
+        return len(self._tasks) == 0
     
     def set_evaluator(self, evaluator: Evaluator):
         self.evaluator = evaluator

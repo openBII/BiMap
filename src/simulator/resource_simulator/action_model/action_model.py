@@ -24,13 +24,16 @@ from src.simulator.resource_simulator.action_model.replicater import Replicater
 from src.simulator.resource_simulator.action_model.column_merger import ColumnMerger
 from src.simulator.resource_simulator.action_model.column_deleter import ColumnDeleter
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord, PathCoord
+from src.simulator.resource_simulator.sync.sync_task import SyncTask
+from src.simulator.resource_simulator.sync.sync_table import SyncTable
 
 
 class ActionModel():
-    def __init__(self, task_graph: TaskGraph, st_matrix: STMatrix, st_context: STContext):
+    def __init__(self, task_graph: TaskGraph, st_matrix: STMatrix, st_context: STContext, sync_table: SyncTable):
         self._task_graph = task_graph
         self._st_matrix = st_matrix
         self._context = st_context
+        self._sync_table = sync_table
 
     def split_task(self, task_id, split_vector: Shape, split_funcs: List[SplitType]):
         if split_vector == 1:
@@ -345,9 +348,17 @@ class ActionModel():
         d.delete_step_phase(space_column, space_coord)
         return d.task_list
 
-    def put_in(self, ml_coord: MLCoord, task_id):
+    def put_in(self, ml_coord: MLCoord, task_id: int):
         self._st_matrix.add_task(ml_coord, self._task_graph.get_node(task_id))
         self._context.put_task_to(ml_coord, task_id)
+
+    def sync(self, ml_coord: MLCoord, sync_id: int):
+        space_point = self._st_matrix.get_element(ml_coord)
+        task = space_point.get_last_task()
+        sync_task = SyncTask(sync_id, task)
+        if task is not None:
+            self._sync_table.add(sync_task)
+        self._st_matrix.add_task(ml_coord, sync_task)
 
     def take_out(self, ml_coord: MLCoord, task_id=None):
         task = self._st_matrix.pop(ml_coord, task_id)

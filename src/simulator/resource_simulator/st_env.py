@@ -28,6 +28,7 @@ from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.resource_simulator.st_model.hop import Hop
 from src.simulator.resource_simulator.evaluation_model.recorder import CommunicationRecord
 from src.simulator.task_rabbit.task_model.vtask_block import VTaskBlock
+from src.simulator.resource_simulator.sync.sync_table import SyncTable
 
 
 class STEnv():
@@ -36,9 +37,10 @@ class STEnv():
         self._st_matrix = st_matrix
 
         self._context = STContext()
+        self._sync_table = SyncTable()
 
         self._evaluator = EvaluationModel(task_graph, st_matrix, self._context)
-        self._actor = ActionModel(task_graph, st_matrix, self._context)
+        self._actor = ActionModel(task_graph, st_matrix, self._context, self._sync_table)
 
         self._history = History()  # Memento
         # self._history.new_state(self.context)
@@ -54,6 +56,9 @@ class STEnv():
     @property
     def task_graph(self):
         return self._task_graph
+    
+    def get_sync_id(self):
+        return self._sync_table.get_sync_id()
 
     def get_task(self, task_id):
         return self._task_graph.get_node(task_id)
@@ -281,8 +286,11 @@ class STEnv():
     def delete_column(self, space_coord):
         return self._actor.delete_column(space_coord)
 
-    def put_in(self, ml_coord, task_id):
+    def put_in(self, ml_coord: MLCoord, task_id):
         self._actor.put_in(ml_coord, task_id)
+
+    def sync(self, ml_coord: MLCoord, sync_id: int):
+        self._actor.sync(ml_coord, sync_id)
 
     def put_group_in(self, ml_coord: MLCoord, task_id):
         """将计算任务块和相应的输入存储任务块放到一个核的一个phase内
@@ -356,13 +364,15 @@ class STEnv():
     def map_edge(self, edge: Edge, path: List[Union[MLCoord, Tuple[MLCoord, int], Tuple[MLCoord, int, int]]]):
         self._actor.map_edge(edge, path)
 
-    def simulate(self, tick_num: int, input_type: InputType = InputType.BATCH):
+    def simulate(self, tick_num: int = 1, input_type: InputType = InputType.BATCH):
+        if tick_num > 1 and input_type == InputType.PIPELINE:
+            raise NotImplementedError
         activated_tasks = self._task_graph.input(tick_num, input_type)
         for node in self._task_graph.static_nodes:
             node.init_ticks(tick_num)
         activated_tasks = activated_tasks | self._task_graph.static_nodes
         # 初始化scheduler，传入activated_tasks
-        scheduler = Scheduler(self._st_matrix, self._context, self._task_graph, activated_tasks)
+        scheduler = Scheduler(self._st_matrix, self._context, self._task_graph, self._sync_table, activated_tasks)
         scheduler.schedule()
 
     # State control

@@ -1,3 +1,4 @@
+from src.simulator.resource_simulator.sync.sync_table import SyncTable
 from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
 from src.simulator.resource_simulator.st_model.st_point import STPoint
 from src.simulator.resource_simulator.evaluation_model.recorder import ComputationRecorder
@@ -15,14 +16,21 @@ class ComputationPoint(STPoint):
     def __repr__(self):
         return repr(self.config)
         
-    def process(self, task_id: int):
+    def process(self, task_id: int, sync_table: SyncTable):
         if self._tasks[self._pc].id == task_id:
             task: CTaskBlock = self._tasks[self._pc]
             duration = self.evaluator(task)
             # The start time is obtained considering data dependencies
             start_time, iteration, consumed_ticks = task.consume()
+            last_max_time = self.recorder.max_time
             self.recorder.record(task_id, iteration, start_time, duration)
             self.increment_pc()
+            if not super().process(sync_table):
+                task.put_back(consumed_ticks)
+                # self.recorder.remove(task_id, iteration)
+                self.recorder.reset(last_max_time)
+                self.decrement_pc()
+                return False
             # TODO: 计算如果可以和访存流水如何计算存储任务块的存活时间
             task.callback(self.recorder.max_time, consumed_ticks, duration)
             task.fire(iteration, self.recorder.max_time)

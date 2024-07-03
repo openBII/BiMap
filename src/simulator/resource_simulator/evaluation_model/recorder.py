@@ -30,19 +30,32 @@ class ComputationRecorder(Recorder):
     def __init__(self, slot=1):
         super().__init__(slot)
 
+    def __contains__(self, task_id: int):
+        for task_info in self.recorder_time:
+            if task_info[0] == task_id:
+                return True
+        return False
+
     def record(self, id: int, iteration: int, min_start: float, time_duration: float):
         allow_time = max(min_start, self.max_time)
         self.max_time = allow_time + time_duration
         time_record = {(id, iteration): [float(allow_time), float(self.max_time)]}
         self.recorder_time.update(time_record)
 
+    def remove(self, id: int, iteration: int):
+        del self.recorder_time[(id, iteration)]
+
+    def reset(self, time: float):
+        self.max_time = time
+
 
 class MemoryRecorder(Recorder):
     def __init__(self, slot=1):
         super().__init__(slot)
 
-    def record(self, id: int, iteration: int, min_start: int, time_duration: int):
-        time_record = {(id, iteration): [min_start, min_start + time_duration]}
+    def record(self, id: int, iteration: int, min_start: float, time_duration: float):
+        allow_time = max(min_start, self.max_time)
+        time_record = {(id, iteration): [allow_time, allow_time + time_duration]}
         self.recorder_time.update(time_record)
 
     def update(self, id: int, iteration: int, end_time: int):

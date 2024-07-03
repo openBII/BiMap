@@ -159,6 +159,13 @@ class Edge():
         assert not self._output_ticks.empty(), "No tick can be consumed due to empty output queue"
         return self._output_ticks.get()
     
+    def put_tick_back(self, tick: Tick):
+        ticks = Queue()
+        ticks.put(tick)
+        while not self._output_ticks.empty():
+            ticks.put(self._output_ticks.get())
+        self._output_ticks = ticks
+    
     def transfer_tick(self):
         """Move a tick from the input tick queue to the output tick queue.
         """

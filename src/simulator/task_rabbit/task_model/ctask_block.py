@@ -49,7 +49,7 @@ class CTaskBlock(TaskBlock):
     def consume(self) -> Tuple[int, int, List[Tick]]:
         # 处理一下没有输入边的情况
         start_time = 0
-        consumed_ticks = []
+        consumed_ticks: List[Tick] = []
         for edge in self._input_edges:
             received_tick = edge.consume_tick()
             consumed_ticks.append(received_tick)
@@ -57,6 +57,11 @@ class CTaskBlock(TaskBlock):
             if received_tick.time > start_time:
                 start_time = received_tick.time
         return start_time, received_tick.iteration, consumed_ticks
+    
+    def put_back(self, ticks: List[Tick]):
+        assert len(ticks) == len(self._input_edges)
+        for i, edge in enumerate(self._input_edges):
+            edge.put_tick_back(ticks[i])
 
     # def copy_like(self) -> TaskBlock:
     #     data = deepcopy(self._data)
