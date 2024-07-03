@@ -11,7 +11,6 @@ from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
 from src.simulator.resource_simulator.config.matrix_config import ServerConfig
 from src.simulator.resource_simulator.st_model.space_matrix.server_factory import ServerFactory
 from src.simulator.resource_simulator.st_model.st_coord import Coord, MLCoord
-from src.simulator.resource_simulator.sync.sync_task import SyncTask
 
 
 # Construct a task graph
@@ -66,16 +65,22 @@ st_env.put_in(storage0_coord, storage0_0.id)
 st_env.put_in(storage0_coord, weight0_0.id)
 compute0_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((0, 0)), Coord(1))
 st_env.put_in(compute0_coord, compute0_0.id)
+sync_id0 = st_env.get_sync_id()
+st_env.sync(compute0_coord, sync_id0)
 storage1_coord = MLCoord(Coord((0, 1)), Coord(1))
 st_env.put_in(storage1_coord, storage0_1.id)
 st_env.put_in(storage1_coord, weight0_1.id)
 compute1_coord = MLCoord(Coord((0, 1)), Coord(0), Coord((0, 0)), Coord(1))
 st_env.put_in(compute1_coord, compute0_1.id)
+sync_id1 = st_env.get_sync_id()
+st_env.sync(compute1_coord, sync_id1)
 st_env.put_in(storage1_coord, output0.id)
 
-st_env.put_in(storage0_coord, storage1_0.id)
 st_env.put_in(storage0_coord, weight1_0.id)
+st_env.sync(storage0_coord, sync_id0)
+st_env.put_in(storage0_coord, storage1_0.id)
 st_env.put_in(compute0_coord, compute1_0.id)
+st_env.sync(compute0_coord, sync_id1)
 st_env.put_in(storage1_coord, storage1_1.id)
 st_env.put_in(storage1_coord, weight1_1.id)
 st_env.put_in(compute1_coord, compute1_1.id)
