@@ -144,7 +144,6 @@ class TaskGraph():
         in_task.add_output_edge(edge)
         return edge
 
-    # FIXME: 这个方法有问题，all_in_tasks这个方法被注释掉了
     def delete_node(self, task_id: int) -> None:
         """
         将task_id表示的结点从Task Graph中移除，即删除所有和该结点相关的边连接
@@ -159,16 +158,18 @@ class TaskGraph():
 
         task = self._nodes.pop(task_id) 
 
-        for in_task in task.all_in_tasks:
+        for in_task in task.in_tasks:
+            in_task: TaskBlock
             in_task.remove_output_task(task_id)
-        for out_task in task.all_out_tasks:
+        for out_task in task.out_tasks:
+            out_task: TaskBlock
             out_task.remove_input_task(task_id)
         task.destroy()
 
-        if id in self._inputs:
-            self._inputs.remove(id)
-        if id in self._outputs:
-            self._outputs.remove(id)
+        if task_id in self._inputs:
+            self._inputs.remove(task_id)
+        if task_id in self._outputs:
+            self._outputs.remove(task_id)
 
     def disable_node(self, task_id: int) -> None:
         """Disable the node whose ID is task_id.

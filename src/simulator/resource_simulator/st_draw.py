@@ -4,14 +4,14 @@
 from top.config import GlobalConfig
 from pyecharts.components import Table
 from pyecharts.options import ComponentTitleOpts
-from task_rabbit.task_model.task_graph import TaskGraph
-from task_rabbit.task_model.task_block import TaskBlock
-from task_rabbit.task_model.ctask_block import CTaskBlock
-from task_rabbit.task_model.stask_block import STaskBlock
+from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
+from src.simulator.task_rabbit.task_model.task_block import TaskBlock
+from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
+from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
 
 from pyecharts.charts import Page, TreeMap
-from resource_simulator.st_model.st_matrix import STMatrix, SpaceColumn, Coord
-from resource_simulator.st_model.st_point import STPoint
+from src.simulator.resource_simulator.st_model.st_matrix import STMatrix, Coord
+from src.simulator.resource_simulator.st_model.st_point import STPoint
 
 import random
 import copy
@@ -43,7 +43,7 @@ class STDraw(object):
                 return 'red'
 
         nodes_data = []
-        for node_id in graph.nodes.keys():
+        for node_id in graph._nodes.keys():
             node = graph.get_node(node_id)
             node_id = node_id if type(node_id) is str else str(node_id)
             label_cc = LabelOpts(is_show=True, position='inside', color=get_node_color(node),
@@ -57,22 +57,22 @@ class STDraw(object):
         #               'rgb(135, 206, 235)', 'rgb(107, 142, 35)', 'rgb(160, 32, 240)', 'rgb(218, 112, 214)',
         #               'rgb(3, 168, 158)', 'rgb(65, 105, 225)', 'rgb(255, 192, 203)', 'rgb(250, 128, 114)',
         #               'rgb(255, 0, 255)',  'rgb(156, 102, 31)', 'rgb(112, 128, 105)']
-        for node in graph.nodes.values():
+        for node in graph._nodes.values():
             # random.shuffle(link_color)
-            for icc_idx, icc in enumerate(node.input_clusters):
+            for edge_idx, edge in enumerate(node.input_edges):
                 link_type = LineStyleOpts(is_show=True, width=1, opacity=1, curve=0, type_='solid',
                                           color='black')  # color=link_color[icc_idx % len(link_color)]
-                for ic in icc.edges.keys():
-                    if type(ic.pre_task.id) is str:
-                        pre_task_id = ic.pre_task.task_type.name + '\n' + ic.pre_task.id
-                        post_task_id = ic.post_task.task_type.name + '\n' + ic.post_task.id
-                    else:
-                        pre_task_id = ic.pre_task.task_type.name + \
-                            '\n' + str(ic.pre_task.id)
-                        post_task_id = ic.post_task.task_type.name + \
-                            '\n' + str(ic.post_task.id)
-                    links_data.append(opts.GraphLink(source=pre_task_id, target=post_task_id, value=None,
-                                                     linestyle_opts=link_type))
+                
+                if type(edge.in_task.id) is str:
+                    pre_task_id = edge.in_task.task_type.name + '\n' + edge.in_task.id
+                    post_task_id = edge.out_task.task_type.name + '\n' + edge.out_task.id
+                else:
+                    pre_task_id = edge.in_task.task_type.name + \
+                        '\n' + str(edge.in_task.id)
+                    post_task_id = edge.out_task.task_type.name + \
+                        '\n' + str(edge.out_task.id)
+                links_data.append(opts.GraphLink(source=pre_task_id, target=post_task_id, value=None,
+                                                    linestyle_opts=link_type))
 
         init_opts = InitOpts(width=width, height=height,
                              renderer='canvas', bg_color='white')
@@ -97,7 +97,7 @@ class STDraw(object):
         return c
     
     @staticmethod
-    def draw_graph(graph: TaskGraph, out_path=GlobalConfig.Path["temp"] + 'task_graph_draw.html',
+    def draw_graph(graph: TaskGraph, out_path: str,
                    width='1500px', height='800px'):
         graph = STDraw.obtain_graph(graph=graph, width=width, height=height)
         graph.render(out_path)

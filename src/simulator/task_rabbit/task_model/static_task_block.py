@@ -1,9 +1,12 @@
 from queue import Queue
+from copy import deepcopy
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from src.simulator.resource_simulator.st_model.tick import Tick
 from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.task_rabbit.task_model.precision import Precision
+from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
+from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
 
 
 class StaticTaskBlock(TaskBlock):
@@ -43,3 +46,14 @@ class StaticTaskBlock(TaskBlock):
         for edge in self._output_edges:
             tick = Tick(self._id, iteration, time)
             edge.add_tick(tick)
+
+    def copy_like(self, shape: Shape = None, is_static: bool = False) -> TaskBlock:
+        if is_static:
+            new_task_block = StaticTaskBlock(IDGenerator.get_next_task_id(),
+                                             deepcopy(self.shape) if shape is None else shape,
+                                             self.precision)
+        else:
+            new_task_block = STaskBlock(IDGenerator.get_next_task_id(),
+                                        deepcopy(self.shape) if shape is None else shape,
+                                        self.precision)
+        return new_task_block

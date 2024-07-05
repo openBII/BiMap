@@ -5,6 +5,8 @@ from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from src.simulator.resource_simulator.st_model.tick import Tick
 from typing import List, Tuple
+from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
+from copy import deepcopy
 
 
 class CTaskBlock(TaskBlock):
@@ -63,11 +65,10 @@ class CTaskBlock(TaskBlock):
         for i, edge in enumerate(self._input_edges):
             edge.put_tick_back(ticks[i])
 
-    # def copy_like(self) -> TaskBlock:
-    #     data = deepcopy(self._data)
-    #     new_task_block = SITaskBlock(IDGenerator.get_next_task_id(),
-    #                                  copy(self.shape),
-    #                                  self.precision, data)
-    #     return new_task_block
-    
-
+    def copy_like(self, shape: Shape = None) -> TaskBlock:
+        new_task_block = CTaskBlock(IDGenerator.get_next_task_id(),
+                                    deepcopy(self.shape) if shape is None else shape,
+                                    self.task_type,
+                                    self.precision,
+                                    self.bias_type)
+        return new_task_block

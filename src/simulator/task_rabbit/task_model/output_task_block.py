@@ -5,6 +5,8 @@ from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.task_rabbit.task_model.storage import Storage
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
+from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
+from copy import deepcopy
 
 
 class OutputTaskBlock(TaskBlock):
@@ -34,9 +36,8 @@ class OutputTaskBlock(TaskBlock):
                 available_time = received_tick.time
         return start_time, available_time - start_time, received_tick.iteration
 
-    # def copy_like(self) -> TaskBlock:
-    #     new_task_block = OutputTaskBlock(copy(self.shape),
-    #                                      IDGenerator.get_next_task_id(),
-    #                                      self.precision)
-    #     new_task_block.socket_id = self.socket_id
-    #     return new_task_block
+    def copy_like(self, shape: Shape = None) -> STaskBlock:
+        new_task_block = STaskBlock(IDGenerator.get_next_task_id(),
+                                    deepcopy(self.shape) if shape is None else shape,
+                                    self.precision)
+        return new_task_block

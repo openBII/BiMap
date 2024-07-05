@@ -1,6 +1,7 @@
 import operator
 from functools import reduce
 from typing import Tuple
+from copy import deepcopy
 
 
 class Shape():
@@ -11,7 +12,7 @@ class Shape():
     如果某个维度大小为0，则意味着不存在这一维度
     """
 
-    def __init__(self, nx=0, nr=0, nf=0, ny=0, nky=0, nkx=0, niy=0, nix=0, batch=1):
+    def __init__(self, nx=0, nr=0, nf=0, ny=0, nky=0, nkx=0, niy=0, nix=0, batch=1, branch=1):
         self.nx = nx
         self.nr = nr
         self.nf = nf
@@ -23,6 +24,8 @@ class Shape():
         self.nix = nix
 
         self.batch = batch
+
+        self.branch = branch
 
         # self.additional_dims    # for extension
 
@@ -178,3 +181,21 @@ class Shape():
     # def __rmod__(self, other):
     #     return Shape(self.ny % other, self.nx % other, self.nf % other,
     #                  self.nr % other, self.nky % other, self.nkx % other)
+
+
+class SplitVector(Shape):
+    def __init__(self, nx=1, nr=1, nf=1, ny=1, batch=1):
+        super().__init__(nx, nr, nf, ny, batch=batch)
+
+    @property
+    def num_slices(self):
+        return self.batch * self.ny * self.nx * self.nf * self.nr
+    
+    def get_slice_shape(self, task_shape: Shape):
+        slice_shape = deepcopy(task_shape)
+        slice_shape.batch = task_shape.batch / self.batch
+        slice_shape.ny = task_shape.ny / self.ny
+        slice_shape.nx = task_shape.nx / self.nx
+        slice_shape.nf = task_shape.nf / self.nf
+        slice_shape.nr = task_shape.nr / self.nr
+        return slice_shape

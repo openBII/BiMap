@@ -15,7 +15,6 @@ from src.simulator.task_rabbit.task_model.task_block_state import TaskState
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 
 
-
 class TaskBlock(ABC):
     """
     TaskBlock类描述一个任务块
@@ -65,8 +64,7 @@ class TaskBlock(ABC):
         raise NotImplementedError
 
     def copy_like(self):
-        # TODO ???
-        return self.copy_like()
+        raise NotImplementedError
 
     def is_enable(self) -> bool:
         """

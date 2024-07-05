@@ -7,11 +7,11 @@ STEnv类描述性能级仿真环境
 """
 
 from copy import deepcopy
-from typing import List, Union, Dict, Tuple
+from typing import List, Union, Dict, Tuple, Iterable
 from top.config import GlobalConfig
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
-from src.simulator.task_rabbit.task_model.shape import Shape
+from src.simulator.task_rabbit.task_model.shape import Shape, SplitVector
 from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
 from src.simulator.resource_simulator.history import History
@@ -227,11 +227,23 @@ class STEnv():
         pass
 
     # Action
-    def split_task(self, task_id: int, split_vector: Shape,
-                   split_funcs: Union[SplitType, List[SplitType]] = SplitType.Average):  # [SplitType]
-        if isinstance(split_funcs, SplitType):
-            split_funcs = [deepcopy(split_funcs)] * 6
-        return self._actor.split_task(task_id, split_vector, split_funcs)
+    # def split_task(self, task_id: int, split_vector: Shape,
+    #                split_funcs: Union[SplitType, List[SplitType]] = SplitType.Average):  # [SplitType]
+    #     if isinstance(split_funcs, SplitType):
+    #         split_funcs = [deepcopy(split_funcs)] * 6
+    #     return self._actor.split_task(task_id, split_vector, split_funcs)
+
+    def split_task(self, task_id: int, split_vector: SplitVector, is_static: bool = False):
+        return self._actor.split_task(task_id, split_vector, is_static)
+
+    def connect_tasks(self, in_tasks: Iterable[TaskBlock], out_tasks: Iterable[TaskBlock]):
+        self._actor.connect_tasks(in_tasks, out_tasks)
+
+    def copy_task(self, task_id: int, num: int = 1, is_static: bool = False):
+        return self._actor.copy_task(task_id, num, is_static)
+    
+    def split_and_copy_task(self, task_id: int, split_vector: SplitVector, num: int = 1, is_static: bool = False):
+        return self._actor.split_and_copy_task(task_id, split_vector, num, is_static)
 
     def split_group(self, task_id_list: List[int], split_vector: Union[Shape, List[Shape]],
                     split_funcs: Union[SplitType, List[SplitType], List[List[SplitType]]] = SplitType.Average) -> List[int]:
@@ -258,6 +270,10 @@ class STEnv():
 
     def delete_task(self, task_id):
         return self._actor.delete_task(task_id)
+    
+    def delete_tasks(self, tasks: Iterable[TaskBlock]):
+        for task in tasks:
+            self._actor.delete_task(task.id)
 
     def replicate_task(self, task_id):
         return self._actor.replicate_task(task_id)

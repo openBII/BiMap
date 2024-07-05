@@ -5,6 +5,8 @@ from src.simulator.task_rabbit.task_model.storage import Storage
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from typing import Tuple, Callable
 from src.simulator.resource_simulator.st_model.tick import Tick
+from copy import deepcopy
+from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
 
 
 class STaskBlock(TaskBlock):
@@ -61,9 +63,8 @@ class STaskBlock(TaskBlock):
                 available_time = received_tick.time
         return start_time, available_time, received_tick.iteration, input_flag
 
-    # def copy_like(self) -> TaskBlock:
-    #     data = deepcopy(self._data)
-    #     new_task_block = SITaskBlock(IDGenerator.get_next_task_id(),
-    #                                  copy(self.shape),
-    #                                  self.precision, data)
-    #     return new_task_block
+    def copy_like(self, shape: Shape = None) -> TaskBlock:
+        new_task_block = STaskBlock(IDGenerator.get_next_task_id(),
+                                    deepcopy(self.shape) if shape is None else shape,
+                                    self.precision)
+        return new_task_block

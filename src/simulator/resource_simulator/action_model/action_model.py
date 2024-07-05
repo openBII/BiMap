@@ -7,14 +7,16 @@ ActionModel 类负责各种动作的响应
 
 from copy import deepcopy
 import logging
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Iterable
 from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.task_rabbit.task_model.bias_type import BiasType
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
-from src.simulator.task_rabbit.task_model.shape import Shape
+from src.simulator.task_rabbit.task_model.shape import Shape, SplitVector
 from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
+from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from src.simulator.task_rabbit.task_model.vtask_block import VTaskBlock
+from src.simulator.task_rabbit.task_model.static_task_block import StaticTaskBlock
 from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
 from src.simulator.resource_simulator.st_context import STContext
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
@@ -35,280 +37,339 @@ class ActionModel():
         self._context = st_context
         self._sync_table = sync_table
 
-    def split_task(self, task_id, split_vector: Shape, split_funcs: List[SplitType]):
-        if split_vector == 1:
-            return  # 不需要拆分
-        original_task = deepcopy(self._task_graph.get_node(task_id))
-        if split_vector.nky != 1 or split_vector.nkx != 1:
-            logging.warn(
-                'Values in ky and kx dimensions of split vector will be ignored')
-            split_vector.nky = 1
-            split_vector.nkx = 1
-        original_task_shape = original_task.shape
-        if original_task_shape.ny == 1 or original_task_shape.ny == -1:
-            if split_vector.ny != 1:
-                logging.warn(
-                    'Value in y dimension of split vector will be ignored')
-                split_vector.ny = 1
-        if original_task_shape.nx == 1 or original_task_shape.nx == -1:
-            if split_vector.nx != 1:
-                logging.warn(
-                    'Value in x dimension of split vector will be ignored')
-                split_vector.nx = 1
-        if original_task_shape.nf == 1 or original_task_shape.nf == -1:
-            if split_vector.ny != 1:
-                logging.warn(
-                    'Value in f dimension of split vector will be ignored')
-                split_vector.nf = 1
-        if original_task_shape.nr == 1 or original_task_shape.nr == -1:
-            if split_vector.nr != 1:
-                logging.warn(
-                    'Value in r dimension of split vector will be ignored')
-                split_vector.nr = 1
-        new_node_ids = []
-        if isinstance(original_task, (CCTaskBlock, CC2DTaskBlock)):
-            # 对CCTaskBlock进行拆分
-            splitter = Splitter(task_id, split_vector,
-                                split_funcs, self._task_graph)
-            splitter.split_node()
-            new_node_ids_after_c_split = splitter.id_list
-            new_node_ids.extend(splitter.id_list)
-            # 生成SICTaskBlock的split intervals
-            cc_split_intervals = splitter.result
-            si_split_intervals = [[(1, 0)] for _ in range(6)]
-            si_split_intervals[0] = deepcopy(cc_split_intervals[4])  # y = iy
-            si_split_intervals[1] = deepcopy(cc_split_intervals[5])  # x = ix
-            si_split_intervals[3] = deepcopy(cc_split_intervals[3])  # r = r
-            # 这里是为了处理copy_node_without_edge中的zip
-            si_split_intervals[4] = si_split_intervals[0]
-            si_split_intervals[5] = si_split_intervals[1]
-            # 由于f方向拆分导致的复制
-            for _ in range(split_vector.nf - 1):
-                si_split_intervals[3].extend(deepcopy(cc_split_intervals[3]))
-            # 对SICTaskBlock进行拆分
-            for task in original_task.in_tasks:
-                if isinstance(task, (SICTaskBlock, SIC2DTaskBlock)):
-                    splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
-                                        split_funcs, self._task_graph)  # split_vector和split_funcs无效
-                    splitter.split_node(si_split_intervals)
-                    new_node_ids.extend(splitter.id_list)
-                    break  # 只有一个SICTaskBlock
-            # 生成SWTaskBlock的split intervals
-            sw_split_intervals = [[(1, 0)] for _ in range(6)]
-            sw_split_intervals[2] = deepcopy(cc_split_intervals[2])
-            sw_split_intervals[3] = deepcopy(cc_split_intervals[3])
-            # 由于y和x方向拆分导致的复制
-            for _ in range(split_vector.ny * split_vector.nx - 1):
-                sw_split_intervals[2].extend(deepcopy(cc_split_intervals[2]))
-            # 对SWTaskBlock进行拆分
-            for task in original_task.in_tasks:
-                if isinstance(task, SWTaskBlock):
-                    splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
-                                        split_funcs, self._task_graph)  # split_vector和split_funcs无效
-                    splitter.split_node(sw_split_intervals)
-                    new_node_ids.extend(splitter.id_list)
-                    break  # 只有一个SWTaskBlock
-            if split_vector.nr == 1:  # 输入通道拆分会使加bias的操作在CADD进行
-                # 生成SBTaskBlock的split intervals
-                sb_split_intervals = [[(1, 0)] for _ in range(6)]
-                sb_split_intervals[2] = deepcopy(cc_split_intervals[2])
-                # 由于y和x方向拆分导致的复制
-                for _ in range(split_vector.ny * split_vector.nx - 1):
-                    sb_split_intervals[2].extend(
-                        deepcopy(cc_split_intervals[2]))
-                # 对SBTaskBlock进行拆分
-                for task in original_task.in_tasks:
-                    if isinstance(task, SBTaskBlock):
-                        splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
-                                            split_funcs, self._task_graph)  # split_vector和split_funcs无效
-                        splitter.split_node(sb_split_intervals)
-                        new_node_ids.extend(splitter.id_list)
-                        break  # 只有一个SBTaskBlock
-            # 消除冗余连接
-            Splitter.remove_redundant_connections(
-                new_node_ids_after_c_split, original_task, self._task_graph)
-        elif isinstance(original_task, (CCMPBTaskBlock, CCMPSTaskBlock, CAVGTaskBlock,
-                                        CADDTaskBlock, CVVHTaskBlock, CVSTaskBlock, CAXTaskBlock)):
-            if split_vector.nr != 1:
-                logging.warn(
-                    '{:s} cannot be split in r dimension'.format(type(original_task).__name__))
-                split_vector.nr = 1
-            if isinstance(original_task, CAVGTaskBlock):
-                if (original_task.shape.nix == original_task.shape.nkx or original_task.shape.nx == 1):
-                    if split_vector.nx != 1:
-                        logging.warn(
-                            'CAVGTaskBlock cannot be split in x dimension because kernel size equals to the input size.'
-                            + ' The value in x dimension of split vector will be ignored.')
-                        split_vector.nx = 1
-                if (original_task.shape.niy == original_task.shape.nky or original_task.shape.ny == 1):
-                    if split_vector.ny != 1:
-                        logging.warn(
-                            'CAVGTaskBlock cannot be split in y dimension because kernel size equals to the input size.'
-                            + ' The value in y dimension of split vector will be ignored.')
-                        split_vector.ny = 1
-            # 对计算任务块进行拆分
-            splitter = Splitter(task_id, split_vector,
-                                split_funcs, self._task_graph)
-            splitter.split_node()
-            new_node_ids_after_c_split = splitter.id_list
-            new_node_ids.extend(splitter.id_list)
-            # 生成SITaskBlock的split intervals
-            c_split_intervals = splitter.result
-            si_split_intervals = [[(1, 0)] for _ in range(6)]
-            si_split_intervals[0] = deepcopy(c_split_intervals[4])  # y = iy
-            si_split_intervals[1] = deepcopy(c_split_intervals[5])  # x = ix
-            si_split_intervals[2] = deepcopy(c_split_intervals[2])  # f = f
-            # 这里是为了处理copy_node_without_edge中的zip
-            si_split_intervals[4] = si_split_intervals[0]
-            si_split_intervals[5] = si_split_intervals[1]
-            # SITaskBlock不会发生复制
-            # 对SITaskBlock进行拆分
-            for task in original_task.in_tasks:
-                if isinstance(task, SITaskBlock):
-                    splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
-                                        split_funcs, self._task_graph)  # split_vector和split_funcs无效
-                    splitter.split_node(si_split_intervals)
-                    new_node_ids.extend(splitter.id_list)
-            # 对bias进行拆分
-            if original_task.bias_type == BiasType.VECTOR:
-                # 生成SBTaskBlock的split intervals
-                sb_split_intervals = [[(1, 0)] for _ in range(6)]
-                sb_split_intervals[2] = deepcopy(c_split_intervals[2])
-                # 由于y和x方向拆分导致的复制
-                for _ in range(split_vector.ny * split_vector.nx - 1):
-                    sb_split_intervals[2].extend(
-                        deepcopy(c_split_intervals[2]))
-                # 对SBTaskBlock进行拆分
-                for task in original_task.in_tasks:
-                    if isinstance(task, SBTaskBlock):
-                        splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
-                                            split_funcs, self._task_graph)  # split_vector和split_funcs无效
-                        splitter.split_node(sb_split_intervals)
-                        new_node_ids.extend(splitter.id_list)
-            # 消除冗余连接
-            Splitter.remove_redundant_connections(
-                new_node_ids_after_c_split, original_task, self._task_graph)
-        elif isinstance(original_task, CVMTaskBlock):
-            if split_vector.ny != 1:
-                logging.warn(
-                    '{:s} cannot be split in y dimension'.format(type(original_task).__name__))
-                split_vector.ny = 1
-            if split_vector.nx != 1:
-                logging.warn(
-                    '{:s} cannot be split in x dimension'.format(type(original_task).__name__))
-                split_vector.nx = 1
-            # 对CVMTaskBlock进行拆分
-            splitter = Splitter(task_id, split_vector,
-                                split_funcs, self._task_graph)
-            splitter.split_node()
-            new_node_ids_after_c_split = splitter.id_list
-            new_node_ids.extend(splitter.id_list)
-            # 生成SIFCTaskBlock的split intervals
-            cc_split_intervals = splitter.result
-            si_split_intervals = [[(1, 0)] for _ in range(6)]
-            si_split_intervals[0] = [(0, 1)]
-            si_split_intervals[1] = [(0, 1)]
-            si_split_intervals[3] = deepcopy(cc_split_intervals[3])  # r = r
-            si_split_intervals[4] = si_split_intervals[0]
-            si_split_intervals[5] = si_split_intervals[1]
-            # 由于f方向拆分导致的复制
-            for _ in range(split_vector.nf - 1):
-                si_split_intervals[3].extend(deepcopy(cc_split_intervals[3]))
-            # 对SIFCTaskBlock进行拆分
-            for task in original_task.in_tasks:
-                if isinstance(task, SIFCTaskBlock):
-                    splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
-                                        split_funcs, self._task_graph)  # split_vector和split_funcs无效
-                    splitter.split_node(si_split_intervals)
-                    new_node_ids.extend(splitter.id_list)
-                    break  # 只有一个SIFCTaskBlock
-            # 生成SWFCTaskBlock的split intervals
-            sw_split_intervals = [[(1, 0)] for _ in range(6)]
-            sw_split_intervals[2] = deepcopy(cc_split_intervals[2])
-            sw_split_intervals[3] = deepcopy(cc_split_intervals[3])
-            # 不会发生复制
-            # 对SWTaskBlock进行拆分
-            for task in original_task.in_tasks:
-                if isinstance(task, SWFCTaskBlock):
-                    splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
-                                        split_funcs, self._task_graph)  # split_vector和split_funcs无效
-                    splitter.split_node(sw_split_intervals)
-                    new_node_ids.extend(splitter.id_list)
-                    break  # 只有一个SWFCTaskBlock
-            if split_vector.nr == 1:  # 输入通道拆分会使加bias的操作在CADD进行
-                # 生成SBTaskBlock的split intervals
-                sb_split_intervals = [[(1, 0)] for _ in range(6)]
-                sb_split_intervals[2] = deepcopy(cc_split_intervals[2])
-                # 不会发生复制
-                # 对SBTaskBlock进行拆分
-                for task in original_task.in_tasks:
-                    if isinstance(task, SBTaskBlock):
-                        splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
-                                            split_funcs, self._task_graph)  # split_vector和split_funcs无效
-                        splitter.split_node(sb_split_intervals)
-                        new_node_ids.extend(splitter.id_list)
-                        break  # 只有一个SBTaskBlock
-            # 消除冗余连接
-            Splitter.remove_redundant_connections(
-                new_node_ids_after_c_split, original_task, self._task_graph)
-        elif isinstance(original_task, CLUTTaskBlock):
-            if split_vector.nr != 1:
-                logging.warn(
-                    '{:s} cannot be split in r dimension'.format(type(original_task).__name__))
-                split_vector.nr = 1
-            # 对CLUTTaskBlock进行拆分
-            splitter = Splitter(task_id, split_vector,
-                                split_funcs, self._task_graph)
-            splitter.split_node()
-            new_node_ids_after_c_split = splitter.id_list
-            new_node_ids.extend(splitter.id_list)
-            # 生成SITaskBlock的split intervals
-            c_split_intervals = splitter.result
-            si_split_intervals = [[(1, 0)] for _ in range(6)]
-            si_split_intervals[0] = deepcopy(c_split_intervals[4])  # y = iy
-            si_split_intervals[1] = deepcopy(c_split_intervals[5])  # x = ix
-            si_split_intervals[2] = deepcopy(c_split_intervals[2])  # f = f
-            # 这里是为了处理copy_node_without_edge中的zip
-            si_split_intervals[4] = si_split_intervals[0]
-            si_split_intervals[5] = si_split_intervals[1]
-            # 不会发生复制
-            # 对所有SITaskBlock进行拆分
-            for task in original_task.in_tasks:
-                if isinstance(task, SITaskBlock):
-                    splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
-                                        split_funcs, self._task_graph)  # split_vector和split_funcs无效
-                    splitter.split_node(si_split_intervals)
-                    new_node_ids.extend(splitter.id_list)
-                    break  # 只能有一个SITaskBlock
-            # LUT不进行拆分只发生复制
-            sb_split_intervals = [[(1, 0)] for _ in range(6)]
-            sb_split_intervals[2] = [(0, original_task.lut_len)]
-            # 由于y, x, f方向拆分导致的复制
-            for _ in range(split_vector.ny * split_vector.nx * split_vector.nf - 1):
-                sb_split_intervals[2].extend([(0, original_task.lut_len)])
-            # 对SBTaskBlock进行复制
-            for task in original_task.in_tasks:
-                if isinstance(task, SBTaskBlock):
-                    splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
-                                        split_funcs, self._task_graph)  # split_vector和split_funcs无效
-                    splitter.split_node(sb_split_intervals)
-                    new_node_ids.extend(splitter.id_list)
-            # 消除冗余连接
-            Splitter.remove_redundant_connections(
-                new_node_ids_after_c_split, original_task, self._task_graph)
-        elif isinstance(original_task, CLIFTaskBlock):
-            raise NotImplementedError('Splitting {:s} has not been implemented'.format(
-                type(original_task).__name__))
+    def split_task(self, task_id: int, split_vector: SplitVector, is_static: bool):
+        task = self._task_graph[task_id]
+        split_tasks: List[TaskBlock] = []
+        for _ in range(split_vector.num_slices):
+            if isinstance(task, StaticTaskBlock):
+                new_task: TaskBlock = task.copy_like(split_vector.get_slice_shape(task.shape), is_static)
+            else:
+                new_task: TaskBlock = task.copy_like(split_vector.get_slice_shape(task.shape))
+            self._task_graph.add_node(new_task)
+            split_tasks.append(new_task)
+        return split_tasks
+    
+    def connect_tasks(self, in_tasks: Iterable[TaskBlock], out_tasks: Iterable[TaskBlock]):
+        if len(in_tasks) > len(out_tasks):
+            for i, in_task in enumerate(in_tasks):
+                self._task_graph.connect(in_task.id, out_tasks[i % len(out_tasks)].id)
         else:
-            raise TypeError('{:s} cannot be split'.format(
-                type(original_task).__name__))
-        return new_node_ids
+            for i, out_task in enumerate(out_tasks):
+                self._task_graph.connect(in_tasks[i % len(in_tasks)].id, out_task.id)
 
-    def old_split_task(self, task_id, split_vector, split_funcs):
-        from resource_simulator.action_model.Splitter import Splitter
-        Splitter = Splitter(task_id, split_vector,
-                          split_funcs, self._task_graph)
-        Splitter.split_node()
+    def _delete_edges(self, in_tasks: Iterable[TaskBlock], out_tasks: Iterable[TaskBlock]):
+        for in_task in in_tasks:
+            useless_edges = []
+            for out_edge in in_task.output_edges:
+                out_task: TaskBlock = out_edge.out_task
+                if out_task in out_tasks:
+                    out_task.input_edges.remove(out_edge)
+                    useless_edges.append(out_edge)
+            for edge in useless_edges:
+                in_task.output_edges.remove(edge)
+                del edge
+
+    def copy_task(self, task_id: int, num: int, is_static: bool):
+        task = self._task_graph[task_id]
+        copied_tasks: List[TaskBlock] = []
+        for _ in range(num):
+            if isinstance(task, StaticTaskBlock):
+                new_task: TaskBlock = task.copy_like(is_static=is_static)
+            else:
+                new_task: TaskBlock = task.copy_like()
+            self._task_graph.add_node(new_task)
+            copied_tasks.append(new_task)
+        if num == 1:
+            return new_task
+        return copied_tasks
+    
+    def split_and_copy_task(self, task_id: int, split_vector: SplitVector, num: int, is_static: bool):
+        split_tasks: List[TaskBlock] = self.split_task(task_id, split_vector, is_static)
+        copied_tasks = []
+        for task in split_tasks:
+            if num == 1:
+                copied_tasks.append(self.copy_task(task.id, num, is_static))
+            else:
+                copied_tasks.extend(self.copy_task(task.id, num, is_static))
+        split_tasks.extend(copied_tasks)
+        assert len(split_tasks) == split_vector.num_slices * (1 + num)
+        return split_tasks
+
+    # def split_task(self, task_id, split_vector: Shape, split_funcs: List[SplitType]):
+    #     if split_vector == 1:
+    #         return  # 不需要拆分
+    #     original_task = deepcopy(self._task_graph.get_node(task_id))
+    #     if split_vector.nky != 1 or split_vector.nkx != 1:
+    #         logging.warn(
+    #             'Values in ky and kx dimensions of split vector will be ignored')
+    #         split_vector.nky = 1
+    #         split_vector.nkx = 1
+    #     original_task_shape = original_task.shape
+    #     if original_task_shape.ny == 1 or original_task_shape.ny == -1:
+    #         if split_vector.ny != 1:
+    #             logging.warn(
+    #                 'Value in y dimension of split vector will be ignored')
+    #             split_vector.ny = 1
+    #     if original_task_shape.nx == 1 or original_task_shape.nx == -1:
+    #         if split_vector.nx != 1:
+    #             logging.warn(
+    #                 'Value in x dimension of split vector will be ignored')
+    #             split_vector.nx = 1
+    #     if original_task_shape.nf == 1 or original_task_shape.nf == -1:
+    #         if split_vector.ny != 1:
+    #             logging.warn(
+    #                 'Value in f dimension of split vector will be ignored')
+    #             split_vector.nf = 1
+    #     if original_task_shape.nr == 1 or original_task_shape.nr == -1:
+    #         if split_vector.nr != 1:
+    #             logging.warn(
+    #                 'Value in r dimension of split vector will be ignored')
+    #             split_vector.nr = 1
+    #     new_node_ids = []
+    #     if original_task.task_type in (TaskBlockType.CC, TaskBlockType.CC2D):
+    #         # 对CCTaskBlock进行拆分
+    #         splitter = Splitter(task_id, split_vector,
+    #                             split_funcs, self._task_graph)
+    #         splitter.split_node()
+    #         new_node_ids_after_c_split = splitter.id_list
+    #         new_node_ids.extend(splitter.id_list)
+    #         # 生成SICTaskBlock的split intervals
+    #         cc_split_intervals = splitter.result
+    #         si_split_intervals = [[(1, 0)] for _ in range(6)]
+    #         si_split_intervals[0] = deepcopy(cc_split_intervals[4])  # y = iy
+    #         si_split_intervals[1] = deepcopy(cc_split_intervals[5])  # x = ix
+    #         si_split_intervals[3] = deepcopy(cc_split_intervals[3])  # r = r
+    #         # 这里是为了处理copy_node_without_edge中的zip
+    #         si_split_intervals[4] = si_split_intervals[0]
+    #         si_split_intervals[5] = si_split_intervals[1]
+    #         # 由于f方向拆分导致的复制
+    #         for _ in range(split_vector.nf - 1):
+    #             si_split_intervals[3].extend(deepcopy(cc_split_intervals[3]))
+    #         # 对SICTaskBlock进行拆分
+    #         for task in original_task.in_tasks:
+    #             task: STaskBlock
+    #             if task.task_type in (TaskBlockType.SIC, TaskBlockType.SIC2D):
+    #                 splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
+    #                                     split_funcs, self._task_graph)  # split_vector和split_funcs无效
+    #                 splitter.split_node(si_split_intervals)
+    #                 new_node_ids.extend(splitter.id_list)
+    #                 break  # 只有一个SICTaskBlock
+    #         # 生成SWTaskBlock的split intervals
+    #         sw_split_intervals = [[(1, 0)] for _ in range(6)]
+    #         sw_split_intervals[2] = deepcopy(cc_split_intervals[2])
+    #         sw_split_intervals[3] = deepcopy(cc_split_intervals[3])
+    #         # 由于y和x方向拆分导致的复制
+    #         for _ in range(split_vector.ny * split_vector.nx - 1):
+    #             sw_split_intervals[2].extend(deepcopy(cc_split_intervals[2]))
+    #         # 对SWTaskBlock进行拆分
+    #         for task in original_task.in_tasks:
+    #             if task.task_type == TaskBlockType.SW:
+    #                 splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
+    #                                     split_funcs, self._task_graph)  # split_vector和split_funcs无效
+    #                 splitter.split_node(sw_split_intervals)
+    #                 new_node_ids.extend(splitter.id_list)
+    #                 break  # 只有一个SWTaskBlock
+    #         if split_vector.nr == 1:  # 输入通道拆分会使加bias的操作在CADD进行
+    #             # 生成SBTaskBlock的split intervals
+    #             sb_split_intervals = [[(1, 0)] for _ in range(6)]
+    #             sb_split_intervals[2] = deepcopy(cc_split_intervals[2])
+    #             # 由于y和x方向拆分导致的复制
+    #             for _ in range(split_vector.ny * split_vector.nx - 1):
+    #                 sb_split_intervals[2].extend(
+    #                     deepcopy(cc_split_intervals[2]))
+    #             # 对SBTaskBlock进行拆分
+    #             for task in original_task.in_tasks:
+    #                 if task.task_type == TaskBlockType.SB:
+    #                     splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
+    #                                         split_funcs, self._task_graph)  # split_vector和split_funcs无效
+    #                     splitter.split_node(sb_split_intervals)
+    #                     new_node_ids.extend(splitter.id_list)
+    #                     break  # 只有一个SBTaskBlock
+    #         # 消除冗余连接
+    #         Splitter.remove_redundant_connections(
+    #             new_node_ids_after_c_split, original_task, self._task_graph)
+    #     elif original_task.task_type in (TaskBlockType.CCMPB, TaskBlockType.CCMPS, TaskBlockType.CAVG,
+    #                                      TaskBlockType.CADD, TaskBlockType.CVVH, TaskBlockType.CVS, TaskBlockType.CAX):
+    #         if split_vector.nr != 1:
+    #             logging.warn(
+    #                 '{:s} cannot be split in r dimension'.format(type(original_task).__name__))
+    #             split_vector.nr = 1
+    #         if original_task.task_type == TaskBlockType.CAVG:
+    #             if (original_task.shape.nix == original_task.shape.nkx or original_task.shape.nx == 1):
+    #                 if split_vector.nx != 1:
+    #                     logging.warn(
+    #                         'CAVGTaskBlock cannot be split in x dimension because kernel size equals to the input size.'
+    #                         + ' The value in x dimension of split vector will be ignored.')
+    #                     split_vector.nx = 1
+    #             if (original_task.shape.niy == original_task.shape.nky or original_task.shape.ny == 1):
+    #                 if split_vector.ny != 1:
+    #                     logging.warn(
+    #                         'CAVGTaskBlock cannot be split in y dimension because kernel size equals to the input size.'
+    #                         + ' The value in y dimension of split vector will be ignored.')
+    #                     split_vector.ny = 1
+    #         # 对计算任务块进行拆分
+    #         splitter = Splitter(task_id, split_vector,
+    #                             split_funcs, self._task_graph)
+    #         splitter.split_node()
+    #         new_node_ids_after_c_split = splitter.id_list
+    #         new_node_ids.extend(splitter.id_list)
+    #         # 生成SITaskBlock的split intervals
+    #         c_split_intervals = splitter.result
+    #         si_split_intervals = [[(1, 0)] for _ in range(6)]
+    #         si_split_intervals[0] = deepcopy(c_split_intervals[4])  # y = iy
+    #         si_split_intervals[1] = deepcopy(c_split_intervals[5])  # x = ix
+    #         si_split_intervals[2] = deepcopy(c_split_intervals[2])  # f = f
+    #         # 这里是为了处理copy_node_without_edge中的zip
+    #         si_split_intervals[4] = si_split_intervals[0]
+    #         si_split_intervals[5] = si_split_intervals[1]
+    #         # SITaskBlock不会发生复制
+    #         # 对SITaskBlock进行拆分
+    #         for task in original_task.in_tasks:
+    #             if task.task_type == TaskBlockType.SI:
+    #                 splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
+    #                                     split_funcs, self._task_graph)  # split_vector和split_funcs无效
+    #                 splitter.split_node(si_split_intervals)
+    #                 new_node_ids.extend(splitter.id_list)
+    #         # 对bias进行拆分
+    #         if original_task.bias_type == BiasType.VECTOR:
+    #             # 生成SBTaskBlock的split intervals
+    #             sb_split_intervals = [[(1, 0)] for _ in range(6)]
+    #             sb_split_intervals[2] = deepcopy(c_split_intervals[2])
+    #             # 由于y和x方向拆分导致的复制
+    #             for _ in range(split_vector.ny * split_vector.nx - 1):
+    #                 sb_split_intervals[2].extend(
+    #                     deepcopy(c_split_intervals[2]))
+    #             # 对SBTaskBlock进行拆分
+    #             for task in original_task.in_tasks:
+    #                 if task.task_type == TaskBlockType.SB:
+    #                     splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
+    #                                         split_funcs, self._task_graph)  # split_vector和split_funcs无效
+    #                     splitter.split_node(sb_split_intervals)
+    #                     new_node_ids.extend(splitter.id_list)
+    #         # 消除冗余连接
+    #         Splitter.remove_redundant_connections(
+    #             new_node_ids_after_c_split, original_task, self._task_graph)
+    #     elif original_task.task_type == TaskBlockType.CVM:
+    #         if split_vector.ny != 1:
+    #             logging.warn(
+    #                 '{:s} cannot be split in y dimension'.format(type(original_task).__name__))
+    #             split_vector.ny = 1
+    #         if split_vector.nx != 1:
+    #             logging.warn(
+    #                 '{:s} cannot be split in x dimension'.format(type(original_task).__name__))
+    #             split_vector.nx = 1
+    #         # 对CVMTaskBlock进行拆分
+    #         splitter = Splitter(task_id, split_vector,
+    #                             split_funcs, self._task_graph)
+    #         splitter.split_node()
+    #         new_node_ids_after_c_split = splitter.id_list
+    #         new_node_ids.extend(splitter.id_list)
+    #         # 生成SIFCTaskBlock的split intervals
+    #         cc_split_intervals = splitter.result
+    #         si_split_intervals = [[(1, 0)] for _ in range(6)]
+    #         si_split_intervals[0] = [(0, 1)]
+    #         si_split_intervals[1] = [(0, 1)]
+    #         si_split_intervals[3] = deepcopy(cc_split_intervals[3])  # r = r
+    #         si_split_intervals[4] = si_split_intervals[0]
+    #         si_split_intervals[5] = si_split_intervals[1]
+    #         # 由于f方向拆分导致的复制
+    #         for _ in range(split_vector.nf - 1):
+    #             si_split_intervals[3].extend(deepcopy(cc_split_intervals[3]))
+    #         # 对SIFCTaskBlock进行拆分
+    #         for task in original_task.in_tasks:
+    #             if task.task_type == TaskBlockType.SIFC:
+    #                 splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
+    #                                     split_funcs, self._task_graph)  # split_vector和split_funcs无效
+    #                 splitter.split_node(si_split_intervals)
+    #                 new_node_ids.extend(splitter.id_list)
+    #                 break  # 只有一个SIFCTaskBlock
+    #         # 生成SWFCTaskBlock的split intervals
+    #         sw_split_intervals = [[(1, 0)] for _ in range(6)]
+    #         sw_split_intervals[2] = deepcopy(cc_split_intervals[2])
+    #         sw_split_intervals[3] = deepcopy(cc_split_intervals[3])
+    #         # 不会发生复制
+    #         # 对SWTaskBlock进行拆分
+    #         for task in original_task.in_tasks:
+    #             if task.task_type == TaskBlockType.SWFC:
+    #                 splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
+    #                                     split_funcs, self._task_graph)  # split_vector和split_funcs无效
+    #                 splitter.split_node(sw_split_intervals)
+    #                 new_node_ids.extend(splitter.id_list)
+    #                 break  # 只有一个SWFCTaskBlock
+    #         if split_vector.nr == 1:  # 输入通道拆分会使加bias的操作在CADD进行
+    #             # 生成SBTaskBlock的split intervals
+    #             sb_split_intervals = [[(1, 0)] for _ in range(6)]
+    #             sb_split_intervals[2] = deepcopy(cc_split_intervals[2])
+    #             # 不会发生复制
+    #             # 对SBTaskBlock进行拆分
+    #             for task in original_task.in_tasks:
+    #                 if task.task_type == TaskBlockType.SB:
+    #                     splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
+    #                                         split_funcs, self._task_graph)  # split_vector和split_funcs无效
+    #                     splitter.split_node(sb_split_intervals)
+    #                     new_node_ids.extend(splitter.id_list)
+    #                     break  # 只有一个SBTaskBlock
+    #         # 消除冗余连接
+    #         Splitter.remove_redundant_connections(
+    #             new_node_ids_after_c_split, original_task, self._task_graph)
+    #     elif original_task.task_type == TaskBlockType.CLUT:
+    #         if split_vector.nr != 1:
+    #             logging.warn(
+    #                 '{:s} cannot be split in r dimension'.format(type(original_task).__name__))
+    #             split_vector.nr = 1
+    #         # 对CLUTTaskBlock进行拆分
+    #         splitter = Splitter(task_id, split_vector,
+    #                             split_funcs, self._task_graph)
+    #         splitter.split_node()
+    #         new_node_ids_after_c_split = splitter.id_list
+    #         new_node_ids.extend(splitter.id_list)
+    #         # 生成SITaskBlock的split intervals
+    #         c_split_intervals = splitter.result
+    #         si_split_intervals = [[(1, 0)] for _ in range(6)]
+    #         si_split_intervals[0] = deepcopy(c_split_intervals[4])  # y = iy
+    #         si_split_intervals[1] = deepcopy(c_split_intervals[5])  # x = ix
+    #         si_split_intervals[2] = deepcopy(c_split_intervals[2])  # f = f
+    #         # 这里是为了处理copy_node_without_edge中的zip
+    #         si_split_intervals[4] = si_split_intervals[0]
+    #         si_split_intervals[5] = si_split_intervals[1]
+    #         # 不会发生复制
+    #         # 对所有SITaskBlock进行拆分
+    #         for task in original_task.in_tasks:
+    #             if task.task_type == TaskBlockType.SI:
+    #                 splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
+    #                                     split_funcs, self._task_graph)  # split_vector和split_funcs无效
+    #                 splitter.split_node(si_split_intervals)
+    #                 new_node_ids.extend(splitter.id_list)
+    #                 break  # 只能有一个SITaskBlock
+    #         # LUT不进行拆分只发生复制
+    #         sb_split_intervals = [[(1, 0)] for _ in range(6)]
+    #         sb_split_intervals[2] = [(0, original_task.lut_len)]
+    #         # 由于y, x, f方向拆分导致的复制
+    #         for _ in range(split_vector.ny * split_vector.nx * split_vector.nf - 1):
+    #             sb_split_intervals[2].extend([(0, original_task.lut_len)])
+    #         # 对SBTaskBlock进行复制
+    #         for task in original_task.in_tasks:
+    #             if task.task_type == TaskBlockType.SB:
+    #                 splitter = Splitter(task.id, Shape(1, 1, 1, 1, 1, 1),
+    #                                     split_funcs, self._task_graph)  # split_vector和split_funcs无效
+    #                 splitter.split_node(sb_split_intervals)
+    #                 new_node_ids.extend(splitter.id_list)
+    #         # 消除冗余连接
+    #         Splitter.remove_redundant_connections(
+    #             new_node_ids_after_c_split, original_task, self._task_graph)
+    #     elif original_task.task_type == TaskBlockType.CLIF:
+    #         raise NotImplementedError('Splitting {:s} has not been implemented'.format(
+    #             type(original_task).__name__))
+    #     else:
+    #         raise TypeError('{:s} cannot be split'.format(
+    #             type(original_task).__name__))
+    #     return new_node_ids
+
+    # def old_split_task(self, task_id, split_vector, split_funcs):
+    #     from src.simulator.resource_simulator.action_model.Splitter import Splitter
+    #     Splitter = Splitter(task_id, split_vector,
+    #                       split_funcs, self._task_graph)
+    #     Splitter.split_node()
 
     def delete_task(self, task_id):
         return self._task_graph.delete_node(task_id)
