@@ -225,6 +225,7 @@ class STMatrix():
         if coord_level == 1:
             assert self.check_edge_path(path)
             # TODO(huanyu): 这个地方写的有点麻烦了, 实际上path上的坐标都只有一个层次
+            # print(repr(edge) + ": " + repr(path))
             self.communication_networks[network_id]._edge_map.update({edge: path.extract()})
         else:
             inner_matrix = self._container[path.top_coord]

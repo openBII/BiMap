@@ -29,6 +29,7 @@ from src.simulator.resource_simulator.st_model.hop import Hop
 from src.simulator.resource_simulator.evaluation_model.recorder import CommunicationRecord
 from src.simulator.task_rabbit.task_model.vtask_block import VTaskBlock
 from src.simulator.resource_simulator.sync.sync_table import SyncTable
+from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
 
 
 class STEnv():
@@ -43,6 +44,8 @@ class STEnv():
         self._actor = ActionModel(task_graph, st_matrix, self._context, self._sync_table)
 
         self._history = History()  # Memento
+
+        IDGenerator.set_base_task_id(self._task_graph)
         # self._history.new_state(self.context)
 
         # self._statistic_cache = {}  # type: Dict[str, CoreStatistic]
@@ -232,6 +235,8 @@ class STEnv():
     #     if isinstance(split_funcs, SplitType):
     #         split_funcs = [deepcopy(split_funcs)] * 6
     #     return self._actor.split_task(task_id, split_vector, split_funcs)
+    def split(self, type: TaskBlockType, tasks: List[TaskBlock]):
+        self._actor.split(type, tasks)
 
     def split_task(self, task_id: int, split_vector: SplitVector, is_static: bool = False):
         return self._actor.split_task(task_id, split_vector, is_static)
