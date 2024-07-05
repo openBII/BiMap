@@ -216,10 +216,10 @@ class TaskBlock(ABC):
     #     return tasks
 
     def add_input_edge(self, edge: Edge):
-        self._input_edges.append(edge)
+        self._input_edges.insert(0, edge)
 
     def add_output_edge(self, edge: Edge):
-        self._output_edges.append(edge)
+        self._output_edges.insert(0, edge)
 
     def remove_input_task(self, task_id: int) -> None:
         """
