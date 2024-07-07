@@ -13,7 +13,6 @@ from src.simulator.resource_simulator.st_model.space_matrix.server_factory impor
 from src.simulator.resource_simulator.st_model.st_coord import Coord, MLCoord
 from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
 from src.simulator.resource_simulator.st_draw import STDraw
-from copy import copy
 
 
 # Construct a task graph
@@ -22,7 +21,7 @@ input_task = InputTaskBlock(-1, Shape(nr=2048), Precision.FLOAT_16)
 storage_task = STaskBlock(0, Shape(nr=2048), Precision.FLOAT_16)
 compute_task = CTaskBlock(1, Shape(nr=2048, nf=4096), TaskBlockType.CVM, Precision.FLOAT_16)
 weight_task = StaticTaskBlock(2, Shape(nr=2048, nf=4096), Precision.FLOAT_16)
-output_task = OutputTaskBlock(100, Shape(nr=4096), Precision.FLOAT_16)
+output_task = OutputTaskBlock(100, Shape(nf=4096), Precision.FLOAT_16)
 task_graph.add_nodes([compute_task, storage_task, input_task, output_task, weight_task])
 edge0 = task_graph.connect(storage_task.id, compute_task.id)
 task_graph.connect(input_task.id, storage_task.id)
@@ -38,7 +37,7 @@ st_env = STEnv(task_graph, server)
 
 # Graph Transformation
 storage_task_on_chip = st_env.copy_task(storage_task.id)
-split_storage_tasks = st_env.split_and_copy_task(storage_task_on_chip.id, SplitVector(nr=2))
+split_storage_tasks = st_env.split_task(storage_task_on_chip.id, SplitVector(nr=2))
 st_env.connect_tasks([storage_task], split_storage_tasks)
 split_compute_tasks = st_env.split_task(compute_task.id, SplitVector(nf=2, nr=2))
 st_env.connect_tasks(split_storage_tasks, split_compute_tasks)
