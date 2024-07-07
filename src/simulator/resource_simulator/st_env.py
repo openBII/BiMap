@@ -30,6 +30,11 @@ from src.simulator.resource_simulator.evaluation_model.recorder import Communica
 from src.simulator.task_rabbit.task_model.vtask_block import VTaskBlock
 from src.simulator.resource_simulator.sync.sync_table import SyncTable
 from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
+from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
+from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
+from src.simulator.task_rabbit.task_model.static_task_block import StaticTaskBlock
+from src.simulator.task_rabbit.task_model.output_task_block import OutputTaskBlock
+from src.simulator.task_rabbit.task_model.precision import Precision
 
 
 class STEnv():
@@ -235,8 +240,11 @@ class STEnv():
     #     if isinstance(split_funcs, SplitType):
     #         split_funcs = [deepcopy(split_funcs)] * 6
     #     return self._actor.split_task(task_id, split_vector, split_funcs)
-    def split(self, type: TaskBlockType, tasks: List[TaskBlock]):
-        self._actor.split(type, tasks)
+    def split_mlp(self, input: STaskBlock, split_inputs: List[STaskBlock], weight: StaticTaskBlock, compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector, precision: Precision = None):
+        return self._actor.split_mlp(input, split_inputs, weight, compute, output, split_vector, precision)
+    
+    def split_pointwise(self, input: STaskBlock, split_inputs: List[STaskBlock], compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector):
+        return self._actor.split_pointwise(input, split_inputs, compute, output, split_vector)
 
     def split_task(self, task_id: int, split_vector: SplitVector, is_static: bool = False):
         return self._actor.split_task(task_id, split_vector, is_static)
@@ -277,8 +285,7 @@ class STEnv():
         return self._actor.delete_task(task_id)
     
     def delete_tasks(self, tasks: Iterable[TaskBlock]):
-        for task in tasks:
-            self._actor.delete_task(task.id)
+        self._actor.delete_tasks(tasks)
 
     def replicate_task(self, task_id):
         return self._actor.replicate_task(task_id)
@@ -309,6 +316,10 @@ class STEnv():
 
     def put_in(self, ml_coord: MLCoord, task_id):
         self._actor.put_in(ml_coord, task_id)
+
+    def put_tasks_in(self, ml_coord: MLCoord, tasks: Iterable[TaskBlock]):
+        for task in tasks:
+            self.put_in(ml_coord, task.id)
 
     def sync(self, ml_coord: MLCoord, sync_id: int):
         self._actor.sync(ml_coord, sync_id)
@@ -384,6 +395,10 @@ class STEnv():
 
     def map_edge(self, edge: Edge, path: List[Union[MLCoord, Tuple[MLCoord, int], Tuple[MLCoord, int, int]]]):
         self._actor.map_edge(edge, path)
+
+    def map_edges(self, edges: Iterable[Edge], path: List[Union[MLCoord, Tuple[MLCoord, int], Tuple[MLCoord, int, int]]]):
+        for edge in edges:
+            self.map_edge(edge, path)
 
     def simulate(self, tick_num: int = 1, input_type: InputType = InputType.BATCH):
         if tick_num > 1 and input_type == InputType.PIPELINE:
