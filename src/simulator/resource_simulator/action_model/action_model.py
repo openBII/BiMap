@@ -39,7 +39,7 @@ class ActionModel():
         self._context = st_context
         self._sync_table = sync_table
 
-    def split_task(self, task_id: int, split_vector: SplitVector, is_static: bool = False):
+    def split_task(self, task_id: int, split_vector: SplitVector, is_static: bool = False, record: bool = True):
         task = self._task_graph[task_id]
         split_tasks: List[TaskBlock] = []
         for _ in range(split_vector.num_slices):
@@ -47,7 +47,8 @@ class ActionModel():
                 new_task: TaskBlock = task.copy_like(split_vector.get_slice_shape(task.shape), is_static)
             else:
                 new_task: TaskBlock = task.copy_like(split_vector.get_slice_shape(task.shape))
-            self._task_graph.add_node(new_task)
+            if record:
+                self._task_graph.add_node(new_task)
             split_tasks.append(new_task)
         return split_tasks
     
@@ -171,6 +172,25 @@ class ActionModel():
         self.connect_tasks(split_compute, split_output)
         self.delete_tasks([compute, input])
         return new_split_inputs, split_compute, split_output
+
+    def split_reduction(self, input: STaskBlock, split_inputs: List[STaskBlock], compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector, precision: Precision = None):
+        new_split_inputs, split_compute, split_output = self.split_pointwise(input, split_inputs, compute, output, split_vector)
+
+        for task in split_output:
+            task.shape.nx = 1 if task.shape.nx != 0 else 0
+            task.shape.ny = 1 if task.shape.ny != 0 else 0
+            if output.shape.nr != 0:
+                task.shape.nr = 1
+            else:
+                task.shape.nf = 1
+
+        add_task = CTaskBlock(IDGenerator.get_next_task_id(), Shape(nf=1, branch=split_vector.nf), TaskBlockType.CADD, precision if precision is not None else compute.precision)
+        self._task_graph.add_node(add_task)
+        self.connect_tasks(split_output, [add_task])
+        add_output = self.copy_task(split_output[0].id)
+        self.connect(add_task, add_output)
+
+        return new_split_inputs, split_compute, split_output, add_task, add_output
 
     # def split_task(self, task_id, split_vector: Shape, split_funcs: List[SplitType]):
     #     if split_vector == 1:

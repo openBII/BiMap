@@ -20,7 +20,7 @@ class StaticTaskBlock(TaskBlock):
         self._ticks: Queue[Tick] = Queue()
 
     def _construct_storage(self) -> None:
-        self._storage = 0
+        self._storage = self.shape.volume
 
     def _construct_computation(self) -> None:
         self._computation = 0

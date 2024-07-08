@@ -37,8 +37,7 @@ class STaskBlock(TaskBlock):
         self._computation = 0
 
     def _construct_storage(self) -> None:
-        # 加入计算过程
-        self._storage = 0
+        self._storage = self.shape.volume
 
     def accept(self, visitor):
         visitor.visit_S(self)

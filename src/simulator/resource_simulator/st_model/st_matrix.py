@@ -50,21 +50,21 @@ class STMatrix():
         # if space_coord.level == self._space_level:
         #     pass
 
-    def get(self, ml_coord: MLCoord, item_id=None):
-        """
-        返回ml_coord指明的位置的item
-        ml_coord指明的位置时空上需要精确到最细粒度
-        """
-        if self._space_level == 0:
-            if not CoordinatesProperty.is_finest_level(ml_coord):
-                raise ValueError('The MLCoord is not at the highest level.')
+    # def get(self, ml_coord: MLCoord, item_id=None):
+    #     """
+    #     返回ml_coord指明的位置的item
+    #     ml_coord指明的位置时空上需要精确到最细粒度
+    #     """
+    #     if self._space_level == 0:
+    #         if not CoordinatesProperty.is_finest_level(ml_coord):
+    #             raise ValueError('The MLCoord is not at the highest level.')
 
-        top_coord = ml_coord.space_coord.top_coord
-        if top_coord not in self._container:
-            return None
+    #     top_coord = ml_coord.space_coord.top_coord
+    #     if top_coord not in self._container:
+    #         return None
 
-        return self._container[top_coord].get(ml_coord.space_sub_level,
-                                              item_id)
+    #     return self._container[top_coord].get(ml_coord.space_sub_level,
+    #                                           item_id)
 
     def get_element(self, ml_coord: MLCoord):
         """

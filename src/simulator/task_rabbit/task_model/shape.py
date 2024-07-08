@@ -199,3 +199,9 @@ class SplitVector(Shape):
         slice_shape.nf = task_shape.nf / self.nf
         slice_shape.nr = task_shape.nr / self.nr
         return slice_shape
+    
+    def __hash__(self) -> int:
+        return hash(str(self.batch) + str(self.ny) + str(self.nx) + str(self.nf) + str(self.nr))
+    
+    def __iter__(self):
+        return iter([self.batch, self.ny, self.nx, self.nf, self.nr])

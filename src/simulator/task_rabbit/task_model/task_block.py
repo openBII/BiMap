@@ -274,7 +274,7 @@ class TaskBlock(ABC):
             return 0
         if self._storage is None:
             self._construct_storage()
-        return self._storage.local_storage
+        return self._storage
 
     def get_computation(self) -> int:
         return self._computation

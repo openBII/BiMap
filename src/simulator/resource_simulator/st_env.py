@@ -35,6 +35,7 @@ from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
 from src.simulator.task_rabbit.task_model.static_task_block import StaticTaskBlock
 from src.simulator.task_rabbit.task_model.output_task_block import OutputTaskBlock
 from src.simulator.task_rabbit.task_model.precision import Precision
+from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint
 
 
 class STEnv():
@@ -91,8 +92,8 @@ class STEnv():
     def get_ml_coord(self, task_id):
         return self._context.get_ml_coord(task_id)
 
-    def get_st_point(self, ml_coord):
-        return self._st_matrix.get(ml_coord)
+    def get_space_point(self, ml_coord: MLCoord):
+        return self._st_matrix.get_element(ml_coord)
 
     def get_space(self, space_coord):
         return self._st_matrix.get_space(space_coord)
@@ -138,9 +139,6 @@ class STEnv():
 
     def get_max_time(self, top_space_coord=None):
         pass
-
-    def get_memory(self, ml_coord) -> MemoryEvaluation:
-        return self._evaluator.get_memory(ml_coord)
 
     def get_task_time(self, task: TaskBlock, iteration: int):
         if self._context.is_task_in_matrix(task.id):
@@ -191,6 +189,39 @@ class STEnv():
     def get_memory_overflow_space(self):
         pass
 
+    def get_memory(self, ml_coord: MLCoord, tasks: Iterable[STaskBlock] = None):
+        memory_point = self.get_space_point(ml_coord)
+        storage = 0
+        if tasks is None:
+            for task in memory_point._tasks:
+                storage += task.get_storage()
+        else:
+            for task in tasks:
+                storage += task.get_storage()
+        return storage
+
+    def does_memory_overflow(self, memory_coord: MLCoord, tasks: Iterable[STaskBlock] = None):
+        memory_point: MemoryPoint = self.get_space_point(memory_coord)
+        return self.get_memory(memory_coord, tasks) > memory_point.capacity
+    
+    def does_mlp_memory_overflow(self, input: STaskBlock, weight: StaticTaskBlock, output: Union[STaskBlock, OutputTaskBlock], memory_coord: MLCoord, split_vector: SplitVector):
+        split_input = self.split_task(input.id, SplitVector(nr=split_vector.nr), record=False)
+        split_weight = self.split_task(weight.id, split_vector, record=False)
+        split_output = self.split_task(output.id, SplitVector(nf=split_vector.nf), record=False)
+        if self.does_memory_overflow(memory_coord, [split_input[0], split_weight[0], split_output[0]]):
+            return True
+        if split_vector.nr > 1:
+            if self.does_memory_overflow(memory_coord, ([split_output[0]] * split_vector.nr) + [split_output[0]]):
+                return True
+        return False
+
+    def does_pointwise_memory_overflow(self, input: STaskBlock, memory_coord: MLCoord, split_vector: SplitVector):
+        split_input = self.split_task(input.id, SplitVector(nf=split_vector.nf), record=False)
+        if self.does_memory_overflow(memory_coord, [split_input[0]] * 2):
+            return True
+        else:
+            return False
+    
     def get_computation_bottleneck(self):
         pass
 
@@ -240,14 +271,23 @@ class STEnv():
     #     if isinstance(split_funcs, SplitType):
     #         split_funcs = [deepcopy(split_funcs)] * 6
     #     return self._actor.split_task(task_id, split_vector, split_funcs)
+    def split_FFN(self):
+        pass
+
+    def split_attention(self):
+        pass
+
+    def split_reduction(self, input: STaskBlock, split_inputs: List[STaskBlock], compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector, precision: Precision = None):
+        return self._actor.split_reduction(input, split_inputs, compute, output, split_vector, precision)
+
     def split_mlp(self, input: STaskBlock, split_inputs: List[STaskBlock], weight: StaticTaskBlock, compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector, precision: Precision = None):
         return self._actor.split_mlp(input, split_inputs, weight, compute, output, split_vector, precision)
     
     def split_pointwise(self, input: STaskBlock, split_inputs: List[STaskBlock], compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector):
         return self._actor.split_pointwise(input, split_inputs, compute, output, split_vector)
 
-    def split_task(self, task_id: int, split_vector: SplitVector, is_static: bool = False):
-        return self._actor.split_task(task_id, split_vector, is_static)
+    def split_task(self, task_id: int, split_vector: SplitVector, is_static: bool = False, record: bool = True):
+        return self._actor.split_task(task_id, split_vector, is_static, record)
 
     def connect_tasks(self, in_tasks: Iterable[TaskBlock], out_tasks: Iterable[TaskBlock]):
         self._actor.connect_tasks(in_tasks, out_tasks)
