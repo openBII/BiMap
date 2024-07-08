@@ -45,13 +45,21 @@ server = ServerFactory.create_matrix(config)
 st_env = STEnv(task_graph, server)
 
 # Graph Transformation
+# up_input_on_chip = st_env.copy_task(up_input.id)
+# split_up_input = st_env.split_task(up_input_on_chip.id, SplitVector(nr=2))
+# st_env.connect_tasks([up_input], split_up_input)
+# split_up_input, split_up_weight, split_up_mlp, split_up_mlp_output, split_up_add, split_up_add_output = st_env.split_mlp(up_input_on_chip, split_up_input, up_weight, up_mlp, relu_input, SplitVector(nf=2, nr=2))
+# split_relu_input, split_relu, split_down_input = st_env.split_pointwise(relu_input, split_up_add_output, relu, down_input, SplitVector(nf=4))
+# split_down_input, split_down_weight, split_down_mlp, split_down_mlp_output, split_down_add, split_down_add_output = st_env.split_mlp(down_input, split_down_input, down_weight, down_mlp, output, SplitVector(nf=2, nr=2))
+# st_env.connect_tasks(split_down_add_output, [output])
+
 up_input_on_chip = st_env.copy_task(up_input.id)
 split_up_input = st_env.split_task(up_input_on_chip.id, SplitVector(nr=2))
 st_env.connect_tasks([up_input], split_up_input)
-split_up_input, split_up_weight, split_up_mlp, split_up_mlp_output, split_up_add, split_up_add_output = st_env.split_mlp(up_input_on_chip, split_up_input, up_weight, up_mlp, relu_input, SplitVector(nf=2, nr=2))
-split_relu_input, split_relu, split_down_input = st_env.split_pointwise(relu_input, split_up_add_output, relu, down_input, SplitVector(nf=4))
-split_down_input, split_down_weight, split_down_mlp, split_down_mlp_output, split_down_add, split_down_add_output = st_env.split_mlp(down_input, split_down_input, down_weight, down_mlp, output, SplitVector(nf=2, nr=2))
-st_env.connect_tasks(split_down_add_output, [output])
+task_dict = st_env.split_FFN(SplitVector(nf=2, nr=2), SplitVector(nf=4), SplitVector(nf=2, nr=2),
+                             up_input_on_chip, split_up_input, up_weight, up_mlp, relu_input,
+                             relu, down_input, down_weight, down_mlp, output)
+st_env.connect_tasks(task_dict["down"]["add_output"], [output])
 
 STDraw.draw_graph(task_graph, out_path='test/FFN.task.html',
                   width='1920px', height='1080px')
@@ -64,62 +72,123 @@ st_env.put_in(dram_coord, up_weight.id)
 st_env.put_in(dram_coord, down_weight.id)
 st_env.put_in(dram_coord, output.id)
 shared_memory_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((3, 1)))
-st_env.put_tasks_in(shared_memory_coord, split_up_input)
-st_env.put_tasks_in(shared_memory_coord, split_up_weight)
-st_env.put_tasks_in(shared_memory_coord, split_up_mlp_output)
-st_env.put_tasks_in(shared_memory_coord, split_relu_input)
-st_env.put_tasks_in(shared_memory_coord, split_down_input)
-st_env.put_tasks_in(shared_memory_coord, split_down_weight)
-st_env.put_tasks_in(shared_memory_coord, split_down_mlp_output)
-st_env.put_tasks_in(shared_memory_coord, split_down_add_output)
+# st_env.put_tasks_in(shared_memory_coord, split_up_input)
+# st_env.put_tasks_in(shared_memory_coord, split_up_weight)
+# st_env.put_tasks_in(shared_memory_coord, split_up_mlp_output)
+# st_env.put_tasks_in(shared_memory_coord, split_relu_input)
+# st_env.put_tasks_in(shared_memory_coord, split_down_input)
+# st_env.put_tasks_in(shared_memory_coord, split_down_weight)
+# st_env.put_tasks_in(shared_memory_coord, split_down_mlp_output)
+# st_env.put_tasks_in(shared_memory_coord, split_down_add_output)
+# for i in range(2):
+#     for j in range(2):
+#         mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(1))
+#         st_env.put_in(mac_array_coord, split_up_mlp[j + i * 2].id)
+# for i in range(2):
+#     mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((0, i)), Coord(1))
+#     st_env.put_in(mac_array_coord, split_up_add[i].id)
+# for i in range(2):
+#     for j in range(2):
+#         mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(1))
+#         st_env.put_in(mac_array_coord, split_relu[j + i * 2].id)
+#         st_env.put_in(mac_array_coord, split_down_mlp[j + i * 2].id)
+# for i in range(2):
+#     mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((0, i)), Coord(1))
+#     st_env.put_in(mac_array_coord, split_down_add[i].id)
+# # Edge Mapping
+# st_env.map_edges(up_input.output_edges, [dram_coord, chip_coord])
+# st_env.map_edges(up_weight.output_edges, [dram_coord, chip_coord])
+# st_env.map_edges(down_weight.output_edges, [dram_coord, chip_coord])
+# for i in range(2):
+#     for j in range(2):
+#         task = split_up_mlp[j + i * 2]
+#         mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(1))
+#         router_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(3))
+#         st_env.map_edges(task.input_edges, [shared_memory_coord, router_coord, mac_array_coord])
+#         st_env.map_edges(task.output_edges, [mac_array_coord, router_coord, shared_memory_coord])
+# for i in range(2):
+#     add = split_up_add[i]
+#     mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((0, i)), Coord(1))
+#     router_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((0, i)), Coord(3))
+#     st_env.map_edges(add.input_edges, [shared_memory_coord, router_coord, mac_array_coord])
+#     st_env.map_edges(add.output_edges, [mac_array_coord, router_coord, shared_memory_coord])
+# for i in range(2):
+#     for j in range(2):
+#         task = split_relu[j + i * 2]
+#         mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(1))
+#         router_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(3))
+#         st_env.map_edges(task.input_edges, [shared_memory_coord, router_coord, mac_array_coord])
+#         st_env.map_edges(task.output_edges, [mac_array_coord, router_coord, shared_memory_coord])
+# for i in range(2):
+#     for j in range(2):
+#         task = split_down_mlp[j + i * 2]
+#         mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(1))
+#         router_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(3))
+#         st_env.map_edges(task.input_edges, [shared_memory_coord, router_coord, mac_array_coord])
+#         st_env.map_edges(task.output_edges, [mac_array_coord, router_coord, shared_memory_coord])
+# for i in range(2):
+#     add = split_down_add[i]
+#     mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((0, i)), Coord(1))
+#     router_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((0, i)), Coord(3))
+#     st_env.map_edges(add.input_edges, [shared_memory_coord, router_coord, mac_array_coord])
+#     st_env.map_edges(add.output_edges, [mac_array_coord, router_coord, shared_memory_coord])
+# st_env.map_edges(output.input_edges, [chip_coord, dram_coord])
+st_env.put_tasks_in(shared_memory_coord, task_dict["up"]["input"])
+st_env.put_tasks_in(shared_memory_coord, task_dict["up"]["weight"])
+st_env.put_tasks_in(shared_memory_coord, task_dict["up"]["mlp_output"])
+st_env.put_tasks_in(shared_memory_coord, task_dict["activation"]["input"])
+st_env.put_tasks_in(shared_memory_coord, task_dict["down"]["input"])
+st_env.put_tasks_in(shared_memory_coord, task_dict["down"]["weight"])
+st_env.put_tasks_in(shared_memory_coord, task_dict["down"]["mlp_output"])
+st_env.put_tasks_in(shared_memory_coord, task_dict["down"]["add_output"])
 for i in range(2):
     for j in range(2):
         mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(1))
-        st_env.put_in(mac_array_coord, split_up_mlp[j + i * 2].id)
+        st_env.put_in(mac_array_coord, task_dict["up"]["mlp"][j + i * 2].id)
 for i in range(2):
     mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((0, i)), Coord(1))
-    st_env.put_in(mac_array_coord, split_up_add[i].id)
+    st_env.put_in(mac_array_coord, task_dict["up"]["add"][i].id)
 for i in range(2):
     for j in range(2):
         mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(1))
-        st_env.put_in(mac_array_coord, split_relu[j + i * 2].id)
-        st_env.put_in(mac_array_coord, split_down_mlp[j + i * 2].id)
+        st_env.put_in(mac_array_coord, task_dict["activation"]["compute"][j + i * 2].id)
+        st_env.put_in(mac_array_coord, task_dict["down"]["mlp"][j + i * 2].id)
 for i in range(2):
     mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((0, i)), Coord(1))
-    st_env.put_in(mac_array_coord, split_down_add[i].id)
+    st_env.put_in(mac_array_coord, task_dict["down"]["add"][i].id)
 # Edge Mapping
 st_env.map_edges(up_input.output_edges, [dram_coord, chip_coord])
 st_env.map_edges(up_weight.output_edges, [dram_coord, chip_coord])
 st_env.map_edges(down_weight.output_edges, [dram_coord, chip_coord])
 for i in range(2):
     for j in range(2):
-        task = split_up_mlp[j + i * 2]
+        task = task_dict["up"]["mlp"][j + i * 2]
         mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(1))
         router_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(3))
         st_env.map_edges(task.input_edges, [shared_memory_coord, router_coord, mac_array_coord])
         st_env.map_edges(task.output_edges, [mac_array_coord, router_coord, shared_memory_coord])
 for i in range(2):
-    add = split_up_add[i]
+    add = task_dict["up"]["add"][i]
     mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((0, i)), Coord(1))
     router_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((0, i)), Coord(3))
     st_env.map_edges(add.input_edges, [shared_memory_coord, router_coord, mac_array_coord])
     st_env.map_edges(add.output_edges, [mac_array_coord, router_coord, shared_memory_coord])
 for i in range(2):
     for j in range(2):
-        task = split_relu[j + i * 2]
+        task = task_dict["activation"]["compute"][j + i * 2]
         mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(1))
         router_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(3))
         st_env.map_edges(task.input_edges, [shared_memory_coord, router_coord, mac_array_coord])
         st_env.map_edges(task.output_edges, [mac_array_coord, router_coord, shared_memory_coord])
 for i in range(2):
     for j in range(2):
-        task = split_down_mlp[j + i * 2]
+        task = task_dict["down"]["mlp"][j + i * 2]
         mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(1))
         router_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((i, j)), Coord(3))
         st_env.map_edges(task.input_edges, [shared_memory_coord, router_coord, mac_array_coord])
         st_env.map_edges(task.output_edges, [mac_array_coord, router_coord, shared_memory_coord])
 for i in range(2):
-    add = split_down_add[i]
+    add = task_dict["down"]["add"][i]
     mac_array_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((0, i)), Coord(1))
     router_coord = MLCoord(Coord((0, 0)), Coord(0), Coord((0, i)), Coord(3))
     st_env.map_edges(add.input_edges, [shared_memory_coord, router_coord, mac_array_coord])

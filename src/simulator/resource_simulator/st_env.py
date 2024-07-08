@@ -271,8 +271,40 @@ class STEnv():
     #     if isinstance(split_funcs, SplitType):
     #         split_funcs = [deepcopy(split_funcs)] * 6
     #     return self._actor.split_task(task_id, split_vector, split_funcs)
-    def split_FFN(self):
-        pass
+    def split_FFN(self, split_vector_up: SplitVector, split_vector_act: SplitVector, split_vector_down: SplitVector,
+                  up_input: STaskBlock, split_up_input: List[STaskBlock],
+                  up_weight: StaticTaskBlock, up_mlp: CTaskBlock, up_output: STaskBlock,
+                  activation: CTaskBlock, activation_output: STaskBlock,
+                  down_weight: StaticTaskBlock, down_mlp: CTaskBlock, down_output: STaskBlock):
+        task_dict: Dict[str, Dict[str, List[TaskBlock]]] = dict()
+        task_dict["up"] = dict()
+        task_dict["activation"] = dict()
+        task_dict["down"] = dict()
+        if split_vector_up.nr > 1:
+            split_up_input, split_up_weight, split_up_mlp, split_up_mlp_output, split_up_add, split_up_add_output = self.split_mlp(up_input, split_up_input, up_weight, up_mlp, up_output, split_vector_up)
+            task_dict["up"]["add"] = split_up_add
+            task_dict["up"]["add_output"] = split_up_add_output
+        else:
+            split_up_input, split_up_weight, split_up_mlp, split_up_mlp_output = self.split_mlp(up_input, split_up_input, up_weight, up_mlp, up_output, split_vector_up)
+        task_dict["up"]["input"] = split_up_input
+        task_dict["up"]["weight"] = split_up_weight
+        task_dict["up"]["mlp"] = split_up_mlp
+        task_dict["up"]["mlp_output"] = split_up_mlp_output
+        split_activation_input, split_activation, split_activation_output = self.split_pointwise(up_output, split_up_add_output, activation, activation_output, split_vector_act)
+        task_dict["activation"]["input"] = split_activation_input
+        task_dict["activation"]["compute"] = split_activation
+        task_dict["up"]["output"] = split_activation_output
+        if split_vector_up.nr > 1:
+            split_down_input, split_down_weight, split_down_mlp, split_down_mlp_output, split_down_add, split_down_add_output = self.split_mlp(activation_output, split_activation_output, down_weight, down_mlp, down_output, split_vector_down)
+            task_dict["down"]["add"] = split_down_add
+            task_dict["down"]["add_output"] = split_down_add_output
+        else:
+            split_down_input, split_down_weight, split_down_mlp, split_down_mlp_output = self.split_mlp(activation_output, split_activation_output, down_weight, down_mlp, down_output, split_vector_down)
+        task_dict["down"]["input"] = split_down_input
+        task_dict["down"]["weight"] = split_down_weight
+        task_dict["down"]["mlp"] = split_down_mlp
+        task_dict["down"]["mlp_output"] = split_down_mlp_output
+        return task_dict
 
     def split_attention(self):
         pass
