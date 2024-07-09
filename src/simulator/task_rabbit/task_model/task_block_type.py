@@ -32,6 +32,7 @@ class TaskBlockType(Enum):
     CLUT = 30
     CLIF = 31
     CAVG = 32
+    CEXP = 33
 
     INPUT = 50
     OUTPUT = 51

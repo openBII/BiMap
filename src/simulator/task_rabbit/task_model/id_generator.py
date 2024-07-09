@@ -1,6 +1,3 @@
-from typing import Union
-
-
 class IDGenerator():
     """
     IDGenerator 类负责产生不重复的ID
@@ -17,7 +14,8 @@ class IDGenerator():
         if type(base) is int:
             IDGenerator.task_num = base
         else:
-            IDGenerator.task_num = max(base.get_all_node_ids())
+            if len(base.get_all_node_ids()) > 0:
+                IDGenerator.task_num = max(base.get_all_node_ids())
 
     @staticmethod
     def get_connection_id(in_task, out_task) -> str:

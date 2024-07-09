@@ -16,10 +16,12 @@ class CTaskBlock(TaskBlock):
 
     def __init__(self, task_id: int, shape: Shape,
                  task_type: TaskBlockType, precision: Precision,
-                 bias_type: BiasType = BiasType.NONE):
+                 bias_type: BiasType = BiasType.NONE,
+                 constant: float = None):
         super().__init__(task_id, shape, precision)
         self.bias_type = bias_type
         self._type = task_type
+        self.constant = constant
 
         self._halide_func = None
 

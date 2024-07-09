@@ -1,3 +1,4 @@
+import torch
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.task_rabbit.task_model.shape import Shape
@@ -18,6 +19,7 @@ class STaskBlock(TaskBlock):
         super().__init__(task_id, shape, precision)
         self._pipeline_area = shape 
         self._type = TaskBlockType.SI
+        self.data: torch.Tensor = None
 
     @property
     def pipeline_num(self) -> Shape:
