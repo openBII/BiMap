@@ -14,7 +14,7 @@ from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.task_rabbit.task_model.shape import Shape, SplitVector
 from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
-from src.simulator.resource_simulator.history import History
+from src.simulator.resource_simulator.state.history import History
 from src.simulator.resource_simulator.st_context import STContext
 from src.simulator.resource_simulator.evaluation_model.evaluation_model import EvaluationModel
 from src.simulator.resource_simulator.action_model import ActionModel
@@ -36,6 +36,7 @@ from src.simulator.task_rabbit.task_model.static_task_block import StaticTaskBlo
 from src.simulator.task_rabbit.task_model.output_task_block import OutputTaskBlock
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint
+from src.simulator.resource_simulator.state.call import Call
 
 
 class STEnv():
@@ -281,26 +282,56 @@ class STEnv():
         task_dict["activation"] = dict()
         task_dict["down"] = dict()
         if split_vector_up.nr > 1:
-            split_up_input, split_up_weight, split_up_mlp, split_up_mlp_output, split_up_add, split_up_add_output = self.split_mlp(up_input, split_up_input, up_weight, up_mlp, up_output, split_vector_up)
+            new_tasks = self.split_mlp(up_input, split_up_input, up_weight, up_mlp, up_output, split_vector_up)
+            if len(new_tasks) == 6:
+                split_up_input, split_up_weight, split_up_mlp, split_up_mlp_output, split_up_add, split_up_add_output = new_tasks
+            else:
+                split_up_weight, split_up_mlp, split_up_mlp_output, split_up_add, split_up_add_output = new_tasks
             task_dict["up"]["add"] = split_up_add
             task_dict["up"]["add_output"] = split_up_add_output
         else:
-            split_up_input, split_up_weight, split_up_mlp, split_up_mlp_output = self.split_mlp(up_input, split_up_input, up_weight, up_mlp, up_output, split_vector_up)
+            new_tasks = self.split_mlp(up_input, split_up_input, up_weight, up_mlp, up_output, split_vector_up)
+            if len(new_tasks) == 4:
+                split_up_input, split_up_weight, split_up_mlp, split_up_mlp_output = new_tasks
+            else:
+                split_up_weight, split_up_mlp, split_up_mlp_output = new_tasks
         task_dict["up"]["input"] = split_up_input
         task_dict["up"]["weight"] = split_up_weight
         task_dict["up"]["mlp"] = split_up_mlp
         task_dict["up"]["mlp_output"] = split_up_mlp_output
-        split_activation_input, split_activation, split_activation_output = self.split_pointwise(up_output, split_up_add_output, activation, activation_output, split_vector_act)
-        task_dict["activation"]["input"] = split_activation_input
+        if split_vector_up.nr > 1:
+            new_tasks = self.split_pointwise(up_output, split_up_add_output, activation, activation_output, split_vector_act)
+        else:
+            new_tasks = self.split_pointwise(up_output, split_up_mlp_output, activation, activation_output, split_vector_act)
+        if len(new_tasks) == 3:
+            split_activation_input, split_activation, split_activation_output = new_tasks
+            task_dict["activation"]["input"] = split_activation_input
+        else:
+            split_activation, split_activation_output = new_tasks
+            if split_vector_up.nr > 1:
+                task_dict["activation"]["input"] = split_up_add_output
+            else:
+                task_dict["activation"]["input"] = split_up_mlp_output
         task_dict["activation"]["compute"] = split_activation
         task_dict["up"]["output"] = split_activation_output
         if split_vector_up.nr > 1:
-            split_down_input, split_down_weight, split_down_mlp, split_down_mlp_output, split_down_add, split_down_add_output = self.split_mlp(activation_output, split_activation_output, down_weight, down_mlp, down_output, split_vector_down)
+            new_tasks = self.split_mlp(activation_output, split_activation_output, down_weight, down_mlp, down_output, split_vector_down)
+            if len(new_tasks) == 6:
+                split_down_input, split_down_weight, split_down_mlp, split_down_mlp_output, split_down_add, split_down_add_output = new_tasks
+                task_dict["down"]["input"] = split_down_input
+            else:
+                split_down_weight, split_down_mlp, split_down_mlp_output, split_down_add, split_down_add_output = new_tasks
+                task_dict["down"]["input"] = split_activation_output
             task_dict["down"]["add"] = split_down_add
             task_dict["down"]["add_output"] = split_down_add_output
         else:
-            split_down_input, split_down_weight, split_down_mlp, split_down_mlp_output = self.split_mlp(activation_output, split_activation_output, down_weight, down_mlp, down_output, split_vector_down)
-        task_dict["down"]["input"] = split_down_input
+            new_tasks = self.split_mlp(activation_output, split_activation_output, down_weight, down_mlp, down_output, split_vector_down)
+            if len(new_tasks) == 4:
+                split_down_input, split_down_weight, split_down_mlp, split_down_mlp_output = new_tasks
+                task_dict["down"]["input"] = split_down_input
+            else:
+                split_down_weight, split_down_mlp, split_down_mlp_output = new_tasks
+                task_dict["down"]["input"] = split_activation_output
         task_dict["down"]["weight"] = split_down_weight
         task_dict["down"]["mlp"] = split_down_mlp
         task_dict["down"]["mlp_output"] = split_down_mlp_output
@@ -313,10 +344,18 @@ class STEnv():
         return self._actor.split_reduction(input, split_inputs, compute, output, split_vector, precision)
 
     def split_mlp(self, input: STaskBlock, split_inputs: List[STaskBlock], weight: StaticTaskBlock, compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector, precision: Precision = None):
-        return self._actor.split_mlp(input, split_inputs, weight, compute, output, split_vector, precision)
+        new_tasks = self._actor.split_mlp(input, split_inputs, weight, compute, output, split_vector, precision)
+        
+        reverse_call = Call(self._actor.reverse_split, new_tasks, [compute, output] + split_inputs)
+        self._history.push_state(reverse_call)
+        return new_tasks
     
     def split_pointwise(self, input: STaskBlock, split_inputs: List[STaskBlock], compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector):
-        return self._actor.split_pointwise(input, split_inputs, compute, output, split_vector)
+        new_tasks = self._actor.split_pointwise(input, split_inputs, compute, output, split_vector)
+
+        reverse_call = Call(self._actor.reverse_split, new_tasks, [compute, output] + split_inputs)
+        self._history.push_state(reverse_call)
+        return new_tasks
 
     def split_task(self, task_id: int, split_vector: SplitVector, is_static: bool = False, record: bool = True):
         return self._actor.split_task(task_id, split_vector, is_static, record)
@@ -485,13 +524,19 @@ class STEnv():
 
     # State control
     def undo(self):
-        pass
+        self._history.pop_state()
 
     def lock(self):
-        pass
+        self._history.lock()
 
     def reset(self):
         pass
+
+    def mark(self, label: str):
+        self._history.mark(label)
+
+    def undo_mark(self, label: str):
+        self._history.pop_mark(label)
 
     def get_compute_task_id(self, task_id_list: List[int]) -> List:
         compute_task_id_list = list()

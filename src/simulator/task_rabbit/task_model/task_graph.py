@@ -38,6 +38,9 @@ class TaskGraph():
     @property
     def groups(self):
         return self._groups
+    
+    def is_enabled(self, task_id: int):
+        return self._nodes[task_id].is_enable()
 
     def get_node(self, id: int) -> TaskBlock:
         if id not in self._nodes:
@@ -180,7 +183,7 @@ class TaskGraph():
         if task_id not in self._nodes:
             raise ValueError('Task ' + str(task_id) + ' not in the graph')
 
-        task = self.get_node(task_id)
+        task = self._nodes[task_id]
         task.disable()
 
     def enable_node(self, task_id: int) -> None:

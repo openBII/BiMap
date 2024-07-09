@@ -44,6 +44,8 @@ class STDraw(object):
 
         nodes_data = []
         for node_id in graph._nodes.keys():
+            if not graph.is_enabled(node_id):
+                continue
             node = graph.get_node(node_id)
             node_id = node_id if type(node_id) is str else str(node_id)
             label_cc = LabelOpts(is_show=True, position='inside', color=get_node_color(node),

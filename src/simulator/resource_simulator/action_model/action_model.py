@@ -98,7 +98,23 @@ class ActionModel():
         assert len(split_tasks) == split_vector.num_slices * (1 + num)
         return split_tasks
     
+    def reverse_split(self, new_tasks:Union[List[List[TaskBlock]], List[TaskBlock]], old_tasks: List[TaskBlock]) -> None:
+        '''
+        split_task的逆操作
+        将new_tasks删除
+        将old_tasks置为enable
+        '''
+        if isinstance(new_tasks[0], TaskBlock):
+            self.delete_tasks(new_tasks)
+        else:
+            for tasks in new_tasks:
+                self.delete_tasks(tasks)
+
+        self.enable_tasks(old_tasks)
+    
     def split_mlp(self, input: STaskBlock, split_inputs: List[STaskBlock], weight: StaticTaskBlock, compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector, precision: Precision = None):
+        new_tasks = []
+
         weight_on_chip: TaskBlock = self.copy_task(weight.id)
         split_weight = self.split_task(weight_on_chip.id, SplitVector(nf=split_vector.nf, nr=split_vector.nr))
         self.connect_tasks([weight], split_weight)
@@ -112,7 +128,6 @@ class ActionModel():
             for j in range(split_vector.nr):
                 for i in range(split_vector.nf):
                     self.connect_tasks(split_inputs[num_grouped_inputs * j:num_grouped_inputs * (j + 1)], [split_mlp[i + j * split_vector.nf]])
-            new_split_inputs = split_inputs
         else:
             assert split_vector.nr % len(split_inputs) == 0
             num_split = split_vector.nr // len(split_inputs)
@@ -121,16 +136,21 @@ class ActionModel():
             for task in split_inputs:
                 last_compute.extend(list(task.in_tasks))
                 new_split_inputs.extend(self.split_task(task.id, SplitVector(nr=num_split)))
-                self.delete_task(task.id)
+                # self.delete_task(task.id)
+                self.disable_task(task.id)
             self.connect_tasks(last_compute, new_split_inputs)
             for i in range(split_vector.nf):
                 self.connect_tasks(new_split_inputs, split_mlp[split_vector.nr * i:split_vector.nr * (i + 1)])
+            new_tasks.append(new_split_inputs)
 
         split_mlp_output: List[TaskBlock] = self.split_and_copy_task(output.id, SplitVector(nf=split_vector.nf), num=split_vector.nr - 1)
         self.connect_tasks(split_mlp, split_mlp_output)
+        new_tasks.append(split_weight)
+        new_tasks.append(split_mlp)
+        new_tasks.append(split_mlp_output)
 
-        if split_vector.nr == 1:
-            return new_split_inputs, split_weight, split_mlp, split_mlp_output
+        # if split_vector.nr == 1:
+        #     return new_split_inputs, split_weight, split_mlp, split_mlp_output
         
         add_tasks: List[TaskBlock] = []
         for _ in range(split_vector.nr):
@@ -141,18 +161,32 @@ class ActionModel():
 
         split_add_output = self.split_task(output.id, SplitVector(nf=split_vector.nf))
         self.connect_tasks(add_tasks, split_add_output)
+        new_tasks.append(add_tasks)
+        new_tasks.append(split_add_output)
 
-        self.delete_tasks([input, compute, weight_on_chip])
+        # self.delete_tasks([input, compute, weight_on_chip])
+        self.delete_task(weight_on_chip.id)
+        self.disable_tasks([input, compute, output])
 
-        return new_split_inputs, split_weight, split_mlp, split_mlp_output, add_tasks, split_add_output
+        if len(output.out_tasks) != 0:
+            if split_vector.nr > 1:
+                for out_task in output.out_tasks:
+                    self.connect_tasks(split_add_output, [out_task])
+            else:
+                for out_task in output.out_tasks:
+                    self.connect_tasks(split_mlp_output, [out_task])
+
+        # return new_split_inputs, split_weight, split_mlp, split_mlp_output, add_tasks, split_add_output
+        return new_tasks
     
     def split_pointwise(self, input: STaskBlock, split_inputs: List[STaskBlock], compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector):
+        new_tasks = []
+
         split_compute = self.split_task(compute.id, split_vector)
 
         if len(split_inputs) >= split_vector.nf:
             assert len(split_inputs) % split_vector.nf == 0
             self.connect_tasks(split_inputs, split_compute)
-            new_split_inputs = split_inputs
         else:
             assert split_vector.nf % len(split_inputs) == 0
             num_split = split_vector.nf // len(split_inputs)
@@ -161,17 +195,28 @@ class ActionModel():
             for task in split_inputs:
                 last_compute.extend(list(task.in_tasks))
                 new_split_inputs.extend(self.split_task(task.id, SplitVector(nf=num_split)))
-                self.delete_task(task.id)
+                # self.delete_task(task.id)
+                self.disable_task(task.id)
             self.connect_tasks(last_compute, new_split_inputs)
             self.connect_tasks(new_split_inputs, split_compute)
+            new_tasks.append(new_split_inputs)
 
         if output.shape.nr != 0:
             split_output = self.split_task(output.id, SplitVector(nx=split_vector.nx, ny=split_vector.ny, nr=split_vector.nf))
         else:
             split_output = self.split_task(output.id, split_vector)
         self.connect_tasks(split_compute, split_output)
-        self.delete_tasks([compute, input])
-        return new_split_inputs, split_compute, split_output
+        new_tasks.append(split_compute)
+        new_tasks.append(split_output)
+
+        if len(output.out_tasks) != 0:
+            for out_task in output.out_tasks:
+                self.connect_tasks(split_output, [out_task])
+
+        # self.delete_tasks([compute, input])
+        self.disable_tasks([compute, input, output])
+
+        return new_tasks
 
     def split_reduction(self, input: STaskBlock, split_inputs: List[STaskBlock], compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector, precision: Precision = None):
         new_split_inputs, split_compute, split_output = self.split_pointwise(input, split_inputs, compute, output, split_vector)
@@ -487,11 +532,19 @@ class ActionModel():
         assert self._task_graph.get_node(task_id).type.is_storage_task
         self._task_graph.get_node(task_id).pipeline_num(pipeline_num)
 
+    def enable_tasks(self, tasks: Iterable[TaskBlock]):
+        for task in tasks:
+            self.enable_task(task.id)
+
     def enable_task(self, task_id):
-        self._task_graph.get_node(task_id).enable()
+        self._task_graph.enable_node(task_id)
+
+    def disable_tasks(self, tasks: Iterable[TaskBlock]):
+        for task in tasks:
+            self.disable_task(task.id)
 
     def disable_task(self, task_id):
-        self._task_graph.get_node(task_id).disable()
+        self._task_graph.disable_node(task_id)
 
     def merge_column(self, space_coord_list):
         # 空间上需要精确到最细粒度
