@@ -25,7 +25,8 @@ class Scheduler():
 
     def init(self, tasks: Set[TaskBlock]):
         for task in tasks:
-            self._activated_task_id.add(task.id)
+            if task.is_enable():
+                self._activated_task_id.add(task.id)
         
     # def add_activated_tasks(self):
     #     new_activated_tasks = set()
@@ -53,7 +54,7 @@ class Scheduler():
     
     def add_activated_edges(self, task: TaskBlock):
         for edge in task.output_edges:
-            if edge.input_activated:
+            if edge.input_activated and edge.is_enable():
                 self._activated_edges.append(edge)
 
     def schedule(self):
@@ -163,7 +164,7 @@ class Scheduler():
     def add_activated_tasks(self, edges: Edge):
         for edge in edges:
             out_task: TaskBlock = edge.out_task
-            if out_task.activated:
+            if out_task.activated and out_task.is_enable():
                 self._activated_task_id.add(out_task.id)
 
     def classify_edges(self):

@@ -62,6 +62,8 @@ class STDraw(object):
         for node in graph._nodes.values():
             # random.shuffle(link_color)
             for edge_idx, edge in enumerate(node.input_edges):
+                if not edge.is_enable():
+                    continue
                 link_type = LineStyleOpts(is_show=True, width=1, opacity=1, curve=0, type_='solid',
                                           color='black')  # color=link_color[icc_idx % len(link_color)]
                 

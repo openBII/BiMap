@@ -27,7 +27,7 @@ class OutputTaskBlock(TaskBlock):
     def consume(self) -> Tuple[int, int, int]:
         start_time = float("inf")
         available_time = 0
-        for edge in self._input_edges:
+        for edge in self.enabled_input_edges:
             received_tick = edge.consume_tick()
             # find the time of the earliest input as the start time of this task
             if received_tick.time < start_time:

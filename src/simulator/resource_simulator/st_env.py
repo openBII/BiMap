@@ -167,10 +167,14 @@ class STEnv():
     def show_overall_time(self, tick_num: int = 1):
         for iteration in range(tick_num):
             for task_id, task in self._task_graph:
+                if not task.is_enable():
+                    continue
                 start, end = self.get_task_time(task, iteration)
                 if not (start is None or end is None):
                     print("Task {:d}: [{:2f}, {:2f}]".format(task_id, start, end))
                     for edge in task.output_edges:
+                        if not edge.is_enable():
+                            continue
                         while True:
                             container_coord, network_id, time_dict = self.get_edge_time(edge, iteration)
                             for hop in time_dict:
@@ -427,10 +431,13 @@ class STEnv():
 
     def put_in(self, ml_coord: MLCoord, task_id):
         self._actor.put_in(ml_coord, task_id)
+        reverse_call = Call(self._actor.take_out, ml_coord, task_id)
+        self._history.push_state(reverse_call)
 
     def put_tasks_in(self, ml_coord: MLCoord, tasks: Iterable[TaskBlock]):
-        for task in tasks:
-            self.put_in(ml_coord, task.id)
+        self._actor.put_tasks_in(ml_coord, tasks)
+        reverse_call = Call(self._actor.take_tasks_out, ml_coord, tasks)
+        self._history.push_state(reverse_call)
 
     def sync(self, ml_coord: MLCoord, sync_id: int):
         self._actor.sync(ml_coord, sync_id)
@@ -450,8 +457,15 @@ class STEnv():
         for in_task in self.get_in_tasks(task_id):
             self.put_in(ml_coord=new_ml_coord, task_id=in_task.id)
 
-    def take_out(self, ml_coord, task_id=None):
-        return self._actor.take_out(ml_coord, task_id)
+    def take_out(self, ml_coord: MLCoord, task_id: int):
+        self._actor.take_out(ml_coord, task_id)
+        reverse_call = Call(self._actor.put_in, ml_coord, task_id)
+        self._history.push_state(reverse_call)
+
+    def task_tasks_out(self, ml_coord: MLCoord, tasks: Iterable[TaskBlock]):
+        self._actor.take_tasks_out(ml_coord, tasks)
+        reverse_call = Call(self._actor.put_tasks_in, ml_coord, tasks)
+        self._history.push_state(reverse_call)
 
     def take_group_out(self, ml_coord: MLCoord, task_id: int = None) -> List[TaskBlock]:
         """
@@ -505,11 +519,19 @@ class STEnv():
                             dst_index, dst_info)
 
     def map_edge(self, edge: Edge, path: List[Union[MLCoord, Tuple[MLCoord, int], Tuple[MLCoord, int, int]]]):
-        self._actor.map_edge(edge, path)
+        new_tasks, new_edges = self._actor.map_edge(edge, path)
+        reverse_call = Call(self._actor.reverse_map_edge, edge, new_tasks, new_edges)
+        self._history.push_state(reverse_call)
 
     def map_edges(self, edges: Iterable[Edge], path: List[Union[MLCoord, Tuple[MLCoord, int], Tuple[MLCoord, int, int]]]):
+        new_tasks = []
+        new_edges = []
         for edge in edges:
-            self.map_edge(edge, path)
+            new_task, new_edge = self._actor.map_edge(edge, path)
+            new_tasks.append(new_task)
+            new_edges.append(new_edge)
+        reverse_call = Call(self._actor.reverse_map_edges, edges, new_tasks, new_edges)
+        self._history.push_state(reverse_call)
 
     def simulate(self, tick_num: int = 1, input_type: InputType = InputType.BATCH):
         if tick_num > 1 and input_type == InputType.PIPELINE:

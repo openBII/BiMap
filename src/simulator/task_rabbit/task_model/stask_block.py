@@ -45,7 +45,7 @@ class STaskBlock(TaskBlock):
         visitor.visit_S(self)
 
     def fire(self, iteration: int, time: int, callback: Callable, start_callback: Callable = None):
-        for edge in self._output_edges:
+        for edge in self.enabled_output_edges:
             tick = Tick(self._id, iteration, time, callback, start_callback)
             edge.add_tick(tick)
 
@@ -53,7 +53,7 @@ class STaskBlock(TaskBlock):
         start_time = float("inf")
         available_time = 0
         input_flag = False
-        for edge in self._input_edges:
+        for edge in self.enabled_input_edges:
             received_tick = edge.consume_tick()
             if received_tick.start_callback:
                 input_flag = True

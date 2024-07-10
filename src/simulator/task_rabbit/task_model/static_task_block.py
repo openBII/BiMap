@@ -43,7 +43,7 @@ class StaticTaskBlock(TaskBlock):
         return tick.time, tick.iteration
 
     def fire(self, iteration: int, time: int):
-        for edge in self._output_edges:
+        for edge in self.enabled_output_edges:
             tick = Tick(self._id, iteration, time)
             edge.add_tick(tick)
 

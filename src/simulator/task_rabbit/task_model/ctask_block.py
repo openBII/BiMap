@@ -39,7 +39,7 @@ class CTaskBlock(TaskBlock):
         visitor.visit_C(self)
 
     def fire(self, iteration: int, time: int):
-        for edge in self._output_edges:
+        for edge in self.enabled_output_edges:
             tick = Tick(self._id, iteration, time)
             edge.add_tick(tick)
 
@@ -54,7 +54,7 @@ class CTaskBlock(TaskBlock):
         # 处理一下没有输入边的情况
         start_time = 0
         consumed_ticks: List[Tick] = []
-        for edge in self._input_edges:
+        for edge in self.enabled_input_edges:
             received_tick = edge.consume_tick()
             consumed_ticks.append(received_tick)
             # find the time of the latest input as the start time of this task
@@ -63,8 +63,8 @@ class CTaskBlock(TaskBlock):
         return start_time, received_tick.iteration, consumed_ticks
     
     def put_back(self, ticks: List[Tick]):
-        assert len(ticks) == len(self._input_edges)
-        for i, edge in enumerate(self._input_edges):
+        assert len(ticks) == len(self.enabled_input_edges)
+        for i, edge in enumerate(self.enabled_input_edges):
             edge.put_tick_back(ticks[i])
 
     def copy_like(self, shape: Shape = None) -> TaskBlock:

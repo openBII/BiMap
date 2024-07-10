@@ -138,6 +138,10 @@ class TaskBlock(ABC):
     @property
     def input_edges(self) -> List[Edge]:
         return self._input_edges
+    
+    @property
+    def enabled_input_edges(self) -> List[Edge]:
+        return [edge for edge in self._input_edges if edge.is_enable()]
 
     @input_edges.setter
     def input_edges(self, value):
@@ -147,6 +151,10 @@ class TaskBlock(ABC):
     @property
     def output_edges(self) -> List[Edge]:
         return self._output_edges
+    
+    @property
+    def enabled_output_edges(self) -> List[Edge]:
+        return [edge for edge in self._output_edges if edge.is_enable()]
 
     @output_edges.setter
     def output_edges(self, value):
@@ -191,7 +199,14 @@ class TaskBlock(ABC):
     def activated(self):
         """If all the input edges of this task block are activated, this task block will be activated.
         """
-        return all(map(lambda x: x.output_activated, self._input_edges))
+        for edge in self._input_edges:
+            if not edge.is_enable():
+                continue
+            else:
+                if not edge.output_activated:
+                    return False
+        return True
+        # return all(map(lambda x: x.output_activated, self._input_edges))
 
     # @property
     # def all_in_tasks(self) -> Set:
