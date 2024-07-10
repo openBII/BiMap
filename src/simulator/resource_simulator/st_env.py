@@ -6,7 +6,7 @@
 STEnv类描述性能级仿真环境
 """
 
-from copy import deepcopy
+from copy import copy, deepcopy
 from typing import List, Union, Dict, Tuple, Iterable
 from top.config import GlobalConfig
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
@@ -526,7 +526,7 @@ class STEnv():
     def map_edges(self, edges: Iterable[Edge], path: List[Union[MLCoord, Tuple[MLCoord, int], Tuple[MLCoord, int, int]]]):
         new_tasks = []
         new_edges = []
-        for edge in edges:
+        for edge in copy(edges):
             new_task, new_edge = self._actor.map_edge(edge, path)
             new_tasks.append(new_task)
             new_edges.append(new_edge)
