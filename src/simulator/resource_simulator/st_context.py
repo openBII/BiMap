@@ -58,6 +58,13 @@ class STContext():
     def take_task_out(self, task_id: int):
         item = self.task_to_coord.get(task_id)
         if item is None:
-            raise KeyError('No key name {:d} in st_context!'.format(task_id))
+            raise KeyError('No key named {:d} in st_context!'.format(task_id))
         else:
             self.task_to_coord.pop(task_id)
+
+    def take_edge_out(self, edge: Edge):
+        path = self.edge_to_coords.get(edge)
+        if path is None:
+            raise KeyError('No key named {:d} in st_context!'.format(repr(edge)))
+        else:
+            return self.edge_to_coords.pop(edge)

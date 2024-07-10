@@ -148,21 +148,19 @@ class ActionModel():
         new_tasks.append(split_weight)
         new_tasks.append(split_mlp)
         new_tasks.append(split_mlp_output)
-
-        # if split_vector.nr == 1:
-        #     return new_split_inputs, split_weight, split_mlp, split_mlp_output
         
-        add_tasks: List[TaskBlock] = []
-        for _ in range(split_vector.nr):
-            add_task = CTaskBlock(IDGenerator.get_next_task_id(), Shape(nf=split_mlp_output[0].shape.nf, branch=split_vector.nr), TaskBlockType.CADD, precision if precision is not None else compute.precision)
-            self._task_graph.add_node(add_task)
-            add_tasks.append(add_task)
-        self.connect_tasks(split_mlp_output, add_tasks)
+        if split_vector.nr > 1:
+            add_tasks: List[TaskBlock] = []
+            for _ in range(split_vector.nr):
+                add_task = CTaskBlock(IDGenerator.get_next_task_id(), Shape(nf=split_mlp_output[0].shape.nf, branch=split_vector.nr), TaskBlockType.CADD, precision if precision is not None else compute.precision)
+                self._task_graph.add_node(add_task)
+                add_tasks.append(add_task)
+            self.connect_tasks(split_mlp_output, add_tasks)
 
-        split_add_output = self.split_task(output.id, SplitVector(nf=split_vector.nf))
-        self.connect_tasks(add_tasks, split_add_output)
-        new_tasks.append(add_tasks)
-        new_tasks.append(split_add_output)
+            split_add_output = self.split_task(output.id, SplitVector(nf=split_vector.nf))
+            self.connect_tasks(add_tasks, split_add_output)
+            new_tasks.append(add_tasks)
+            new_tasks.append(split_add_output)
 
         # self.delete_tasks([input, compute, weight_on_chip])
         self.delete_task(weight_on_chip.id)
@@ -567,6 +565,10 @@ class ActionModel():
         self._st_matrix.add_task(ml_coord, self._task_graph.get_node(task_id))
         self._context.put_task_to(ml_coord, task_id)
 
+    def put_tasks_in(self, ml_coord: MLCoord, tasks: Iterable[TaskBlock]):
+        for task in tasks:
+            self.put_in(ml_coord, task.id)
+
     def sync(self, ml_coord: MLCoord, sync_id: int):
         space_point = self._st_matrix.get_element(ml_coord)
         task = space_point.get_last_task()
@@ -575,14 +577,14 @@ class ActionModel():
             self._sync_table.add(sync_task)
         self._st_matrix.add_task(ml_coord, sync_task)
 
-    def take_out(self, ml_coord: MLCoord, task_id=None):
+    def take_out(self, ml_coord: MLCoord, task_id: int):
         task = self._st_matrix.pop(ml_coord, task_id)
-        if type(task) is dict:
-            for v in task.values():
-                self._context.take_task_out(v.id, ml_coord)
-        else:
-            self._context.take_task_out(task.id, ml_coord)
+        self._context.take_task_out(task.id)
         return task
+    
+    def take_tasks_out(self, ml_coord: MLCoord, tasks: Iterable[TaskBlock]):
+        for task in tasks:
+            self.take_out(ml_coord, task.id)
 
     # def take_out_task(self, task_id, ml_coord: MLCoord):
     #     # 删除坐标种的某个节点
@@ -618,6 +620,8 @@ class ActionModel():
         假设chiplet -> chiplet -> DRAM, 则写入数据到DRAM为1 -> 1 -> 2, 从DRAM读数据为2 -> 2 -> 1
         """
         # 加入虚拟任务结点保证每条边上的所有坐标都在同一空间层次, 且在同一个互联域中
+        new_tasks = []
+        new_edges = []
         path: PathCoord = PathCoord(path)
         assert not path.illegal, "Illegal edge path"
         IDGenerator.set_base_task_id(self._task_graph)
@@ -630,6 +634,7 @@ class ActionModel():
             new_path.append(ml_coord0)
             if ml_coord1.ml_coord.level != ml_coord0.ml_coord.level:
                 task1, new_edge = self.add_virtual_task(task0, edge)
+                new_tasks.append(task1)
                 # task1 = VTaskBlock(
                 #     task_id=IDGenerator.get_next_task_id(),
                 #     shape=task0.out_shape,
@@ -644,7 +649,9 @@ class ActionModel():
                 task0 = task1
                 # 低级到高级
                 if ml_coord1.ml_coord.level < ml_coord0.ml_coord.level:
-                    self.split_same_level_edges(new_edge, new_path)
+                    partial_new_tasks, partial_new_edges = self.split_same_level_edges(new_edge, new_path)
+                    new_tasks.extend(partial_new_tasks)
+                    new_edges.extend(partial_new_edges)
                     new_ml_coord = deepcopy(ml_coord0)
                     while new_ml_coord.ml_coord.level != ml_coord1.ml_coord.level:
                         new_ml_coord.ml_coord = new_ml_coord.ml_coord.outer_coord
@@ -659,24 +666,32 @@ class ActionModel():
                     if new_ml_coord.ml_coord in new_path:
                         assert (new_path[new_ml_coord.ml_coord].network_id == new_ml_coord.network_id and 
                                 new_path[new_ml_coord.ml_coord].link_id == new_ml_coord.link_id), "Illegal edge coordinate"
-                        self.split_same_level_edges(new_edge, new_path)
+                        partial_new_tasks, partial_new_edges = self.split_same_level_edges(new_edge, new_path)
+                        new_tasks.extend(partial_new_tasks)
+                        new_edges.extend(partial_new_edges)
                     else:
                         new_path.append(new_ml_coord)
-                        self.split_same_level_edges(new_edge, new_path)
+                        partial_new_tasks, partial_new_edges = self.split_same_level_edges(new_edge, new_path)
+                        new_tasks.extend(partial_new_tasks)
+                        new_edges.extend(partial_new_edges)
                     new_path = PathCoord()
         if task1 is not None:
             new_edge = Edge(in_task=task1, out_task=edge.out_task)
             task1.add_output_edge(new_edge)
             new_path.append(ml_coord1)
             out_task: TaskBlock = edge.out_task
-            out_task.input_edges.remove(edge)
+            # out_task.input_edges.remove(edge)
             out_task.add_input_edge(new_edge)
-            self.split_same_level_edges(new_edge, new_path)
-            del edge
-            del path
+            partial_new_tasks, partial_new_edges = self.split_same_level_edges(new_edge, new_path)
+            new_tasks.extend(partial_new_tasks)
+            new_edges.extend(partial_new_edges)
+            # del edge
+            edge.disable()
+            # del path
+            return new_tasks, new_edges
         # 说明path上所有坐标都在同一层级
         else:
-            self.split_same_level_edges(edge, path)
+            return self.split_same_level_edges(edge, path)
 
     def add_virtual_task(self, task0: TaskBlock, edge: Edge):
         task1 = VTaskBlock(
@@ -687,8 +702,8 @@ class ActionModel():
         new_edge = Edge(in_task=task0, out_task=task1)
         self._task_graph.add_node(task1)
         task1.add_input_edge(new_edge)
-        if edge in task0.output_edges:
-            task0.output_edges.remove(edge)
+        # if edge in task0.output_edges:
+        #     task0.output_edges.remove(edge)
         task0.add_output_edge(new_edge) 
         return task1, new_edge
 
@@ -696,6 +711,8 @@ class ActionModel():
         """
         拆分同一层次的edge: 坐标所在的容器不同
         """
+        new_tasks = []
+        new_edges = []
         assert path.same_level, "All coordinates on this path should be at the same level"
         # IDGenerator.set_base_task_id(self._task_graph)
         task0: TaskBlock = edge.in_task
@@ -708,6 +725,8 @@ class ActionModel():
             # 同容器跨互联域
             if element0.network_id != element1.network_id:
                 task1, new_edge = self.add_virtual_task(task0, edge)
+                new_tasks.append(task1)
+                new_edges.append(new_edge)
                 self._st_matrix.add_edge(new_edge, new_path)
                 self._context.put_edge_to(new_path, new_edge)
                 new_element = deepcopy(element0)
@@ -717,6 +736,7 @@ class ActionModel():
 
         if task1 is not None:
             new_edge = Edge(in_task=task1, out_task=edge.out_task)
+            new_edges.append(new_edge)
             task1.add_output_edge(new_edge)
             new_path.append(element1)
             out_task: TaskBlock = edge.out_task
@@ -730,6 +750,21 @@ class ActionModel():
         else:
             self._st_matrix.add_edge(edge, path)
             self._context.put_edge_to(path, edge)
+            return [], [edge]
+
+        return new_tasks, new_edges
+
+    def reverse_map_edge(self, original_edge: Edge, new_tasks: List[TaskBlock], new_edges: List[Edge]):
+        original_edge.enable()
+        for task in new_tasks:
+            self._task_graph.delete_node(task.id)
+        for edge in new_edges:
+            path = self._context.take_edge_out(edge)
+            self._st_matrix.take_edge_out(edge, path)
+
+    def reverse_map_edges(self, edges: List[Edge], new_tasks: List[List[TaskBlock]], new_edges: List[List[Edge]]):
+        for edge, new_task, new_edge in zip(edges, new_tasks, new_edges):
+            self.reverse_map_edge(edge, new_task, new_edge)
 
 
 if __name__ == "__main__":

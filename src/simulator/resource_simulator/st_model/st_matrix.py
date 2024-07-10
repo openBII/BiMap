@@ -154,18 +154,17 @@ class STMatrix():
     #     '''
     #     pass
 
-    # FIXME I can't just pop a space structure
-    def pop(self, ml_coord: MLCoord, item_id=None):
+    def pop(self, ml_coord: MLCoord, item_id: int):
         """
-        清空在ml_coord指明的位置的item，并返回该item
+        清空在ml_coord指明的位置的item, 并返回该item
         """
-        top_coord = ml_coord.space_coord.top_coord
+        top_coord = ml_coord.top_coord
         if top_coord not in self._container:
             raise ValueError('The coordinate is not in the container.')
 
-        coord = ml_coord.space_sub_level
-        if not hasattr(coord, 'space_coord') and len(coord) == 0:
-            return self._container.pop(top_coord)
+        coord = ml_coord.inner_coord
+        if len(coord) == 0:
+            return self._container[top_coord].pop(item_id)
         return self._container[top_coord].pop(coord, item_id)
 
     def exist(self, coord: Coord):
@@ -231,6 +230,16 @@ class STMatrix():
             inner_matrix = self._container[path.top_coord]
             inner_path = path.inner_coord
             inner_matrix.add_edge(edge, inner_path)
+
+    def take_edge_out(self, edge: Edge, path: PathCoord):
+        coord_level = path.level
+        network_id = path.network_id
+        if coord_level == 1:
+            self.communication_networks[network_id]._edge_map.pop(edge)
+        else:
+            inner_matrix = self._container[path.top_coord]
+            inner_path = path.inner_coord
+            inner_matrix.take_edge_out(edge, inner_path)
 
     def check_edge_path(self, path: PathCoord) -> bool:
         if not path.same_domain:

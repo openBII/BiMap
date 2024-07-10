@@ -22,6 +22,11 @@ class STPoint():
         self._pc = 0
         self.evaluator = Evaluator()
         self.recorder = Recorder()
+
+    def pop(self, task_id):
+        for i, task in enumerate(self._tasks):
+            if task.id == task_id:
+                return self._tasks.pop(i)
         
     def add_task(self, task: TaskBlock):
         self._tasks.append(task)
