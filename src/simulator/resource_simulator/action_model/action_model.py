@@ -620,6 +620,8 @@ class ActionModel():
         假设chiplet -> chiplet -> DRAM, 则写入数据到DRAM为1 -> 1 -> 2, 从DRAM读数据为2 -> 2 -> 1
         """
         # 加入虚拟任务结点保证每条边上的所有坐标都在同一空间层次, 且在同一个互联域中
+        if not edge.is_enable():
+            raise ValueError("Disabled edge cannot be mapped")
         new_tasks = []
         new_edges = []
         path: PathCoord = PathCoord(path)
