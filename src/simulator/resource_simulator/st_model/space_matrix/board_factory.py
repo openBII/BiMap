@@ -1,7 +1,7 @@
 from src.simulator.resource_simulator.config.matrix_config import BoardConfig
 from src.simulator.resource_simulator.st_model.space_matrix.factory import Factory
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
-from src.simulator.resource_simulator.st_model.space_point.communication_point import BoardCommunicationPoint
+from src.simulator.resource_simulator.st_model.space_point.communication_point import SharedMemoryCommunicationPoint
 from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint
 from src.simulator.resource_simulator.config.communication_config import CommunicationConfig
 from src.simulator.resource_simulator.st_model.st_coord import Coord
@@ -19,11 +19,13 @@ class BoardFactory(Factory):
         chiplet = ComputeChipletFactory.create_matrix(config.chiplet)
         board.add_element(coord=Coord(0), element=chiplet)
 
-        DRAM = MemoryPoint(config.DRAM["capacity"])
-        board.add_element(coord=Coord(1), element=DRAM)
+        dram = MemoryPoint(config.DRAM["capacity"])
+        dram_coord = Coord(2)
+        board.add_element(coord=dram_coord, element=dram)
 
         communication_config = CommunicationConfig(config.network["bandwidth"])
-        communication_network = BoardCommunicationPoint(communication_config)
+        communication_network = SharedMemoryCommunicationPoint(
+            communication_config, dram_coord, arbitrator_coord=Coord(1))
         board.add_communication_network(communication_network)
 
         return board
