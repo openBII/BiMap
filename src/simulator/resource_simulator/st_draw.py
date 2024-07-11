@@ -104,6 +104,10 @@ class STDraw(object):
     def draw_graph(graph: TaskGraph, out_path: str,
                    width='1500px', height='800px'):
         graph = STDraw.obtain_graph(graph=graph, width=width, height=height)
+        import os
+        dir_name = os.path.dirname(out_path)
+        if not os.path.exists(os.path.dirname(out_path)):
+            os.makedirs(dir_name)
         graph.render(out_path)
         
 

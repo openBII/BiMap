@@ -140,6 +140,13 @@ class TaskBlock(ABC):
         return self._input_edges
     
     @property
+    def input_edge(self) -> Edge:
+        if len(self._input_edges) == 1:
+            return self._input_edges[0]
+        else:
+            raise ValueError("Current task has multiple input edges")
+    
+    @property
     def enabled_input_edges(self) -> List[Edge]:
         return [edge for edge in self._input_edges if edge.is_enable()]
 
@@ -151,6 +158,13 @@ class TaskBlock(ABC):
     @property
     def output_edges(self) -> List[Edge]:
         return self._output_edges
+    
+    @property
+    def output_edge(self) -> Edge:
+        if len(self._output_edges) == 1:
+            return self._output_edges[0]
+        else:
+            raise ValueError("Current task has multiple output edges")
     
     @property
     def enabled_output_edges(self) -> List[Edge]:

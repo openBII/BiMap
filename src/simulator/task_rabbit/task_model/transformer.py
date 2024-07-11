@@ -21,6 +21,12 @@ def create_data(task_graph: TaskGraph, shape: Shape, precision: Precision, is_ou
     task_graph.add_node(data)
     return data
 
+def create_static(task_graph: TaskGraph, shape: Shape, precision: Precision):
+    IDGenerator.set_base_task_id(task_graph)
+    data = StaticTaskBlock(IDGenerator.get_next_task_id(), shape, precision)
+    task_graph.add_node(data)
+    return data
+
 def create_input(task_graph: TaskGraph, shape: Shape, precision: Precision):
     IDGenerator.set_base_task_id(task_graph)
     input = InputTaskBlock(IDGenerator.get_next_task_id(), shape, precision)

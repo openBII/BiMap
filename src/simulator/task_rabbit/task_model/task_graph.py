@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Dict, List, Set, Union, Iterable
+from typing import Dict, List, Set, Union, Iterable, Sequence
 
 from src.simulator.task_rabbit.task_model.edge import Edge, RearrangeInfo
 from src.simulator.task_rabbit.task_model.shape import Shape
@@ -146,6 +146,12 @@ class TaskGraph():
         out_task.add_input_edge(edge)
         in_task.add_output_edge(edge)
         return edge
+    
+    def connect_tasks_in_sequence(self, tasks: Sequence[TaskBlock]):
+        edges: List[Edge] = []
+        for i in range(len(tasks) - 1):
+            edges.append(self.connect(tasks[i].id, tasks[i + 1].id))
+        return edges
 
     def delete_node(self, task_id: int) -> None:
         """

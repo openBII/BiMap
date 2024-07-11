@@ -5,7 +5,7 @@
 MLCoord类表示一个时空坐标，第一维表示空间坐标，第二维表示时间坐标
 包含_space_coord和_time_coord
 """
-from typing import Tuple, List, Union, Sequence
+from typing import Tuple, List, Union, Iterable
 
 
 # 一个层级中的元素坐标，可以为多维坐标
@@ -32,6 +32,14 @@ class MLCoord(tuple):
 
     def __init__(self, *multiple_coords: Tuple[Coord]):
         super().__init__()
+
+    @staticmethod
+    def create_mlcoord(*args: Union[Tuple, int]):
+        coords = []
+        for t in args:
+            coord = Coord(t)
+            coords.append(coord)
+        return MLCoord(*coords)
 
     @property
     def level(self):
@@ -88,6 +96,13 @@ class MLCoord(tuple):
     #         return self
 
     #     return self + (math.inf, ) * (target_level - self.level)
+
+def create_mlcoord(*args: Union[Tuple, int]):
+    coords = []
+    for t in args:
+        coord = Coord(t)
+        coords.append(coord)
+    return MLCoord(*coords)
 
 
 class EdgeCoord:
