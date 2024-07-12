@@ -1,25 +1,20 @@
 from src.simulator.resource_simulator.st_env import STEnv
 from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.task_rabbit.task_model.precision import Precision
-from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
 from src.simulator.resource_simulator.config.matrix_config import ServerConfig
 from src.simulator.resource_simulator.st_model.space_matrix.server_factory import ServerFactory
 from src.simulator.resource_simulator.st_model.st_coord import create_mlcoord
 from src.simulator.resource_simulator.st_draw import STDraw
-from src.simulator.task_rabbit.task_model.transformer import create_input, create_data, create_compute, create_static
+from src.simulator.task_rabbit.task_model.transformer import create_input, create_data, create_mlp
 
 
 # Construct a task graph
 task_graph = TaskGraph()
 input = create_input(task_graph, Shape(nr=2048), Precision.FLOAT_16)
 mlp_input = create_data(task_graph, Shape(nr=2048), Precision.FLOAT_16)
-weight = create_static(task_graph, Shape(nr=2048, nf=4096), Precision.FLOAT_16)
-mlp = create_compute(task_graph, Shape(nr=2048, nf=4096), TaskBlockType.CVM, Precision.FLOAT_16)
-output = create_data(task_graph, Shape(nf=4096), Precision.FLOAT_16, True)
-task_graph.connect_tasks_in_sequence([input, mlp_input, mlp, output])
-task_graph.connect(weight.id, mlp.id)
-task_graph.topologize()
+weight, mlp, output = create_mlp(task_graph, Shape(nr=2048, nf=4096), Precision.FLOAT_16, True)
+task_graph.connect_tasks_in_sequence([input, mlp_input, mlp])
 
 STDraw.draw_graph(task_graph, out_path='temp/mlp.task.html',
                 width='1920px', height='1080px')
