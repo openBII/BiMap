@@ -42,6 +42,20 @@ def create_compute(task_graph: TaskGraph, shape: Shape, type: TaskBlockType, pre
 def create_FFN():
     pass
 
+def create_mlp(task_graph: TaskGraph, shape: Shape, precision: Precision, 
+               is_output: bool = False, task_dict: Dict = None):
+    IDGenerator.set_base_task_id(task_graph)
+    weight = create_static(task_graph, shape, precision)
+    mlp = create_compute(task_graph, shape, TaskBlockType.CVM, precision)
+    output = create_data(task_graph, Shape(nf=shape.nf), precision, is_output)
+    task_graph.connect(weight.id, mlp.id)
+    task_graph.connect(mlp.id, output.id)
+    if task_dict is not None:
+        task_dict["compute"] = mlp
+        task_dict["weight"] = weight
+        task_dict["output"] = output
+    return weight, mlp, output
+
 def create_softmax(task_graph: TaskGraph, length: int, precision: Precision, task_dict: Dict):
     IDGenerator.set_base_task_id(task_graph)
     exp = create_compute(task_graph, Shape(nf=length), TaskBlockType.CEXP, precision)
