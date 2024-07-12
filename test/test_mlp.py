@@ -17,7 +17,7 @@ weight, mlp, output = create_mlp(task_graph, Shape(nr=2048, nf=4096), Precision.
 task_graph.connect_tasks_in_sequence([input, mlp_input, mlp])
 
 STDraw.draw_graph(task_graph, out_path='temp/mlp.task.html',
-                width='1920px', height='1080px')
+                  width='1920px', height='1080px')
 
 # Construct a hardware
 config = ServerConfig("top/gpu_server.toml")
