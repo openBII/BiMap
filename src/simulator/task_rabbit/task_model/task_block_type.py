@@ -33,9 +33,15 @@ class TaskBlockType(Enum):
     CLIF = 31
     CAVG = 32
     CEXP = 33
+    CReduceSum = 34
+    CSQRT = 35
+    CDIV = 36
+    CRELU = 37
 
     INPUT = 50
     OUTPUT = 51
+
+    MCONCAT = 52
 
     @staticmethod
     def is_compute_task(task_type):
