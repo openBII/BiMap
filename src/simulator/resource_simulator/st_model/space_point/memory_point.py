@@ -57,3 +57,8 @@ class MemoryPoint(STPoint):
             return True
         else:
             raise TypeError("Unsupported task type")
+        
+
+class DRAMPoint(MemoryPoint):
+    def __init__(self, capacity):
+        super().__init__(capacity)

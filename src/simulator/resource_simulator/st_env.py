@@ -35,7 +35,7 @@ from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
 from src.simulator.task_rabbit.task_model.static_task_block import StaticTaskBlock
 from src.simulator.task_rabbit.task_model.output_task_block import OutputTaskBlock
 from src.simulator.task_rabbit.task_model.precision import Precision
-from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint
+from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint, DRAMPoint
 from src.simulator.resource_simulator.state.call import Call
 
 
@@ -207,7 +207,10 @@ class STEnv():
 
     def does_memory_overflow(self, memory_coord: MLCoord, tasks: Iterable[STaskBlock] = None):
         memory_point: MemoryPoint = self.get_space_point(memory_coord)
-        return self.get_memory(memory_coord, tasks) > memory_point.capacity
+        if isinstance(memory_point, DRAMPoint):
+            return self.get_memory(memory_coord, tasks) > memory_point.capacity * 1024 * 1024 * 1024
+        else:
+            return self.get_memory(memory_coord, tasks) > memory_point.capacity * 1024
     
     def does_mlp_memory_overflow(self, input: STaskBlock, weight: StaticTaskBlock, output: Union[STaskBlock, OutputTaskBlock], memory_coord: MLCoord, split_vector: SplitVector):
         split_input = self.split_task(input.id, SplitVector(nr=split_vector.nr), record=False)
