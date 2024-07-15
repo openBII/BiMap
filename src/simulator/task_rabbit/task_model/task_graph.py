@@ -110,6 +110,16 @@ class TaskGraph():
         for node in task_nodes:
             self.add_node(node)
 
+    def add_node_between(self, source: TaskBlock, destinations: List[TaskBlock], 
+                         node: TaskBlock):
+        self.connect(source.id, node.id)
+        for dst in destinations:
+            self.connect(node.id, dst.id)
+            edge = self.get_edge(source.id, dst.id)
+            source.remove_output_edge(edge)
+            dst.remove_input_edge(edge)
+            edge.destroy()
+
     def connect(self, source_id: int, destination_id: int,
                  source_position: Shape = None, source_size: Shape = None,
                  destination_position: Shape = None, destination_size: Shape = None,
