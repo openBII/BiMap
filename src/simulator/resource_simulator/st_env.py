@@ -52,7 +52,6 @@ class STEnv():
 
         self._history = History()  # Memento
 
-        IDGenerator.set_base_task_id(self._task_graph)
         # self._history.new_state(self.context)
 
         # self._statistic_cache = {}  # type: Dict[str, CoreStatistic]
@@ -349,9 +348,21 @@ class STEnv():
 
     def split_reduction(self, input: STaskBlock, split_inputs: List[STaskBlock], compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector, precision: Precision = None):
         return self._actor.split_reduction(input, split_inputs, compute, output, split_vector, precision)
+    
+    def split_dot_product(self, input: STaskBlock, split_inputs: List[STaskBlock], 
+                          weight: STaskBlock, 
+                          compute: CTaskBlock, 
+                          output: Union[STaskBlock, OutputTaskBlock], 
+                          split_vector: SplitVector):
+        new_tasks = self._actor.split_dot_product(input, split_inputs, weight,
+                                                  compute, output,
+                                                  split_vector)
+        reverse_call = Call(self._actor.reverse_split, new_tasks, [compute, weight, output] + split_inputs)
+        self._history.push_state(reverse_call)
+        return new_tasks
 
-    def split_mlp(self, input: STaskBlock, split_inputs: List[STaskBlock], weight: StaticTaskBlock, compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector, precision: Precision = None):
-        new_tasks = self._actor.split_mlp(input, split_inputs, weight, compute, output, split_vector, precision)
+    def split_mlp(self, input: STaskBlock, split_inputs: List[STaskBlock], weight: StaticTaskBlock, compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector):
+        new_tasks = self._actor.split_mlp(input, split_inputs, weight, compute, output, split_vector)
         
         reverse_call = Call(self._actor.reverse_split, new_tasks, [compute, output] + split_inputs)
         self._history.push_state(reverse_call)
@@ -360,6 +371,16 @@ class STEnv():
     def split_pointwise(self, input: STaskBlock, split_inputs: List[STaskBlock], compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector):
         new_tasks = self._actor.split_pointwise(input, split_inputs, compute, output, split_vector)
 
+        reverse_call = Call(self._actor.reverse_split, new_tasks, [compute, output] + split_inputs)
+        self._history.push_state(reverse_call)
+        return new_tasks
+    
+    def split_scale(self, input: STaskBlock, split_inputs: List[STaskBlock], 
+                    compute: CTaskBlock, scale: STaskBlock,
+                    output: Union[STaskBlock, OutputTaskBlock], 
+                    split_vector: SplitVector):
+        new_tasks = self._actor.split_scale(input, split_inputs, compute,
+                                            scale, output, split_vector)
         reverse_call = Call(self._actor.reverse_split, new_tasks, [compute, output] + split_inputs)
         self._history.push_state(reverse_call)
         return new_tasks
