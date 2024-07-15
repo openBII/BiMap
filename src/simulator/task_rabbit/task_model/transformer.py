@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import Dict, Union, Iterable, Sequence
 from math import sqrt
 from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
@@ -26,9 +27,14 @@ def create_static(task_graph: TaskGraph, shape: Shape, precision: Precision):
     task_graph.add_node(data)
     return data
 
-def create_input(task_graph: TaskGraph, shape: Shape, precision: Precision):
+def create_input(task_graph: TaskGraph, shape: Shape, precision: Precision, 
+                 generate_data: bool = True):
     input = InputTaskBlock(IDGenerator.get_next_task_id(), shape, precision)
     task_graph.add_node(input)
+    if generate_data:
+        data = create_data(task_graph, shape, precision)
+        task_graph.connect(input.id, data.id)
+        return input, data
     return input
 
 def create_compute(task_graph: TaskGraph, shape: Shape, type: TaskBlockType, 
@@ -95,10 +101,10 @@ def create_softmax(task_graph: TaskGraph, input: TaskBlock,
     task_dict["reduction"] = {}
     reduction_output, _ = create_reduce_sum(
         task_graph, exp_output, precision, task_dict=task_dict["reduction"])
-    task_dict["scale"] = {}
-    output, _ = create_scale(task_graph, exp_output, precision,
-                             task_dict=task_dict["scale"], 
-                             value=reduction_output)
+    task_dict["div"] = {}
+    output, _ = create_div(task_graph, [exp_output, reduction_output],
+                           exp_output.shape, precision,
+                           task_dict=task_dict["div"])
     return output, task_dict
 
 def create_scale(task_graph: TaskGraph, input: TaskBlock, precision: Precision,
@@ -121,7 +127,9 @@ def create_concat(task_graph: TaskGraph, inputs: Iterable[TaskBlock],
                   shape: Shape, precision: Precision,
                   is_output: bool = False, task_dict: Dict = None):
     task_dict = {} if task_dict is None else task_dict
-    concat = create_compute(task_graph, Shape(nf=shape.nf, branch=len(inputs)), 
+    concat_shape = deepcopy(shape)
+    concat_shape.branch = len(inputs)
+    concat = create_compute(task_graph, concat_shape, 
                             TaskBlockType.MCONCAT, precision)
     output = create_data(task_graph, shape, precision, is_output)
     for input in inputs:
@@ -148,8 +156,10 @@ def create_attention(task_graph: TaskGraph, embedding: TaskBlock,
                           precision, task_dict=task_dict["value"])
     key_cache = create_data(
         task_graph, Shape(nr=d_key, nf=seq_len - 1), precision)
-    new_key_cache = create_data(
-        task_graph, Shape(nr=d_key, nf=seq_len), precision)
+    task_dict["concat_key"] = {}
+    new_key_cache, _ = create_concat(task_graph, [key, key_cache], 
+                                     Shape(nr=d_key, nf=seq_len), precision,
+                                     task_dict=task_dict["concat_key"])
     task_dict["dot_product"] = {}
     dot_product_output, _ = create_mlp(task_graph, query,
                                        Shape(nr=d_key, nf=seq_len), precision,
@@ -157,7 +167,7 @@ def create_attention(task_graph: TaskGraph, embedding: TaskBlock,
                                        weight=new_key_cache)
     task_dict["scale"] = {}
     scale_output, _ = create_scale(
-        task_graph, dot_product_output, Shape(nf=seq_len), precision, 
+        task_graph, dot_product_output, precision, 
         task_dict=task_dict["scale"], value=1 / sqrt(d_key))
     task_dict["softmax"] = {}
     softmax_output, _ = create_softmax(
@@ -165,18 +175,15 @@ def create_attention(task_graph: TaskGraph, embedding: TaskBlock,
         task_dict=task_dict["softmax"])
     value_cache = create_data(task_graph, Shape(nr=seq_len - 1, nf=d_value), 
                               precision)
-    new_value_cache = create_data(task_graph, Shape(nr=seq_len, nf=d_value), 
-                                  precision)
+    task_dict["concat_value"] = {}
+    new_value_cache, _ = create_concat(task_graph, [value, value_cache], 
+                                       Shape(nr=seq_len, nf=d_value), precision,
+                                       task_dict=task_dict["concat_value"])
     task_dict["attention"] = {}
     output, _ = create_mlp(
         task_graph, softmax_output, Shape(nr=seq_len, nf=d_value), precision, 
         is_output, task_dict["attention"], new_value_cache)
-
-    task_graph.connect(key.id, new_key_cache.id)
-    task_graph.connect(key_cache.id, new_key_cache.id)
-    task_graph.connect(value.id, new_value_cache.id)
-    task_graph.connect(value_cache.id, new_value_cache.id)
-
+    
     task_dict["key_cache"] = {}
     task_dict["key_cache"]["old"] = key_cache
     task_dict["key_cache"]["new"] = new_key_cache
@@ -203,7 +210,7 @@ def create_multi_head_attention(task_graph: TaskGraph, embedding: TaskBlock,
         outputs.append(output)
     task_dict["concat"] = {}
     concat_output, _ = create_concat(task_graph, outputs, 
-                                     Shape(nf=d_value), precision,
+                                     Shape(nf=d_value, nr=1), precision,
                                      task_dict=task_dict["concat"])
     task_dict["mlp"] = {}
     output, _ = create_mlp(task_graph, concat_output,
