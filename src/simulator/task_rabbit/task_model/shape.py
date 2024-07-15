@@ -191,17 +191,44 @@ class SplitVector(Shape):
     def num_slices(self):
         return self.batch * self.ny * self.nx * self.nf * self.nr
     
-    def get_slice_shape(self, task_shape: Shape):
-        slice_shape = deepcopy(task_shape)
-        slice_shape.batch = task_shape.batch / self.batch
-        slice_shape.ny = task_shape.ny / self.ny
-        slice_shape.nx = task_shape.nx / self.nx
-        slice_shape.nf = task_shape.nf / self.nf
-        slice_shape.nr = task_shape.nr / self.nr
-        return slice_shape
+    @staticmethod
+    def split_integer(n: int, k: int):
+        base = n // k
+        remainder = n % k
+        result = [base + 1] * remainder + [base] * (k - remainder)
+        return result
+
+    def generate_slice_shapes(self, task_shape: Shape):
+        self.batch_slices = SplitVector.split_integer(task_shape.batch, self.batch)
+        self.y_slices = SplitVector.split_integer(task_shape.ny, self.ny)
+        self.x_slices = SplitVector.split_integer(task_shape.nx, self.nx)
+        self.f_slices = SplitVector.split_integer(task_shape.nf, self.nf)
+        self.r_slices = SplitVector.split_integer(task_shape.nr, self.nr)
+    
+    def slice_shape_generator(self, task_shape: Shape):
+        for b in range(self.batch):
+            for y in range(self.ny):
+                for x in range(self.nx):
+                    for f in range(self.nf):
+                        for r in range(self.nr):
+                            slice_shape = deepcopy(task_shape)
+                            slice_shape.batch = self.batch_slices[b]
+                            slice_shape.ny = self.y_slices[y]
+                            slice_shape.nx = self.x_slices[x]
+                            slice_shape.nf = self.f_slices[f]
+                            slice_shape.nr = self.r_slices[r]
+                            yield slice_shape
     
     def __hash__(self) -> int:
         return hash(str(self.batch) + str(self.ny) + str(self.nx) + str(self.nf) + str(self.nr))
     
     def __iter__(self):
         return iter([self.batch, self.ny, self.nx, self.nf, self.nr])
+
+
+if __name__ == "__main__":
+    task_shape = Shape(ny=43, nx=43, nf=43)
+    split_vector = SplitVector(ny=5, nx=5, nf=5)
+    split_vector.generate_slice_shapes(task_shape)
+    for slice_shape in split_vector.slice_shape_generator(task_shape):
+        print(slice_shape)
