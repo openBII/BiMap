@@ -7,7 +7,7 @@ class IDGenerator():
     @staticmethod
     def get_next_task_id() -> int:
         IDGenerator.task_num += 1
-        return IDGenerator.task_num
+        return IDGenerator.task_num - 1
 
     @staticmethod
     def set_base_task_id(base):
