@@ -56,6 +56,12 @@ class CommunicationEvaluator(Evaluator):
                 return True
         else:
             return False
+        
+    def copy_edge_map(self):
+        edge_map = {}
+        for key in self.edge_map:
+            edge_map[key] = deepcopy(self.edge_map[key])
+        return edge_map
 
     def create_edge_path(self, edge: Edge, iteration: int, ml_coords: List[Tuple[MLCoord, int]]):
         """
@@ -136,7 +142,10 @@ class CommunicationEvaluator(Evaluator):
 
     def get_bandwidth(self, hop: Hop):
         if type(self.bandwidth) in [float, int]:
-            return self.bandwidth
+            if hop.src == hop.dst:
+                return float("inf")
+            else:
+                return self.bandwidth
         elif isinstance(self.bandwidth, BandwidthDict):
             return self.bandwidth[hop]
         else:
@@ -180,8 +189,8 @@ class CommunicationEvaluator(Evaluator):
         if extern_deadline is None:
             recorder = self.copy_recorder()
         while len(finished_edges) == 0:  # 每次评估一个hop
-            if self.all_edges_reach_deadline(edge_heap, extern_deadline):
-                break
+            # if self.all_edges_reach_deadline(edge_heap, extern_deadline):
+            #     break
             min_start_time, min_edge = heapq.heappop(edge_heap)  # 最先可以开始的边
             if extern_deadline is not None:
                 if min_start_time > extern_deadline:
@@ -255,6 +264,8 @@ class CommunicationEvaluator(Evaluator):
                     else:
                         # 将未完成的边重新加入堆中
                         heapq.heappush(edge_heap, (record.end_time, edge))
+            if self.all_edges_reach_deadline(edge_heap, extern_deadline):
+                break
         if extern_deadline is None:
             self.recorder.recorder_time = recorder
         else:
@@ -283,8 +294,9 @@ class SharedMemoryCommunicationEvaluator(CommunicationEvaluator):
         self.shared_memory_coord = shared_memory_coord
         self.arbitrator_coord = arbitrator_coord
 
-    def generate_hops(self, edge: Edge, iteration: int, src: Coord, dst: Coord, link_id: int):
-        if self.arbitrator_coord in [src, dst]:
+    def generate_hops(self, edge: Edge, iteration: int, src: Coord, dst: Coord, 
+                      link_id: int):
+        if src == dst or self.arbitrator_coord in [src, dst]:
             self.append_hop(edge, iteration, Hop(src, dst, link_id))
         else:
             if self.shared_memory_coord in [src, dst]:
