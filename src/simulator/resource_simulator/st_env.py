@@ -557,6 +557,24 @@ class STEnv():
         reverse_call = Call(self._actor.reverse_map_edges, edges, new_tasks, new_edges)
         self._history.push_state(reverse_call)
 
+    def auto_edge_map(self):
+        tasks = copy(self._task_graph.get_all_node_ids())
+        for task_id in tasks:
+            if task_id in self._task_graph._inputs:
+                continue
+            else:
+                task = self._task_graph[task_id]
+                for output_edge in task.enabled_output_edges:
+                    src: TaskBlock = output_edge.in_task
+                    dst: TaskBlock = output_edge.out_task
+                    if not dst.is_enable():
+                        continue
+                    src_mlcoord = self.get_ml_coord(src.id)
+                    dst_mlcoord = self.get_ml_coord(dst.id)
+                    self.map_edge(output_edge, 
+                                  self._st_matrix.generate_path(src_mlcoord,
+                                                                dst_mlcoord))
+
     def simulate(self, tick_num: int = 1, input_type: InputType = InputType.BATCH):
         if tick_num > 1 and input_type == InputType.PIPELINE:
             raise NotImplementedError
