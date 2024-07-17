@@ -17,6 +17,10 @@ class CommunicationPoint(STPoint):
         self._edge_map: Dict[Edge, List[Tuple[MLCoord, int]]] = {}
         self.evaluator = CommunicationEvaluator(self.bandwidth)
 
+    def update_bandwidth(self, value: float):
+        self.bandwidth = value
+        self.evaluator.bandwidth = value
+
     def __repr__(self):
         return 'bandwidth: ' + repr(self.bandwidth) + '\n'
 
