@@ -752,7 +752,7 @@ class ActionModel():
         new_edges = []
         path: PathCoord = PathCoord(path)
         assert not path.illegal, "Illegal edge path"
-        IDGenerator.set_base_task_id(self._task_graph)
+        # IDGenerator.set_base_task_id(self._task_graph)
         task0: TaskBlock = edge.in_task
         task1 = None
         new_path = PathCoord()
