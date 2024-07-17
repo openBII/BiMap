@@ -75,6 +75,10 @@ class TaskBlockType(Enum):
                                    TaskBlockType.SB.value,
                                    TaskBlockType.SWFC.value,
                                    TaskBlockType.SW2D.value)
+    
+    @staticmethod
+    def is_memory_operation(task_type):
+        return task_type in (TaskBlockType.MCONCAT, )
 
     def __str__(self):
         return self.name

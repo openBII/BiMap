@@ -5,6 +5,8 @@ from src.simulator.task_rabbit.task_model.output_task_block import OutputTaskBlo
 from src.simulator.task_rabbit.task_model.static_task_block import StaticTaskBlock
 from src.simulator.resource_simulator.sync.sync_table import SyncTable
 from src.simulator.resource_simulator.sync.sync_task import SyncTask
+from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
+from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 
 
 class MemoryPoint(STPoint):
@@ -55,6 +57,17 @@ class MemoryPoint(STPoint):
             else:
                 task.fire(iteration, available_time, self.recorder.update)
             return True
+        elif isinstance(task, CTaskBlock):
+            if TaskBlockType.is_memory_operation(task.task_type):
+                # TODO(huanyu): evaluate memory operations
+                start_time, iteration, consumed_ticks = task.consume()
+                self.recorder.record(task_id, iteration, start_time, 0)
+                available_time = max(start_time, self.recorder.max_time)
+                task.callback(available_time, consumed_ticks, 0)
+                task.fire(iteration, available_time)
+                return True
+            else:
+                TypeError("Unsupported task type")
         else:
             raise TypeError("Unsupported task type")
         
