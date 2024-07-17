@@ -50,7 +50,7 @@ class TaskBlockType(Enum):
 
     @staticmethod
     def is_storage_task(task_type):
-        return task_type.value < TaskBlockType.SEPERATOR.value
+        return task_type.value < TaskBlockType.STATIC.value
 
     @staticmethod
     def is_soma_task(task_type):
