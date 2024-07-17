@@ -251,6 +251,9 @@ class STMatrix():
             #     if not self.exist(edge_coord.ml_coord.top_coord):
             #         return False
         return True
+    
+    def generate_path(self, src: MLCoord, dst: MLCoord) -> List[MLCoord]:
+        raise NotImplementedError
 
 
     # def process(self, edges: List[Edge]) -> List[Edge]:

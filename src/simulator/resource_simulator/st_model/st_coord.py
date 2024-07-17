@@ -63,6 +63,9 @@ class MLCoord(tuple):
     def bottom_coord(self) -> Coord:
         return self[-1]
     
+    def create_mlcoord_with_different_bottom_coord(self, bottom_coord: Coord):
+        return MLCoord(*self[:-1], bottom_coord)
+    
     @property
     def empty(self) -> bool:
         return len(self) == 0
