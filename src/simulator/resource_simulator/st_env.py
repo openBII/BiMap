@@ -94,6 +94,10 @@ class STEnv():
 
     def get_space_point(self, ml_coord: MLCoord):
         return self._st_matrix.get_element(ml_coord)
+    
+    def get_communication_network(self, ml_coord: MLCoord, network_id: int = 0):
+        space_matrix = self.get_space_point(ml_coord)
+        return space_matrix.communication_networks[network_id]
 
     def get_space(self, space_coord):
         return self._st_matrix.get_space(space_coord)
@@ -183,6 +187,14 @@ class STEnv():
                                 edge = edge.out_task.output_edges[0]
                             else:
                                 break
+
+    def get_latency(self, iteration: int = 0):
+        latency = 0
+        for output_id in self._task_graph._outputs:
+            output = self._task_graph[output_id]
+            _, end = self.get_task_time(output, iteration)
+            latency = max(end, latency)
+        return latency 
 
     def get_computation(self, ml_coord):
         pass
