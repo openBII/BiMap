@@ -37,6 +37,8 @@ class CommunicationPoint(STPoint):
             else:
                 tick_dict.update({edge: [tick]})
             heapq.heappush(start_time_heap, (tick.time, (edge, tick.iteration)))
+        if deadline is None:
+            copied_edge_map = self.evaluator.copy_edge_map()
         for edge in tick_dict:
             ticks = tick_dict[edge]
             for tick in ticks:
@@ -45,6 +47,7 @@ class CommunicationPoint(STPoint):
         finished_edges: List[Tuple[Edge, int]]
         finished_edges, finish_time = self.evaluator(start_time_heap, deadline)
         if deadline is None:
+            self.evaluator.edge_map = copied_edge_map
             for edge in edges:
                 ticks = tick_dict[edge]
                 tick = ticks.pop()  # 后进先出, 因为put_back时每次都是在队首放一个tick
