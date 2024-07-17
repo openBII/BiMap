@@ -2,6 +2,7 @@ from src.simulator.resource_simulator.st_env import STEnv
 from src.simulator.task_rabbit.task_model.shape import Shape, SplitVector
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
+from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.resource_simulator.config.matrix_config import ServerConfig
 from src.simulator.resource_simulator.st_model.space_matrix.server_factory import ServerFactory
 from src.simulator.resource_simulator.st_model.st_coord import create_mlcoord
@@ -58,9 +59,11 @@ env.put_in(dram0, embedding.id)
 embedding_on_chip = env.copy_task(embedding.id)
 task_graph.add_node_between(embedding, embedding.out_tasks, 
                             embedding_on_chip)
-split_embedding_on_chip = env.split_task(embedding_on_chip.id, SplitVector(nf=1))
+split_embedding_on_chip = env.split_task(embedding_on_chip.id, 
+                                         SplitVector(nf=1))
 env.connect_tasks([embedding], split_embedding_on_chip)
 env.put_tasks_in(shared_memory0, split_embedding_on_chip)
+env.put_in(dram0, output.id)
 
 query_weight = task_dict["query"]["weight"]
 env.put_in(dram0, query_weight.id)
@@ -200,4 +203,7 @@ STDraw.draw_graph(task_graph, out_path='temp/attention.task.html',
                   width='1920px', height='1080px')
 
 # Edge Mapping
+env.auto_edge_map()
 
+env.simulate()
+env.show_overall_time()

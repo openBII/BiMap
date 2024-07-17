@@ -5,6 +5,7 @@ from src.simulator.resource_simulator.st_model.space_point.communication_point i
 from src.simulator.resource_simulator.config.communication_config import CommunicationConfig
 from src.simulator.resource_simulator.st_model.st_coord import Coord
 from src.simulator.resource_simulator.st_model.space_matrix.board_factory import BoardFactory
+from src.simulator.resource_simulator.st_model.space_matrix.gpu_server_matrix import GPUServerMatrix
 
 
 class ServerFactory(Factory):
@@ -14,7 +15,7 @@ class ServerFactory(Factory):
 
     @staticmethod
     def create_matrix(config: ServerConfig) -> STMatrix:
-        server = STMatrix(dim=2, space_level=4)
+        server = GPUServerMatrix(dim=2, space_level=4)
         for i in range(config.size[0]):
             for j in range(config.size[1]):
                 board = BoardFactory.create_matrix(config.PCB)
