@@ -59,16 +59,40 @@ ROUTER = 3
 SHARED_MEMORY = (SIZE_X + 1, SIZE_Y // 2)
 SRAM_BUFFER = 0
 
-# Mapping
-dram0 = create_mlcoord((0, 0), DRAM)
-shared_memory0 = create_mlcoord((0, 0), CHIP, SHARED_MEMORY)
-env.put_in(dram0, embedding.id)
+# Graph transformation
 embedding_on_chip = env.copy_task(embedding.id)
 task_graph.add_node_between(embedding, embedding.out_tasks, 
                             embedding_on_chip)
 split_embedding_on_chip = env.split_task(embedding_on_chip.id, 
                                          SplitVector())
 env.connect_tasks([embedding], split_embedding_on_chip)
+
+SIZE_X = 2
+SIZE_Y = 1
+
+split_task_dict = env.split_attention(task_dict,
+                                      embedding_on_chip,
+                                      split_embedding_on_chip,
+                                      SplitVector(nf=SIZE_X * SIZE_Y),
+                                      SplitVector(nf=SIZE_X * SIZE_Y),
+                                      SplitVector(nf=SIZE_X * SIZE_Y),
+                                      SplitVector(nf=SIZE_X * SIZE_Y),
+                                      SplitVector(nf=SIZE_X * SIZE_Y),
+                                      SplitVector(nf=SIZE_X * SIZE_Y),
+                                      SplitVector(nf=SIZE_X * SIZE_Y),
+                                      SplitVector(nf=SIZE_X * SIZE_Y))
+
+output.enable()
+split_attention_output = split_task_dict["attention"]["output"]
+env.connect_tasks(split_attention_output, [output])
+
+STDraw.draw_graph(task_graph, out_path='temp/attention.task.html',
+                width='1920px', height='1080px')
+
+# Mapping
+dram0 = create_mlcoord((0, 0), DRAM)
+shared_memory0 = create_mlcoord((0, 0), CHIP, SHARED_MEMORY)
+env.put_in(dram0, embedding.id)
 env.put_tasks_in(shared_memory0, split_embedding_on_chip)
 env.put_in(dram0, output.id)
 query_weight = task_dict["query"]["weight"]
@@ -82,15 +106,10 @@ env.put_in(dram0, key_cache.id)
 value_cache = task_dict["value_cache"]["old"]
 env.put_in(dram0, value_cache.id)
 
-SIZE_X = 2
-SIZE_Y = 1
-
 # Map MLP of query
-query_mlp = task_dict["query"]["compute"]
-query = task_dict["query"]["output"]
-split_query_weight, split_query_mlp, split_query_output = env.split_mlp(
-    embedding_on_chip, split_embedding_on_chip, query_weight, 
-    query_mlp, query, SplitVector(nf=SIZE_X * SIZE_Y))
+split_query_weight = split_task_dict["query"]["weight"]
+split_query_output = split_task_dict["query"]["output"]
+split_query_mlp = split_task_dict["query"]["compute"]
 env.put_tasks_in(shared_memory0, split_query_weight)
 env.put_tasks_in(shared_memory0, split_query_output)
 for j in range(SIZE_X):
@@ -99,11 +118,9 @@ for j in range(SIZE_X):
         env.put_in(tensor_unit, split_query_mlp[k + j * SIZE_Y].id)
 
 # Map MLP of key
-key_mlp = task_dict["key"]["compute"]
-key = task_dict["key"]["output"]
-split_key_weight, split_key_mlp, split_key_output = env.split_mlp(
-    embedding_on_chip, split_embedding_on_chip, key_weight, 
-    key_mlp, key, SplitVector(nf=SIZE_X * SIZE_Y))
+split_key_mlp = split_task_dict["key"]["compute"]
+split_key_weight = split_task_dict["key"]["weight"]
+split_key_output = split_task_dict["key"]["output"]
 env.put_tasks_in(shared_memory0, split_key_weight)
 env.put_tasks_in(shared_memory0, split_key_output)
 for j in range(SIZE_X):
@@ -112,11 +129,9 @@ for j in range(SIZE_X):
         env.put_in(tensor_unit, split_key_mlp[k + j * SIZE_Y].id)
 
 # Map MLP of value
-value_mlp = task_dict["value"]["compute"]
-value = task_dict["value"]["output"]
-split_value_weight, split_value_mlp, split_value_output = env.split_mlp(
-    embedding_on_chip, split_embedding_on_chip, value_weight, 
-    value_mlp, value, SplitVector(nf=SIZE_X * SIZE_Y))
+split_value_mlp = split_task_dict["value"]["compute"]
+split_value_weight = split_task_dict["value"]["weight"]
+split_value_output = split_task_dict["value"]["output"]
 env.put_tasks_in(shared_memory0, split_value_weight)
 env.put_tasks_in(shared_memory0, split_value_output)
 for j in range(SIZE_X):
@@ -126,16 +141,12 @@ for j in range(SIZE_X):
 
 # Map the creation of new key cache
 concat_key = task_dict["concat_key"]["move"]
-new_key_cache = task_dict["concat_key"]["output"]
 env.put_in(dram0, concat_key.id)
 
 # Map the dot product between query and key cache
-dot_product = task_dict["dot_product"]["compute"]
-dot_product_output = task_dict["dot_product"]["output"]
-split_key_cache, split_dot_product, split_dot_product_output = env.split_dot_product(
-    query, split_query_output, new_key_cache, dot_product, 
-    dot_product_output, SplitVector(nf=SIZE_X * SIZE_Y), 
-)
+split_dot_product = split_task_dict["dot_product"]["compute"]
+split_key_cache = split_task_dict["dot_product"]["weight"]
+split_dot_product_output = split_task_dict["dot_product"]["output"]
 env.put_tasks_in(shared_memory0, split_key_cache)
 env.put_tasks_in(shared_memory0, split_dot_product_output)
 for j in range(SIZE_X):
@@ -144,11 +155,8 @@ for j in range(SIZE_X):
         env.put_in(tensor_unit, split_dot_product[k + j * SIZE_Y].id)
 
 # Map scale
-scale = task_dict["scale"]["compute"]
-scale_output = task_dict["scale"]["output"]
-split_scale, split_scale_output = env.split_pointwise(
-    dot_product_output, split_dot_product_output, scale,
-    scale_output, SplitVector(nf=SIZE_X * SIZE_Y))
+split_scale = split_task_dict["scale"]["compute"]
+split_scale_output = split_task_dict["scale"]["output"]
 env.put_tasks_in(shared_memory0, split_scale_output)
 for j in range(SIZE_X):
     for k in range(SIZE_Y):
@@ -156,11 +164,8 @@ for j in range(SIZE_X):
         env.put_in(tensor_unit, split_scale[k + j * SIZE_Y].id)
 
 # Map SoftMax
-softmax_exp = task_dict["softmax"]["exp"]["compute"]
-softmax_exp_output = task_dict["softmax"]["exp"]["output"]
-split_softmax_exp, split_softmax_exp_output = env.split_pointwise(
-    scale_output, split_scale_output, softmax_exp,
-    softmax_exp_output, SplitVector(nf=SIZE_X * SIZE_Y))
+split_softmax_exp = split_task_dict["softmax"]["exp"]["compute"]
+split_softmax_exp_output = split_task_dict["softmax"]["exp"]["output"]
 env.put_tasks_in(shared_memory0, split_softmax_exp_output)
 for j in range(SIZE_X):
     for k in range(SIZE_Y):
@@ -173,11 +178,8 @@ tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
 env.put_in(tensor_unit, softmax_reduce.id)
 env.put_in(shared_memory0, softmax_reduce_output.id)
 
-softmax_div = task_dict["softmax"]["div"]["compute"]
-softmax_div_output = task_dict["softmax"]["div"]["output"]
-split_softmax_div, split_softmax_div_output = env.split_scale(
-    softmax_exp_output, split_softmax_exp_output, softmax_div,
-    softmax_reduce_output, softmax_div_output, SplitVector(nf=SIZE_X * SIZE_Y))
+split_softmax_div = split_task_dict["softmax"]["div"]["compute"]
+split_softmax_div_output = split_task_dict["softmax"]["div"]["output"]
 env.put_tasks_in(shared_memory0, split_softmax_div_output)
 for j in range(SIZE_X):
     for k in range(SIZE_Y):
@@ -186,27 +188,17 @@ for j in range(SIZE_X):
 
 # Map the creation of new key cache
 concat_value = task_dict["concat_value"]["move"]
-new_value_cache = task_dict["concat_value"]["output"]
 env.put_in(dram0, concat_value.id)
 
 # Map attention
-attention = task_dict["attention"]["compute"]
-attention_output = task_dict["attention"]["output"]
-split_value_cache, split_attention, split_attention_output = env.split_dot_product(
-    softmax_div_output, split_softmax_div_output, new_value_cache, attention, 
-    attention_output, SplitVector(nf=SIZE_X * SIZE_Y))
+split_attention = split_task_dict["attention"]["compute"]
+split_value_cache = split_task_dict["attention"]["weight"]
 env.put_tasks_in(shared_memory0, split_value_cache)
 env.put_tasks_in(shared_memory0, split_attention_output)
 for j in range(SIZE_X):
     for k in range(SIZE_Y):
         tensor_unit = create_mlcoord((0, 0), CHIP, (j, k), TENSOR_UNIT)
         env.put_in(tensor_unit, split_attention[k + j * SIZE_Y].id)
-
-output.enable()
-env.connect_tasks(split_attention_output, [output])
-
-STDraw.draw_graph(task_graph, out_path='temp/attention.task.html',
-                width='1920px', height='1080px')
 
 # Edge Mapping
 env.auto_edge_map()
