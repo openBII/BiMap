@@ -354,6 +354,68 @@ class STEnv():
         task_dict["down"]["mlp"] = split_down_mlp
         task_dict["down"]["mlp_output"] = split_down_mlp_output
         return task_dict
+    
+    def split_multi_head_attention(self, task_dict: Dict, embedding: TaskBlock, 
+                                   split_embedding: List[TaskBlock], head: int,
+                                   query_split_vectors: List[SplitVector],
+                                   key_split_vectors: List[SplitVector],
+                                   value_split_vectors: List[SplitVector],
+                                   dot_product_split_vectors: List[SplitVector],
+                                   scale_split_vectors: List[SplitVector],
+                                   softmax_exp_split_vectors: List[SplitVector],
+                                   softmax_div_split_vectors: List[SplitVector],
+                                   attention_split_vectors: List[SplitVector],
+                                   mlp_split_vector: SplitVector):
+        split_task_dict = {}
+        nr = query_split_vectors[0].nr
+        for i in range(head):
+            assert query_split_vectors[i].nr == nr
+            split_task_dict[i] = self.split_attention(
+                task_dict[i],
+                embedding,
+                split_embedding,
+                query_split_vectors[i],
+                key_split_vectors[i],
+                value_split_vectors[i],
+                dot_product_split_vectors[i],
+                scale_split_vectors[i],
+                softmax_exp_split_vectors[i],
+                softmax_div_split_vectors[i],
+                attention_split_vectors[i])
+            
+        concat = task_dict["concat"]["move"]
+        concat_output = task_dict["concat"]["output"]
+        split_concat_output = self.split_task(concat_output.id, SplitVector())
+        self.connect_tasks([concat], split_concat_output)
+        split_task_dict["concat"] = {}
+        split_task_dict["concat"]["output"] = split_concat_output
+        mlp_weight = task_dict["mlp"]["weight"]
+        mlp = task_dict["mlp"]["compute"]
+        mlp_output = task_dict["mlp"]["output"]
+        new_tasks = self.split_mlp(
+            concat_output, split_concat_output, mlp_weight, mlp, mlp_output,
+            split_vector=mlp_split_vector)
+
+        split_task_dict["mlp"] = {}
+        if len(new_tasks) == 3:
+            split_mlp_weight, split_mlp, split_mlp_output = new_tasks
+        elif len(new_tasks) == 4:
+            split_mlp_input, split_mlp_weight, split_mlp, split_mlp_output = new_tasks
+            split_task_dict["mlp"]["input"] = split_mlp_input
+            split_task_dict["concat"]["output"] = split_mlp_input
+        elif len(new_tasks) == 6:
+            split_mlp_input, split_mlp_weight, split_mlp, split_mlp_output, split_mlp_add, split_mlp_add_output = new_tasks
+            split_task_dict["mlp"]["input"] = split_mlp_input
+            split_task_dict["mlp"]["add"] = split_mlp_add
+            split_task_dict["mlp"]["add_output"] = split_mlp_add_output
+            split_task_dict["concat"]["output"] = split_mlp_input
+        else:
+            raise ValueError("Wrong number of return values")
+        split_task_dict["mlp"]["compute"] = split_mlp
+        split_task_dict["mlp"]["weight"] = split_mlp_weight
+        split_task_dict["mlp"]["output"] = split_mlp_output
+
+        return split_task_dict
 
     def split_attention(self, task_dict: Dict, embedding: TaskBlock, 
                         split_embedding: List[TaskBlock],
@@ -364,8 +426,7 @@ class STEnv():
                         scale_split_vector: SplitVector,
                         softmax_exp_split_vector: SplitVector,
                         softmax_div_split_vector: SplitVector,
-                        attention_split_vector: SplitVector
-                        ):
+                        attention_split_vector: SplitVector):
         split_task_dict = {}
 
         assert (query_split_vector.nr == key_split_vector.nr == 
