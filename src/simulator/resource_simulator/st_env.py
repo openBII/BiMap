@@ -355,8 +355,158 @@ class STEnv():
         task_dict["down"]["mlp_output"] = split_down_mlp_output
         return task_dict
 
-    def split_attention(self):
-        pass
+    def split_attention(self, task_dict: Dict, embedding: TaskBlock, 
+                        split_embedding: List[TaskBlock],
+                        query_split_vector: SplitVector,
+                        key_split_vector: SplitVector,
+                        value_split_vector: SplitVector,
+                        dot_product_split_vector: SplitVector,
+                        scale_split_vector: SplitVector,
+                        softmax_exp_split_vector: SplitVector,
+                        softmax_div_split_vector: SplitVector,
+                        attention_split_vector: SplitVector
+                        ):
+        split_task_dict = {}
+
+        assert (query_split_vector.nr == key_split_vector.nr == 
+                value_split_vector.nr)
+
+        # MLP of query
+        query_mlp = task_dict["query"]["compute"]
+        query_weight = task_dict["query"]["weight"]
+        query = task_dict["query"]["output"]
+        new_tasks = self.split_mlp(
+            embedding, split_embedding, query_weight, 
+            query_mlp, query, query_split_vector)
+        
+        split_task_dict["query"] = {}
+        if len(new_tasks) == 3:
+            split_query_weight, split_query_mlp, split_query_output = new_tasks
+        elif len(new_tasks) == 4:
+            split_query_input, split_query_weight, split_query_mlp, split_query_output = new_tasks
+            split_task_dict["query"]["input"] = split_query_input
+        elif len(new_tasks) == 6:
+            split_query_input, split_query_weight, split_query_mlp, split_query_output, split_query_add, split_query_add_output = new_tasks
+            split_task_dict["query"]["input"] = split_query_input
+            split_task_dict["query"]["add"] = split_query_add
+            split_task_dict["query"]["add_output"] = split_query_add_output
+        else:
+            raise ValueError("Wrong number of return values")
+        split_task_dict["query"]["compute"] = split_query_mlp
+        split_task_dict["query"]["weight"] = split_query_weight
+        split_task_dict["query"]["output"] = split_query_output
+
+        # MLP of key
+        key_mlp = task_dict["key"]["compute"]
+        key_weight = task_dict["key"]["weight"]
+        key = task_dict["key"]["output"]
+        new_tasks = self.split_mlp(
+            embedding, split_embedding, key_weight, 
+            key_mlp, key, key_split_vector)
+
+        split_task_dict["key"] = {}
+        if len(new_tasks) == 3:
+            split_key_weight, split_key_mlp, split_key_output = new_tasks
+        elif len(new_tasks) == 4:
+            split_key_input, split_key_weight, split_key_mlp, split_key_output = new_tasks
+            split_task_dict["key"]["input"] = split_key_input
+        elif len(new_tasks) == 6:
+            split_key_input, split_key_weight, split_key_mlp, split_key_output, split_key_add, split_key_add_output = new_tasks
+            split_task_dict["key"]["input"] = split_key_input
+            split_task_dict["key"]["add"] = split_key_add
+            split_task_dict["key"]["add_output"] = split_key_add_output
+        else:
+            raise ValueError("Wrong number of return values")
+        split_task_dict["key"]["compute"] = split_key_mlp
+        split_task_dict["key"]["weight"] = split_key_weight
+        split_task_dict["key"]["output"] = split_key_output
+
+        # MLP of value
+        value_mlp = task_dict["value"]["compute"]
+        value_weight = task_dict["value"]["weight"]
+        value = task_dict["value"]["output"]
+        new_tasks = self.split_mlp(
+            embedding, split_embedding, value_weight, 
+            value_mlp, value, value_split_vector)
+        
+        split_task_dict["value"] = {}
+        if len(new_tasks) == 3:
+            split_value_weight, split_value_mlp, split_value_output = new_tasks
+        elif len(new_tasks) == 4:
+            split_value_input, split_value_weight, split_value_mlp, split_value_output = new_tasks
+            split_task_dict["value"]["input"] = split_value_input
+        elif len(new_tasks) == 6:
+            split_value_input, split_value_weight, split_value_mlp, split_value_output, split_value_add, split_value_add_output = new_tasks
+            split_task_dict["value"]["input"] = split_value_input
+            split_task_dict["value"]["add"] = split_value_add
+            split_task_dict["value"]["add_output"] = split_value_add_output
+        else:
+            raise ValueError("Wrong number of return values")
+        split_task_dict["value"]["compute"] = split_value_mlp
+        split_task_dict["value"]["weight"] = split_value_weight
+        split_task_dict["value"]["output"] = split_value_output
+
+        # Dot product between query and key cache
+        dot_product = task_dict["dot_product"]["compute"]
+        dot_product_output = task_dict["dot_product"]["output"]
+        new_key_cache = task_dict["concat_key"]["output"]
+        split_key_cache, split_dot_product, split_dot_product_output = self.split_dot_product(
+            query, split_query_output, new_key_cache, dot_product, 
+            dot_product_output, dot_product_split_vector)
+    
+        split_task_dict["dot_product"] = {}
+        split_task_dict["dot_product"]["compute"] = split_dot_product
+        split_task_dict["dot_product"]["weight"] = split_key_cache
+        split_task_dict["dot_product"]["output"] = split_dot_product_output
+
+        # Scale
+        scale = task_dict["scale"]["compute"]
+        scale_output = task_dict["scale"]["output"]
+        split_scale, split_scale_output = self.split_pointwise(
+            dot_product_output, split_dot_product_output, scale,
+            scale_output, scale_split_vector)
+        
+        split_task_dict["scale"] = {}
+        split_task_dict["scale"]["compute"] = split_scale
+        split_task_dict["scale"]["output"] = split_scale_output
+
+        # SoftMax
+        softmax_exp = task_dict["softmax"]["exp"]["compute"]
+        softmax_exp_output = task_dict["softmax"]["exp"]["output"]
+        split_softmax_exp, split_softmax_exp_output = self.split_pointwise(
+            scale_output, split_scale_output, softmax_exp,
+            softmax_exp_output, softmax_exp_split_vector)
+        
+        split_task_dict["softmax"] = {}
+        split_task_dict["softmax"]["exp"] = {}
+        split_task_dict["softmax"]["exp"]["compute"] = split_softmax_exp
+        split_task_dict["softmax"]["exp"]["output"] = split_softmax_exp_output
+
+        softmax_reduce_output = task_dict["softmax"]["reduction"]["output"]
+        softmax_div = task_dict["softmax"]["div"]["compute"]
+        softmax_div_output = task_dict["softmax"]["div"]["output"]
+        split_softmax_div, split_softmax_div_output = self.split_scale(
+            softmax_exp_output, split_softmax_exp_output, softmax_div,
+            softmax_reduce_output, softmax_div_output, softmax_div_split_vector)
+        
+        split_task_dict["softmax"]["div"] = {}
+        split_task_dict["softmax"]["div"]["compute"] = split_softmax_div
+        split_task_dict["softmax"]["div"]["output"] = split_softmax_div_output
+
+        # Attention
+        new_value_cache = task_dict["concat_value"]["output"]
+        attention = task_dict["attention"]["compute"]
+        attention_output = task_dict["attention"]["output"]
+        split_value_cache, split_attention, split_attention_output = self.split_dot_product(
+            softmax_div_output, split_softmax_div_output, new_value_cache, 
+            attention, attention_output, attention_split_vector)
+        
+        split_task_dict["attention"] = {}
+        split_task_dict["attention"]["compute"] = split_attention
+        split_task_dict["attention"]["weight"] = split_value_cache
+        split_task_dict["attention"]["output"] = split_attention_output
+        
+        return split_task_dict
 
     def split_reduction(self, input: STaskBlock, split_inputs: List[STaskBlock], compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector, precision: Precision = None):
         return self._actor.split_reduction(input, split_inputs, compute, output, split_vector, precision)
