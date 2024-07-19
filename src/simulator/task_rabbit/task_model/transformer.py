@@ -235,8 +235,8 @@ def create_layer_norm(task_graph: TaskGraph, input: TaskBlock,
                                  input.shape, precision, 
                                  task_dict=task_dict["add_mean"])
     task_dict["product"] = {}
-    product_output, _ = create_hadamard_product(
-        task_graph, [add_mean_out, add_mean_out], add_mean_out.shape, precision, 
+    product_output, _ = create_pointwise(
+        task_graph, add_mean_out, precision, TaskBlockType.CVVH,
         task_dict=task_dict["product"])
     task_dict["reduce_sum_var"] = {}
     reduce_sum_var_output, _ = create_reduce_sum(
