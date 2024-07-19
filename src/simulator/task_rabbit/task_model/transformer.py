@@ -58,7 +58,7 @@ def create_ffn(task_graph: TaskGraph, input: TaskBlock, inner_dim: int,
                                      activation_type, 
                                      task_dict=task_dict["activation"])
     task_dict["down"] = {}
-    output, _ = create_mlp(task_graph, input, 
+    output, _ = create_mlp(task_graph, act_output, 
                            Shape(nf=input.shape.nf, nr=inner_dim),
                            precision, is_output,
                            task_dict=task_dict["down"])
