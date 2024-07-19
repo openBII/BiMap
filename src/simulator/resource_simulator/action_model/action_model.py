@@ -342,6 +342,34 @@ class ActionModel():
         self.connect_tasks([scale], split_compute)
         return new_tasks
     
+    def split_elementwise(self, inputs: List[STaskBlock],
+                          split_inputs: List[List[STaskBlock]],
+                          compute: CTaskBlock,
+                          output: Union[STaskBlock, OutputTaskBlock],
+                          split_vector: SplitVector):
+        # Two inputs
+        new_tasks = self.split_pointwise(inputs[0], split_inputs[0], compute, 
+                                         output, split_vector)
+        self.disable_task(inputs[1].id)
+        split_compute = new_tasks[1] if len(new_tasks) == 3 else new_tasks[0]
+        if len(split_inputs[1]) >= split_vector.nf:
+            assert len(split_inputs[1]) % split_vector.nf == 0
+            self.connect_tasks(split_inputs[1], split_compute)
+        else:
+            assert split_vector.nf % len(split_inputs[1]) == 0
+            num_split = split_vector.nf // len(split_inputs[1])
+            new_split_inputs = []
+            last_compute = []
+            for task in split_inputs[1]:
+                last_compute.extend(list(task.in_tasks))
+                new_split_inputs.extend(self.split_task(task.id, SplitVector(nf=num_split)))
+                # self.delete_task(task.id)
+                self.disable_task(task.id)
+            self.connect_tasks(last_compute, new_split_inputs)
+            self.connect_tasks(new_split_inputs, split_compute)
+            new_tasks.append(new_split_inputs)
+        return new_tasks
+    
     def split_reduction(self, input: STaskBlock, split_inputs: List[STaskBlock], compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector, precision: Precision = None):
         new_split_inputs, split_compute, split_output = self.split_pointwise(input, split_inputs, compute, output, split_vector)
 
