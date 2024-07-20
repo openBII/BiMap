@@ -339,7 +339,7 @@ class STEnv():
             else:
                 split_task_dict["activation"]["input"] = split_up_mlp_output
         split_task_dict["activation"]["compute"] = split_activation
-        split_task_dict["up"]["output"] = split_activation_output
+        split_task_dict["activation"]["output"] = split_activation_output
         if split_vector_up.nr > 1:
             new_tasks = self.split_mlp(activation_output, split_activation_output, down_weight, down_mlp, down_output, split_vector_down)
             if len(new_tasks) == 6:
@@ -406,7 +406,7 @@ class STEnv():
             split_task_dict["add"]["output"] = split_task_dict["layer_norm"]["add"]["input"]
         return split_task_dict  
     
-    def split_transformer_block(self, task_dict: Dict, embedding: TaskBlock, 
+    def split_transformer_layer(self, task_dict: Dict, embedding: TaskBlock, 
                                 split_embedding: List[TaskBlock], head: int,
                                 query_split_vectors: List[SplitVector],
                                 key_split_vectors: List[SplitVector],
