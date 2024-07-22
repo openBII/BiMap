@@ -9,6 +9,15 @@ class Hop():
         self.dst = dst
         self.link_id = id  # Link ID
 
+    def __hash__(self) -> int:
+        return hash((self.src, self.dst, self.link_id))
+
+    def __eq__(self, value) -> bool:
+        return (isinstance(value, Hop) and
+                self.src == value.src and 
+                self.dst == value.dst and
+                self.link_id == value.link_id)
+
     def __repr__(self) -> str:
         return "Link ID: {:d}  From ".format(self.link_id) + repr(self.src) + " to " + repr(self.dst) 
 

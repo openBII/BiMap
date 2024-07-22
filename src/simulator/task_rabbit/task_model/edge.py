@@ -7,7 +7,6 @@ from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.resource_simulator.st_model.tick import Tick
 
 
-
 class RearrangeInfoType(Enum):
     IDENTITY = 0
     RESHAPE = 1
@@ -74,15 +73,17 @@ class Edge():
         self._input_ticks: Queue[Tick] = Queue()
         self._output_ticks: Queue[Tick] = Queue()
 
+        self._edge_id = id(self)
+
     def __repr__(self):
         return "From Task {:d} to Task {:d}".format(self.in_task.id, self.out_task.id)
     
     def __lt__(self, other):
-        return self.edge_id < other.edge_id
+        return self._edge_id < other._edge_id
 
     @property
     def edge_id(self) -> int:
-        return id(self)
+        return self._edge_id
 
     @property
     def flux(self) -> int:
@@ -199,10 +200,11 @@ class Edge():
         return str(self._in_task) + '-->' + str(self._out_task)
 
     def __hash__(self):
-        return hash(self.edge_id)
+        return self._edge_id
 
     def __eq__(self, other):
-        return self.edge_id == other.edge_id
+        return self._edge_id == other._edge_id
+        # return self.in_task.id == other.in_task.id and self.out_task.id == other.out_task.id
 
     def __contains__(self, item):
         return self._in_task == item or self._out_task == item

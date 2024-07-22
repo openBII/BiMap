@@ -4,7 +4,6 @@ from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
 from src.simulator.resource_simulator.st_model.hop import Hop, HopDict
 import heapq
-from copy import deepcopy
 from src.simulator.resource_simulator.evaluation_model.recorder import CommunicationRecorder, CommunicationRecord
 from src.simulator.resource_simulator.evaluation_model.evaluator import Evaluator, EvaluationMode
 
@@ -58,9 +57,11 @@ class CommunicationEvaluator(Evaluator):
             return False
         
     def copy_edge_map(self):
-        edge_map = {}
+        edge_map: Dict[Tuple[Edge, int], List[Hop]] = {}
         for key in self.edge_map:
-            edge_map[key] = deepcopy(self.edge_map[key])
+            edge_map[key] = [] 
+            for hop in self.edge_map[key]:
+                edge_map[key].append(Hop(hop.src, hop.dst, hop.link_id))
         return edge_map
 
     def create_edge_path(self, edge: Edge, iteration: int, ml_coords: List[Tuple[MLCoord, int]]):
@@ -161,8 +162,9 @@ class CommunicationEvaluator(Evaluator):
     
     def copy_recorder(self):
         recorder = {}
-        for key, record in self.recorder:
-            recorder[key] = deepcopy(record)
+        for key in self.recorder.recorder_time:
+            record = self.recorder.recorder_time[key]
+            recorder[key] = CommunicationRecord(record.start_time, record.end_time, record.percent)
         return recorder
 
     def eval_by_model(self, edge_heap: List[Tuple[int, Tuple[Edge, int]]], extern_deadline: float = None) -> Tuple[List[Edge], int]:

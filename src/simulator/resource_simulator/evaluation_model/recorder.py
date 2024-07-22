@@ -92,24 +92,27 @@ class CommunicationRecorder(Recorder):
         except StopIteration:
             raise StopIteration
 
-    def __contains__(self, __key: Tuple[Edge, int, Hop]):
-        for key in self.recorder_time:
-            if __key[0] == key[0] and __key[1] == key[1] and __key[2].src == key[2].src and __key[2].dst == key[2].dst and __key[2].link_id == key[2].link_id:
-                return True
-        return False
+    def __contains__(self, key: Tuple[Edge, int, Hop]):
+        return key in self.recorder_time
+        # for key in self.recorder_time:
+        #     if __key[0] == key[0] and __key[1] == key[1] and __key[2].src == key[2].src and __key[2].dst == key[2].dst and __key[2].link_id == key[2].link_id:
+        #         return True
+        # return False
     
-    def __getitem__(self, __key: Tuple[Edge, int, Hop]):
-        for key in self.recorder_time:
-            if __key[0] == key[0] and __key[1] == key[1] and __key[2].src == key[2].src and __key[2].dst == key[2].dst and __key[2].link_id == key[2].link_id:
-                return self.recorder_time[key]
-        return self.recorder_time[__key]
+    def __getitem__(self, key: Tuple[Edge, int, Hop]):
+        return self.recorder_time[key]
+        # for key in self.recorder_time:
+        #     if __key[0] == key[0] and __key[1] == key[1] and __key[2].src == key[2].src and __key[2].dst == key[2].dst and __key[2].link_id == key[2].link_id:
+        #         return self.recorder_time[key]
+        # return self.recorder_time[__key]
     
-    def update(self, __key: Tuple[Edge, int, Hop], value: CommunicationRecord):
-        for key in self.recorder_time:
-            if __key[0] == key[0] and __key[1] == key[1] and __key[2].src == key[2].src and __key[2].dst == key[2].dst and __key[2].link_id == key[2].link_id:
-                self.recorder_time.update({key: value})
-                return
-        self.recorder_time.update({__key: value})
+    def update(self, key: Tuple[Edge, int, Hop], value: CommunicationRecord):
+        self.recorder_time.update({key: value})
+        # for key in self.recorder_time:
+        #     if __key[0] == key[0] and __key[1] == key[1] and __key[2].src == key[2].src and __key[2].dst == key[2].dst and __key[2].link_id == key[2].link_id:
+        #         self.recorder_time.update({key: value})
+        #         return
+        # self.recorder_time.update({__key: value})
 
     def correct_time(self, tick: Tick, time: float):
         assert time >= 0

@@ -32,7 +32,6 @@ class Shape():
         # 不能出现小于0的维度
         assert not [dim for dim in self.dim_tuple if dim < 0]
 
-
     # Transformer specific
     @property
     def ns(self) -> int:
