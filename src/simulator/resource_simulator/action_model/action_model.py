@@ -30,6 +30,7 @@ from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord, P
 from src.simulator.resource_simulator.sync.sync_task import SyncTask
 from src.simulator.resource_simulator.sync.sync_table import SyncTable
 from src.simulator.task_rabbit.task_model.precision import Precision
+from src.simulator.task_rabbit.task_model.transformer import create_compute
 
 
 class ActionModel():
@@ -61,6 +62,18 @@ class ActionModel():
             for i, out_task in enumerate(out_tasks):
                 self._task_graph.connect(in_tasks[i % len(in_tasks)].id, out_task.id)
 
+    def add_nodes_between(self, source: TaskBlock, destination: TaskBlock,
+                          nodes: List[TaskBlock]):
+        self.connect_tasks([source], nodes)
+        self.connect_tasks(nodes, [destination])
+        self.delete_edge(source, destination)
+
+    def delete_edge(self, src_task: TaskBlock, dst_task: TaskBlock):
+        edge = self._task_graph.get_edge(src_task.id, dst_task.id)
+        src_task.output_edges.remove(edge)
+        dst_task.input_edges.remove(edge)
+        del edge
+
     def _delete_edges(self, in_tasks: Iterable[TaskBlock], out_tasks: Iterable[TaskBlock]):
         for in_task in in_tasks:
             useless_edges = []
@@ -73,7 +86,8 @@ class ActionModel():
                 in_task.output_edges.remove(edge)
                 del edge
 
-    def copy_task(self, task_id: int, num: int = 1, is_static: bool = False):
+    def copy_task(self, task_id: int, num: int = 1, is_static: bool = False,
+                  record: bool = True):
         task = self._task_graph[task_id]
         copied_tasks: List[TaskBlock] = []
         for _ in range(num):
@@ -81,7 +95,8 @@ class ActionModel():
                 new_task: TaskBlock = task.copy_like(is_static=is_static)
             else:
                 new_task: TaskBlock = task.copy_like()
-            self._task_graph.add_node(new_task)
+            if record:
+                self._task_graph.add_node(new_task)
             copied_tasks.append(new_task)
         if num == 1:
             return new_task
@@ -201,7 +216,7 @@ class ActionModel():
         if split_vector.nr > 1:
             add_tasks: List[TaskBlock] = []
             for _ in range(split_vector.nr):
-                add_task = CTaskBlock(IDGenerator.get_next_task_id(), Shape(nf=split_mlp_output[0].shape.nf, branch=split_vector.nr), TaskBlockType.CADD, precision if precision is not None else compute.precision)
+                add_task = CTaskBlock(IDGenerator.get_next_task_id(), Shape(nf=split_mlp_output[0].shape.nf, branch=split_vector.nr), TaskBlockType.CADD, compute.precision)
                 self._task_graph.add_node(add_task)
                 add_tasks.append(add_task)
             self.connect_tasks(split_mlp_output, add_tasks)
@@ -238,12 +253,23 @@ class ActionModel():
         split_mlp = self.split_task(compute.id, SplitVector(nf=split_vector.nf, nr=split_vector.nr))
         self.connect_tasks(split_weight, split_mlp)
 
-        if len(split_inputs) >= split_vector.nr:
+        if len(split_inputs) == split_vector.nr:
+            self.connect_tasks(split_inputs, split_mlp)
+        elif len(split_inputs) > split_vector.nr:
             assert len(split_inputs) % split_vector.nr == 0
             num_grouped_inputs = len(split_inputs) // split_vector.nr
-            for j in range(split_vector.nr):
-                for i in range(split_vector.nf):
-                    self.connect_tasks(split_inputs[num_grouped_inputs * j:num_grouped_inputs * (j + 1)], [split_mlp[i + j * split_vector.nf]])
+            concats = []
+            for _ in range(split_vector.nr):
+                concat = create_compute(
+                    task_graph=self._task_graph,
+                    shape=Shape(nf=split_inputs[0].shape.nf * num_grouped_inputs), 
+                    type=TaskBlockType.MCONCAT,
+                    precision=split_inputs[0].precision
+                )
+                concats.append(concat)
+            self.connect_tasks(split_inputs, concats)
+            self.connect_tasks(concats, split_mlp)
+            new_tasks.append(concats)
         else:
             assert split_vector.nr % len(split_inputs) == 0
             num_split = split_vector.nr // len(split_inputs)
@@ -255,9 +281,31 @@ class ActionModel():
                 # self.delete_task(task.id)
                 self.disable_task(task.id)
             self.connect_tasks(last_compute, new_split_inputs)
-            for i in range(split_vector.nf):
-                self.connect_tasks(new_split_inputs, split_mlp[split_vector.nr * i:split_vector.nr * (i + 1)])
+            # for i in range(split_vector.nf):
+            #     self.connect_tasks(new_split_inputs, split_mlp[split_vector.nr * i:split_vector.nr * (i + 1)])
+            self.connect_tasks(new_split_inputs, split_mlp)
             new_tasks.append(new_split_inputs)
+
+        # if len(split_inputs) >= split_vector.nr:
+        #     assert len(split_inputs) % split_vector.nr == 0
+        #     num_grouped_inputs = len(split_inputs) // split_vector.nr
+        #     for j in range(split_vector.nr):
+        #         for i in range(split_vector.nf):
+        #             self.connect_tasks(split_inputs[num_grouped_inputs * j:num_grouped_inputs * (j + 1)], [split_mlp[i + j * split_vector.nf]])
+        # else:
+        #     assert split_vector.nr % len(split_inputs) == 0
+        #     num_split = split_vector.nr // len(split_inputs)
+        #     new_split_inputs = []
+        #     last_compute = []
+        #     for task in split_inputs:
+        #         last_compute.extend(list(task.in_tasks))
+        #         new_split_inputs.extend(self.split_task(task.id, SplitVector(nr=num_split)))
+        #         # self.delete_task(task.id)
+        #         self.disable_task(task.id)
+        #     self.connect_tasks(last_compute, new_split_inputs)
+        #     for i in range(split_vector.nf):
+        #         self.connect_tasks(new_split_inputs, split_mlp[split_vector.nr * i:split_vector.nr * (i + 1)])
+        #     new_tasks.append(new_split_inputs)
 
         split_mlp_output: List[TaskBlock] = self.split_and_copy_task(output.id, SplitVector(nf=split_vector.nf), num=split_vector.nr - 1)
         self.connect_tasks(split_mlp, split_mlp_output)
@@ -267,9 +315,13 @@ class ActionModel():
         
         if split_vector.nr > 1:
             add_tasks: List[TaskBlock] = []
-            for _ in range(split_vector.nr):
-                add_task = CTaskBlock(IDGenerator.get_next_task_id(), Shape(nf=split_mlp_output[0].shape.nf, branch=split_vector.nr), TaskBlockType.CADD, precision if precision is not None else compute.precision)
-                self._task_graph.add_node(add_task)
+            for _ in range(split_vector.nf):
+                add_task = create_compute(
+                    task_graph=self._task_graph,
+                    shape=Shape(nf=split_mlp_output[0].shape.nf, branch=split_vector.nr),
+                    type=TaskBlockType.CADD,
+                    precision=compute.precision
+                )
                 add_tasks.append(add_task)
             self.connect_tasks(split_mlp_output, add_tasks)
 
@@ -280,7 +332,10 @@ class ActionModel():
 
         # self.delete_tasks([input, compute, weight_on_chip])
         self.delete_task(weight_on_chip.id)
-        self.disable_tasks([input, compute, output])
+        if input is None:
+            self.disable_tasks([compute, output])
+        else:
+            self.disable_tasks([input, compute, output])
 
         if len(output.out_tasks) != 0:
             if split_vector.nr > 1:
@@ -850,9 +905,13 @@ class ActionModel():
             return self.split_same_level_edges(edge, path)
 
     def add_virtual_task(self, task0: TaskBlock, edge: Edge):
+        if edge.out_task.shape.volume < task0.shape.volume:
+            shape = edge.out_task.shape
+        else:
+            shape = task0.shape
         task1 = VTaskBlock(
             task_id=IDGenerator.get_next_task_id(),
-            shape=task0.out_shape,
+            shape=shape,
             precision=task0.precision
             )
         new_edge = Edge(in_task=task0, out_task=task1)

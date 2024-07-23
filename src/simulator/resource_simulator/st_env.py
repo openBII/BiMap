@@ -811,7 +811,11 @@ class STEnv():
         self._history.push_state(reverse_call)
         return new_tasks
 
-    def split_mlp(self, input: STaskBlock, split_inputs: List[STaskBlock], weight: StaticTaskBlock, compute: CTaskBlock, output: Union[STaskBlock, OutputTaskBlock], split_vector: SplitVector):
+    def split_mlp(self, split_inputs: List[STaskBlock], weight: StaticTaskBlock, 
+                  compute: CTaskBlock, 
+                  output: Union[STaskBlock, OutputTaskBlock], 
+                  split_vector: SplitVector,
+                  input: STaskBlock = None):
         new_tasks = self._actor.split_mlp(input, split_inputs, weight, compute, output, split_vector)
         
         reverse_call = Call(self._actor.reverse_split, new_tasks, [compute, output] + split_inputs)
@@ -850,14 +854,21 @@ class STEnv():
         self._history.push_state(reverse_call)
         return new_tasks
 
-    def split_task(self, task_id: int, split_vector: SplitVector, is_static: bool = False, record: bool = True):
+    def split_task(self, task_id: int, split_vector: SplitVector, 
+                   is_static: bool = False, record: bool = True):
         return self._actor.split_task(task_id, split_vector, is_static, record)
 
-    def connect_tasks(self, in_tasks: Iterable[TaskBlock], out_tasks: Iterable[TaskBlock]):
+    def connect_tasks(self, in_tasks: Iterable[TaskBlock], 
+                      out_tasks: Iterable[TaskBlock]):
         self._actor.connect_tasks(in_tasks, out_tasks)
 
-    def copy_task(self, task_id: int, num: int = 1, is_static: bool = False):
-        return self._actor.copy_task(task_id, num, is_static)
+    def add_nodes_between(self, source: TaskBlock, destination: TaskBlock, 
+                          nodes: List[TaskBlock]):
+        self._actor.add_nodes_between(source, destination, nodes)
+
+    def copy_task(self, task_id: int, num: int = 1, is_static: bool = False,
+                  record: bool = True):
+        return self._actor.copy_task(task_id, num, is_static, record)
     
     def split_and_copy_task(self, task_id: int, split_vector: SplitVector, num: int = 1, is_static: bool = False):
         return self._actor.split_and_copy_task(task_id, split_vector, num, is_static)

@@ -227,3 +227,7 @@ if __name__ == "__main__":
     print(coord1)
     print(deepcopy(coord0))
     print(Coord(0) == Coord(0))
+
+    coord = Coord((0, 0))
+    ml_coord = create_mlcoord(coord)
+    print(ml_coord)
