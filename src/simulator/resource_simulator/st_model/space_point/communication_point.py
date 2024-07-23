@@ -64,9 +64,19 @@ class CommunicationPoint(STPoint):
                     edge._fire(tick, finish_time, self.evaluator.recorder.correct_time)
                 else:
                     edge._put_back(tick, tick.time if tick.time > finish_time else finish_time)
-        unfinished_edges = copy(edges)
-        for edge in finished_edges:
-            unfinished_edges.remove(edge[0])
+        # unfinished_edges = copy(edges)
+        # for edge in finished_edges:
+        #     unfinished_edges.remove(edge[0])
+        unfinished_edges = []
+        for entry in start_time_heap:
+            unfinished_edges.append(entry[1][0])
+        # unfinished_hash = 0
+        # for edge in unfinished_edges:
+        #     unfinished_hash += hash(edge)
+        # another_unfinished_hash = 0
+        # for edge in another_unfinished_edges:
+        #     another_unfinished_hash += hash(edge)
+        # assert unfinished_hash == another_unfinished_hash
         if deadline is not None:
             assert finish_time == deadline
         return unfinished_edges, [edge[0] for edge in finished_edges], finish_time

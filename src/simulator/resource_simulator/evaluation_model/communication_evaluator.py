@@ -166,6 +166,9 @@ class CommunicationEvaluator(Evaluator):
             record = self.recorder.recorder_time[key]
             recorder[key] = CommunicationRecord(record.start_time, record.end_time, record.percent)
         return recorder
+    
+    def backup_recorder(self):
+        pass
 
     def eval_by_model(self, edge_heap: List[Tuple[int, Tuple[Edge, int]]], extern_deadline: float = None) -> Tuple[List[Edge], int]:
         '''
@@ -196,6 +199,7 @@ class CommunicationEvaluator(Evaluator):
             min_start_time, min_edge = heapq.heappop(edge_heap)  # 最先可以开始的边
             if extern_deadline is not None:
                 if min_start_time > extern_deadline:
+                    heapq.heappush(edge_heap, (min_start_time, min_edge))
                     return [], extern_deadline
             if len(edge_heap) != 0:
                 second_min_start_time, second_min_edge = heapq.heappop(edge_heap)  # 第二先可以开始的边
