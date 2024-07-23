@@ -14,7 +14,7 @@ from src.simulator.task_rabbit.task_model.transformer import create_input, creat
 task_graph = TaskGraph()
 input, mlp_input = create_input(task_graph, Shape(nf=2048), Precision.FLOAT_16)
 output, task_dict = create_mlp(task_graph, mlp_input, Shape(nr=2048, nf=4096), 
-                                 Precision.FLOAT_16, True)
+                               Precision.FLOAT_16, True)
 
 STDraw.draw_graph(task_graph, out_path='temp/mlp.task.html',
                   width='1920px', height='1080px')
