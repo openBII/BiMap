@@ -156,7 +156,7 @@ class CommunicationEvaluator(Evaluator):
         if deadline is None:
             return False
         for entry in edge_heap:
-            if entry[0] != deadline:
+            if entry[0] < deadline:
                 return False
         return True
     
