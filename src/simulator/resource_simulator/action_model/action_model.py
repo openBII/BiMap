@@ -426,7 +426,8 @@ class ActionModel():
         task_dict = {} if task_dict is None else task_dict
         self.split_pointwise(inputs[0], split_inputs[0], compute, 
                              output, split_vector, task_dict)
-        self.disable_task(inputs[1].id)
+        if inputs[1] is not None:
+            self.disable_task(inputs[1].id)
         split_compute = task_dict["compute"]
         if len(split_inputs[1]) >= split_vector.nf:
             assert len(split_inputs[1]) % split_vector.nf == 0
