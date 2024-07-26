@@ -9,6 +9,8 @@ from src.simulator.resource_simulator.st_model.st_coord import create_mlcoord
 from src.simulator.resource_simulator.st_draw import STDraw
 from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
 from src.simulator.task_rabbit.task_model.transformer import create_transformer_layer, create_input
+import cProfile
+import pstats
 
 
 # Algorithm parameters
@@ -59,33 +61,28 @@ for i in range(HEAD):
     task_graph.connect(input_value_cache.id, 
                        task_dict["attention"]["multi_head_attention"][i]["value_cache"]["old"].id)
 
-STDraw.draw_graph(task_graph, out_path='temp/transformer.task.html',
-                  width='1920px', height='1080px')
-
 # Create a hardware
 server = ServerFactory.create_matrix(config)
 
 # Create a DSE environment
 env = STEnv(task_graph, server)
 
-# # Update hardware parameter
+# Update hardware parameter
 # board0 = create_mlcoord((0, 0))
 # board_network = env.get_communication_network(board0)
 # board_network.update_bandwidth(bandwidth)
 
-size_x = 2
-size_y = 1
+size_x = 8
+size_y = 8
 
 # Graph transformation
-embedding_on_chip = env.copy_task(embedding.id)
-task_graph.add_node_between(embedding, embedding.out_tasks, embedding_on_chip)
-split_embedding_on_chip = env.split_task(embedding_on_chip.id, SplitVector())
-env.connect_tasks([embedding], split_embedding_on_chip)
+split_embedding = env.split_task(embedding.id, SplitVector())
+task_graph.add_node_between(embedding, embedding.out_tasks, split_embedding[0])
+env.connect_tasks([embedding], split_embedding)
 
 split_task_dict = env.split_transformer_layer(
     task_dict=task_dict,
-    embedding=embedding_on_chip,
-    split_embedding=split_embedding_on_chip,
+    split_embedding=split_embedding,
     head=HEAD,
     query_split_vectors=[SplitVector(nf=size_x * size_y)] * HEAD,
     key_split_vectors=[SplitVector(nf=size_x * size_y)] * HEAD,
@@ -119,7 +116,7 @@ STDraw.draw_graph(task_graph,
 dram0 = create_mlcoord((0, 0), DRAM)
 shared_memory0 = create_mlcoord((0, 0), CHIP, SHARED_MEMORY)
 env.put_in(dram0, embedding.id)
-env.put_tasks_in(shared_memory0, split_embedding_on_chip)
+env.put_tasks_in(shared_memory0, split_embedding)
 env.put_in(dram0, output.id)
 env.put_in(dram0, task_dict["attention"]["multi_head_attention"]["mlp"]["weight"].id)
 env.put_in(dram0, task_dict["ffn"]["ffn"]["up"]["weight"].id)
@@ -183,8 +180,10 @@ for i in range(HEAD):
     split_dot_product = split_task_dict["attention"]["multi_head_attention"][i]["dot_product"]["compute"]
     split_key_cache = split_task_dict["attention"]["multi_head_attention"][i]["dot_product"]["weight"]
     split_dot_product_output = split_task_dict["attention"]["multi_head_attention"][i]["dot_product"]["output"]
+    split_dot_product_concat = split_task_dict["attention"]["multi_head_attention"][i]["dot_product"]["concat"]
     env.put_tasks_in(shared_memory0, split_key_cache)
     env.put_tasks_in(shared_memory0, split_dot_product_output)
+    env.put_tasks_in(shared_memory0, split_dot_product_concat)
     for j in range(size_x):
         for k in range(size_y):
             tensor_unit = create_mlcoord((0, 0), CHIP, (core_idx + j, core_idy + k), TENSOR_UNIT)
@@ -230,8 +229,10 @@ for i in range(HEAD):
     split_attention = split_task_dict["attention"]["multi_head_attention"][i]["attention"]["compute"]
     split_value_cache = split_task_dict["attention"]["multi_head_attention"][i]["attention"]["weight"]
     split_attention_output = split_task_dict["attention"]["multi_head_attention"][i]["attention"]["output"]
+    split_attention_concat = split_task_dict["attention"]["multi_head_attention"][i]["attention"]["concat"]
     env.put_tasks_in(shared_memory0, split_value_cache)
     env.put_tasks_in(shared_memory0, split_attention_output)
+    env.put_tasks_in(shared_memory0, split_attention_concat)
     for j in range(size_x):
         for k in range(size_y):
             tensor_unit = create_mlcoord((0, 0), CHIP, (core_idx + j, core_idy + k), TENSOR_UNIT)
@@ -321,8 +322,10 @@ for i in range(size_x * size_y * HEAD):
 split_up = split_task_dict["ffn"]["ffn"]["up"]["compute"]
 split_up_weight = split_task_dict["ffn"]["ffn"]["up"]["weight"]
 split_up_output = split_task_dict["ffn"]["ffn"]["up"]["output"]
+split_up_concat = split_task_dict["ffn"]["ffn"]["up"]["concat"]
 env.put_tasks_in(shared_memory0, split_up_weight)
 env.put_tasks_in(shared_memory0, split_up_output)
+env.put_tasks_in(shared_memory0, split_up_concat)
 for i in range(size_x * size_y * HEAD):
     idx = i // SIZE_Y
     idy = i % SIZE_Y
@@ -343,8 +346,10 @@ for i in range(size_x * size_y * HEAD):
 split_down = split_task_dict["ffn"]["ffn"]["down"]["compute"]
 split_down_weight = split_task_dict["ffn"]["ffn"]["down"]["weight"]
 split_down_output = split_task_dict["ffn"]["ffn"]["down"]["output"]
+split_down_concat = split_task_dict["ffn"]["ffn"]["down"]["concat"]
 env.put_tasks_in(shared_memory0, split_down_weight)
 env.put_tasks_in(shared_memory0, split_down_output)
+env.put_tasks_in(shared_memory0, split_down_concat)
 for i in range(size_x * size_y * HEAD):
     idx = i // SIZE_Y
     idy = i % SIZE_Y
@@ -417,6 +422,10 @@ for i in range(size_x * size_y * HEAD):
 # Edge Mapping
 env.auto_edge_map()
 
-env.simulate()
-env.show_overall_time()
+# env.simulate()
+cProfile.run("env.simulate()", 'temp/restats')
+# env.show_overall_time()
 print(env.get_latency())
+
+p = pstats.Stats('temp/restats')
+p.sort_stats(pstats.SortKey.CUMULATIVE).print_stats(20)
