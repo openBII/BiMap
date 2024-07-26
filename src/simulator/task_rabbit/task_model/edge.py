@@ -92,7 +92,10 @@ class Edge():
             return min(self._in_task.shape.volume, 
                        self._out_task.shape.volume)
         elif TaskBlockType.is_memory_operation(self._in_task.task_type):
-            return self._in_task.shape.volume
+            if TaskBlockType.is_storage_task(self._out_task.task_type):
+                return self._out_task.shape.volume
+            else:
+                return self._in_task.shape.volume
         else:
             return self._out_task.shape.volume
 
