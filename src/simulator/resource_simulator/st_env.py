@@ -309,8 +309,8 @@ class STEnv():
         down_mlp = task_dict["down"]["compute"]
         down_output = task_dict["down"]["output"]
 
-        self.split_mlp(up_input, split_up_input, up_weight, up_mlp, up_output, 
-                       split_vector_up, split_task_dict["up"])
+        self.split_mlp(split_up_input, up_weight, up_mlp, up_output, 
+                       split_vector_up, up_input, split_task_dict["up"])
 
         split_up_output = split_task_dict["up"]["output"]
         new_tasks = self.split_pointwise(up_output, split_up_output, activation, 
@@ -318,8 +318,9 @@ class STEnv():
                                          split_task_dict["activation"])
  
         split_activation_output = split_task_dict["activation"]["output"]
-        self.split_mlp(activation_output, split_activation_output, down_weight, 
+        self.split_mlp(split_activation_output, down_weight, 
                        down_mlp, down_output, split_vector_down,
+                       activation_output,
                        split_task_dict["down"])
 
         return split_task_dict
@@ -360,7 +361,7 @@ class STEnv():
             split_task_dict["add"]["output"] = split_task_dict["layer_norm"]["add"]["input"]
         return split_task_dict
     
-    def split_transformer_layer(self, task_dict: Dict, embedding: TaskBlock, 
+    def split_transformer_layer(self, task_dict: Dict,
                                 split_embedding: List[TaskBlock], head: int,
                                 query_split_vectors: List[SplitVector],
                                 key_split_vectors: List[SplitVector],
@@ -381,12 +382,11 @@ class STEnv():
                                 ffn_add_split_vector: SplitVector,
                                 ffn_layer_norm_add_split_vector: SplitVector,
                                 ffn_layer_norm_product_split_vector: SplitVector,
-                                ffn_layer_norm_div_split_vector: SplitVector
-                                ):
+                                ffn_layer_norm_div_split_vector: SplitVector,
+                                embedding: TaskBlock = None):
         split_task_dict = {}
         split_task_dict["attention"] = self.split_attention_block(
             task_dict["attention"],
-            embedding,
             split_embedding,
             head,
             query_split_vectors,
@@ -401,7 +401,8 @@ class STEnv():
             add_split_vector,
             layer_norm_add_split_vector,
             layer_norm_product_split_vector,
-            layer_norm_div_split_vector
+            layer_norm_div_split_vector,
+            embedding
         )
         split_task_dict["ffn"] = self.split_ffn_block(
             task_dict["ffn"],
