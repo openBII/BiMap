@@ -106,6 +106,8 @@ class Scheduler():
             #     break
 
     def process_virtual_task(self, task: VTaskBlock):
+        if not task.activated:
+            return
         task.transfer_ticks()
         self.add_activated_edges(task)
 
