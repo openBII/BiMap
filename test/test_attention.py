@@ -95,8 +95,6 @@ STDraw.draw_graph(task_graph, out_path='temp/tiled_attention.task.html',
                 width='1920px', height='1080px')
 
 # Map MLP of query
-query_mlp = task_dict["query"]["compute"]
-query = task_dict["query"]["output"]
 split_query_weight = split_task_dict["query"]["weight"]
 split_query_output = split_task_dict["query"]["output"]
 split_query_mlp = split_task_dict["query"]["compute"]
@@ -108,8 +106,6 @@ for j in range(size_x):
         env.put_in(tensor_unit, split_query_mlp[k + j * size_y].id)
 
 # Map MLP of key
-key_mlp = task_dict["key"]["compute"]
-key = task_dict["key"]["output"]
 split_key_weight = split_task_dict["key"]["weight"]
 split_key_output = split_task_dict["key"]["output"]
 split_key_mlp = split_task_dict["key"]["compute"]
@@ -121,8 +117,6 @@ for j in range(size_x):
         env.put_in(tensor_unit, split_key_mlp[k + j * size_y].id)
 
 # Map MLP of value
-value_mlp = task_dict["value"]["compute"]
-value = task_dict["value"]["output"]
 split_value_weight = split_task_dict["value"]["weight"]
 split_value_output = split_task_dict["value"]["output"]
 split_value_mlp = split_task_dict["value"]["compute"]
@@ -138,8 +132,6 @@ concat_key = task_dict["concat_key"]["move"]
 env.put_in(dram0, concat_key.id)
 
 # Map the dot product between query and key cache
-dot_product = task_dict["dot_product"]["compute"]
-dot_product_output = task_dict["dot_product"]["output"]
 split_key_cache = split_task_dict["dot_product"]["weight"]
 split_dot_product = split_task_dict["dot_product"]["compute"]
 split_dot_product_output = split_task_dict["dot_product"]["output"]
@@ -153,8 +145,6 @@ for j in range(size_x):
         env.put_in(tensor_unit, split_dot_product[k + j * size_y].id)
 
 # Map scale
-scale = task_dict["scale"]["compute"]
-scale_output = task_dict["scale"]["output"]
 split_scale = split_task_dict["scale"]["compute"]
 split_scale_output = split_task_dict["scale"]["output"]
 env.put_tasks_in(shared_memory0, split_scale_output)
@@ -164,8 +154,6 @@ for j in range(size_x):
         env.put_in(tensor_unit, split_scale[k + j * size_y].id)
 
 # Map SoftMax
-softmax_exp = task_dict["softmax"]["exp"]["compute"]
-softmax_exp_output = task_dict["softmax"]["exp"]["output"]
 split_softmax_exp = split_task_dict["softmax"]["exp"]["compute"]
 split_softmax_exp_output = split_task_dict["softmax"]["exp"]["output"]
 env.put_tasks_in(shared_memory0, split_softmax_exp_output)
@@ -180,8 +168,6 @@ tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
 env.put_in(tensor_unit, softmax_reduce.id)
 env.put_in(shared_memory0, softmax_reduce_output.id)
 
-softmax_div = task_dict["softmax"]["div"]["compute"]
-softmax_div_output = task_dict["softmax"]["div"]["output"]
 split_softmax_div = split_task_dict["softmax"]["div"]["compute"]
 split_softmax_div_output = split_task_dict["softmax"]["div"]["output"]
 env.put_tasks_in(shared_memory0, split_softmax_div_output)
@@ -195,8 +181,6 @@ concat_value = task_dict["concat_value"]["move"]
 env.put_in(dram0, concat_value.id)
 
 # Map attention
-attention = task_dict["attention"]["compute"]
-attention_output = task_dict["attention"]["output"]
 split_value_cache = split_task_dict["attention"]["weight"]
 split_attention = split_task_dict["attention"]["compute"]
 split_attention_output = split_task_dict["attention"]["output"]
