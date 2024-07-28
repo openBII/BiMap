@@ -84,9 +84,7 @@ split_task_dict = env.split_attention(
     key_split_vector=SplitVector(nf=size_x * size_y),
     value_split_vector=SplitVector(nf=size_x * size_y),
     dot_product_split_vector=SplitVector(nf=size_x * size_y),
-    scale_split_vector=SplitVector(nf=size_x * size_y),
-    softmax_exp_split_vector=SplitVector(nf=size_x * size_y),
-    softmax_div_split_vector=SplitVector(nf=size_x * size_y),
+    softmax_split_vector=SplitVector(nf=size_x * size_y),
     attention_split_vector=SplitVector(nf=size_x * size_y)
 )
 output.enable()
@@ -144,37 +142,46 @@ for j in range(size_x):
         tensor_unit = create_mlcoord((0, 0), CHIP, (j, k), TENSOR_UNIT)
         env.put_in(tensor_unit, split_dot_product[k + j * size_y].id)
 
-# Map scale
-split_scale = split_task_dict["scale"]["compute"]
-split_scale_output = split_task_dict["scale"]["output"]
-env.put_tasks_in(shared_memory0, split_scale_output)
-for j in range(size_x):
-    for k in range(size_y):
-        tensor_unit = create_mlcoord((0, 0), CHIP, (j, k), TENSOR_UNIT)
-        env.put_in(tensor_unit, split_scale[k + j * size_y].id)
+# # Map scale
+# split_scale = split_task_dict["scale"]["compute"]
+# split_scale_output = split_task_dict["scale"]["output"]
+# env.put_tasks_in(shared_memory0, split_scale_output)
+# for j in range(size_x):
+#     for k in range(size_y):
+#         tensor_unit = create_mlcoord((0, 0), CHIP, (j, k), TENSOR_UNIT)
+#         env.put_in(tensor_unit, split_scale[k + j * size_y].id)
+
+# # Map SoftMax
+# split_softmax_exp = split_task_dict["softmax"]["exp"]["compute"]
+# split_softmax_exp_output = split_task_dict["softmax"]["exp"]["output"]
+# env.put_tasks_in(shared_memory0, split_softmax_exp_output)
+# for j in range(size_x):
+#     for k in range(size_y):
+#         tensor_unit = create_mlcoord((0, 0), CHIP, (j, k), TENSOR_UNIT)
+#         env.put_in(tensor_unit, split_softmax_exp[k + j * size_y].id)
+
+# softmax_reduce = task_dict["softmax"]["reduction"]["compute"]
+# softmax_reduce_output = task_dict["softmax"]["reduction"]["output"]
+# tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
+# env.put_in(tensor_unit, softmax_reduce.id)
+# env.put_in(shared_memory0, softmax_reduce_output.id)
+
+# split_softmax_div = split_task_dict["softmax"]["div"]["compute"]
+# split_softmax_div_output = split_task_dict["softmax"]["div"]["output"]
+# env.put_tasks_in(shared_memory0, split_softmax_div_output)
+# for j in range(size_x):
+#     for k in range(size_y):
+#         tensor_unit = create_mlcoord((0, 0), CHIP, (j, k), TENSOR_UNIT)
+#         env.put_in(tensor_unit, split_softmax_div[k + j * size_y].id)
 
 # Map SoftMax
-split_softmax_exp = split_task_dict["softmax"]["exp"]["compute"]
-split_softmax_exp_output = split_task_dict["softmax"]["exp"]["output"]
-env.put_tasks_in(shared_memory0, split_softmax_exp_output)
+split_softmax = split_task_dict["softmax"]["compute"]
+split_softmax_output = split_task_dict["softmax"]["output"]
+env.put_tasks_in(shared_memory0, split_softmax_output)
 for j in range(size_x):
     for k in range(size_y):
         tensor_unit = create_mlcoord((0, 0), CHIP, (j, k), TENSOR_UNIT)
-        env.put_in(tensor_unit, split_softmax_exp[k + j * size_y].id)
-
-softmax_reduce = task_dict["softmax"]["reduction"]["compute"]
-softmax_reduce_output = task_dict["softmax"]["reduction"]["output"]
-tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
-env.put_in(tensor_unit, softmax_reduce.id)
-env.put_in(shared_memory0, softmax_reduce_output.id)
-
-split_softmax_div = split_task_dict["softmax"]["div"]["compute"]
-split_softmax_div_output = split_task_dict["softmax"]["div"]["output"]
-env.put_tasks_in(shared_memory0, split_softmax_div_output)
-for j in range(size_x):
-    for k in range(size_y):
-        tensor_unit = create_mlcoord((0, 0), CHIP, (j, k), TENSOR_UNIT)
-        env.put_in(tensor_unit, split_softmax_div[k + j * size_y].id)
+        env.put_in(tensor_unit, split_softmax[k + j * size_y].id)
 
 # Map the creation of new key cache
 concat_value = task_dict["concat_value"]["move"]

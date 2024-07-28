@@ -41,7 +41,6 @@ output, task_dict = create_attention_block(
     d_value=D_VALUE,
     seq_len=SEQ_LEN,
     head=HEAD,
-    epsilon=1e-5,
     precision=Precision.FLOAT_16,
     is_output=True
 )
@@ -80,25 +79,21 @@ task_graph.add_node_between(embedding, embedding.out_tasks, split_embedding[0])
 env.connect_tasks([embedding], split_embedding)
 
 split_task_dict = env.split_attention_block(
-    task_dict,
-    split_embedding,
-    HEAD,
-    [SplitVector(nf=size_x * size_y)] * HEAD,
-    [SplitVector(nf=size_x * size_y)] * HEAD,
-    [SplitVector(nf=size_x * size_y)] * HEAD,
-    [SplitVector(nf=size_x * size_y)] * HEAD,
-    [SplitVector(nf=size_x * size_y)] * HEAD,
-    [SplitVector(nf=size_x * size_y)] * HEAD,
-    [SplitVector(nf=size_x * size_y)] * HEAD,
-    [SplitVector(nf=size_x * size_y)] * HEAD,
-    SplitVector(nf=size_x * size_y * HEAD),
-    SplitVector(),
-    SplitVector(nf=size_x * size_y * HEAD),
-    SplitVector(nf=size_x * size_y * HEAD),
-    SplitVector(nf=size_x * size_y * HEAD)
+    task_dict=task_dict,
+    split_embedding=split_embedding,
+    head=HEAD,
+    query_split_vectors=[SplitVector(nf=size_x * size_y)] * HEAD,
+    key_split_vectors=[SplitVector(nf=size_x * size_y)] * HEAD,
+    value_split_vectors=[SplitVector(nf=size_x * size_y)] * HEAD,
+    dot_product_split_vectors=[SplitVector(nf=size_x * size_y)] * HEAD,
+    softmax_split_vectors=[SplitVector(nf=size_x * size_y)] * HEAD,
+    attention_split_vectors=[SplitVector(nf=size_x * size_y)] * HEAD,
+    mlp_split_vector=SplitVector(nf=size_x * size_y * HEAD),
+    add_split_vector=SplitVector(),
+    layer_norm_split_vector=SplitVector(nf=size_x * size_y * HEAD)
     )
 output.enable()
-env.connect_tasks(split_task_dict["layer_norm"]["div"]["output"], [output])
+env.connect_tasks(split_task_dict["layer_norm"]["output"], [output])
 
 STDraw.draw_graph(task_graph, 
                   out_path='temp/tiled_attention_block.task.html',
@@ -179,37 +174,46 @@ for i in range(HEAD):
             tensor_unit = create_mlcoord((0, 0), CHIP, (core_idx + j, core_idy + k), TENSOR_UNIT)
             env.put_in(tensor_unit, split_dot_product[k + j * size_y].id)
 
-    # Map scale
-    split_scale = split_task_dict["multi_head_attention"][i]["scale"]["compute"]
-    split_scale_output = split_task_dict["multi_head_attention"][i]["scale"]["output"]
-    env.put_tasks_in(shared_memory0, split_scale_output)
-    for j in range(size_x):
-        for k in range(size_y):
-            tensor_unit = create_mlcoord((0, 0), CHIP, (core_idx + j, core_idy + k), TENSOR_UNIT)
-            env.put_in(tensor_unit, split_scale[k + j * size_y].id)
-
     # Map SoftMax
-    split_softmax_exp = split_task_dict["multi_head_attention"][i]["softmax"]["exp"]["compute"]
-    split_softmax_exp_output = split_task_dict["multi_head_attention"][i]["softmax"]["exp"]["output"]
-    env.put_tasks_in(shared_memory0, split_softmax_exp_output)
+    split_softmax = split_task_dict["multi_head_attention"][i]["softmax"]["compute"]
+    split_softmax_output = split_task_dict["multi_head_attention"][i]["softmax"]["output"]
+    env.put_tasks_in(shared_memory0, split_softmax_output)
     for j in range(size_x):
         for k in range(size_y):
             tensor_unit = create_mlcoord((0, 0), CHIP, (core_idx + j, core_idy + k), TENSOR_UNIT)
-            env.put_in(tensor_unit, split_softmax_exp[k + j * size_y].id)
+            env.put_in(tensor_unit, split_softmax[k + j * size_y].id)
 
-    softmax_reduce = task_dict["multi_head_attention"][i]["softmax"]["reduction"]["compute"]
-    softmax_reduce_output = task_dict["multi_head_attention"][i]["softmax"]["reduction"]["output"]
-    tensor_unit = create_mlcoord((0, 0), CHIP, (core_idx, core_idy), TENSOR_UNIT)
-    env.put_in(tensor_unit, softmax_reduce.id)
-    env.put_in(shared_memory0, softmax_reduce_output.id)
+    # # Map scale
+    # split_scale = split_task_dict["multi_head_attention"][i]["scale"]["compute"]
+    # split_scale_output = split_task_dict["multi_head_attention"][i]["scale"]["output"]
+    # env.put_tasks_in(shared_memory0, split_scale_output)
+    # for j in range(size_x):
+    #     for k in range(size_y):
+    #         tensor_unit = create_mlcoord((0, 0), CHIP, (core_idx + j, core_idy + k), TENSOR_UNIT)
+    #         env.put_in(tensor_unit, split_scale[k + j * size_y].id)
 
-    split_softmax_div = split_task_dict["multi_head_attention"][i]["softmax"]["div"]["compute"]
-    split_softmax_div_output = split_task_dict["multi_head_attention"][i]["softmax"]["div"]["output"]
-    env.put_tasks_in(shared_memory0, split_softmax_div_output)
-    for j in range(size_x):
-        for k in range(size_y):
-            tensor_unit = create_mlcoord((0, 0), CHIP, (core_idx + j, core_idy + k), TENSOR_UNIT)
-            env.put_in(tensor_unit, split_softmax_div[k + j * size_y].id)
+    # # Map SoftMax
+    # split_softmax_exp = split_task_dict["multi_head_attention"][i]["softmax"]["exp"]["compute"]
+    # split_softmax_exp_output = split_task_dict["multi_head_attention"][i]["softmax"]["exp"]["output"]
+    # env.put_tasks_in(shared_memory0, split_softmax_exp_output)
+    # for j in range(size_x):
+    #     for k in range(size_y):
+    #         tensor_unit = create_mlcoord((0, 0), CHIP, (core_idx + j, core_idy + k), TENSOR_UNIT)
+    #         env.put_in(tensor_unit, split_softmax_exp[k + j * size_y].id)
+
+    # softmax_reduce = task_dict["multi_head_attention"][i]["softmax"]["reduction"]["compute"]
+    # softmax_reduce_output = task_dict["multi_head_attention"][i]["softmax"]["reduction"]["output"]
+    # tensor_unit = create_mlcoord((0, 0), CHIP, (core_idx, core_idy), TENSOR_UNIT)
+    # env.put_in(tensor_unit, softmax_reduce.id)
+    # env.put_in(shared_memory0, softmax_reduce_output.id)
+
+    # split_softmax_div = split_task_dict["multi_head_attention"][i]["softmax"]["div"]["compute"]
+    # split_softmax_div_output = split_task_dict["multi_head_attention"][i]["softmax"]["div"]["output"]
+    # env.put_tasks_in(shared_memory0, split_softmax_div_output)
+    # for j in range(size_x):
+    #     for k in range(size_y):
+    #         tensor_unit = create_mlcoord((0, 0), CHIP, (core_idx + j, core_idy + k), TENSOR_UNIT)
+    #         env.put_in(tensor_unit, split_softmax_div[k + j * size_y].id)
 
     # Map the creation of new key cache
     concat_value = task_dict["multi_head_attention"][i]["concat_value"]["move"]
@@ -251,62 +255,71 @@ env.put_tasks_in(shared_memory0, split_add_output)
 tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
 env.put_in(tensor_unit, add[0].id)
 
-reduce_sum = task_dict["layer_norm"]["reduce_sum_mean"]["compute"]
-reduce_sum_output = task_dict["layer_norm"]["reduce_sum_mean"]["output"]
-env.put_in(shared_memory0, reduce_sum_output.id)
-tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
-env.put_in(tensor_unit, reduce_sum.id)
-
-scale = task_dict["layer_norm"]["average"]["compute"]
-scale_output = task_dict["layer_norm"]["average"]["output"]
-env.put_in(shared_memory0, scale_output.id)
-tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
-env.put_in(tensor_unit, scale.id)
-
-split_layer_norm_add = split_task_dict["layer_norm"]["add"]["compute"]
-split_layer_norm_add_output = split_task_dict["layer_norm"]["add"]["output"]
-env.put_tasks_in(shared_memory0, split_layer_norm_add_output)
+split_layer_norm = split_task_dict["layer_norm"]["compute"]
+split_layer_norm_output = split_task_dict["layer_norm"]["output"]
+env.put_tasks_in(shared_memory0, split_layer_norm_output)
 for i in range(size_x * size_y * HEAD):
     idx = i // SIZE_Y
     idy = i % SIZE_Y
     tensor_unit = create_mlcoord((0, 0), CHIP, (idx, idy), TENSOR_UNIT)
-    env.put_in(tensor_unit, split_layer_norm_add[i].id)
+    env.put_in(tensor_unit, split_layer_norm[i].id)
 
-split_product = split_task_dict["layer_norm"]["product"]["compute"]
-split_product_output = split_task_dict["layer_norm"]["product"]["output"]
-env.put_tasks_in(shared_memory0, split_product_output)
-for i in range(size_x * size_y * HEAD):
-    idx = i // SIZE_Y
-    idy = i % SIZE_Y
-    tensor_unit = create_mlcoord((0, 0), CHIP, (idx, idy), TENSOR_UNIT)
-    env.put_in(tensor_unit, split_product[i].id)
+# reduce_sum = task_dict["layer_norm"]["reduce_sum_mean"]["compute"]
+# reduce_sum_output = task_dict["layer_norm"]["reduce_sum_mean"]["output"]
+# env.put_in(shared_memory0, reduce_sum_output.id)
+# tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
+# env.put_in(tensor_unit, reduce_sum.id)
 
-reduce_sum_var = task_dict["layer_norm"]["reduce_sum_var"]["compute"]
-reduce_sum_var_output = task_dict["layer_norm"]["reduce_sum_var"]["output"]
-env.put_in(shared_memory0, reduce_sum_var_output.id)
-tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
-env.put_in(tensor_unit, reduce_sum_var.id)
+# scale = task_dict["layer_norm"]["average"]["compute"]
+# scale_output = task_dict["layer_norm"]["average"]["output"]
+# env.put_in(shared_memory0, scale_output.id)
+# tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
+# env.put_in(tensor_unit, scale.id)
 
-add_var = task_dict["layer_norm"]["add_var"]["compute"]
-add_var_output = task_dict["layer_norm"]["add_var"]["output"]
-env.put_in(shared_memory0, add_var_output.id)
-tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
-env.put_in(tensor_unit, add_var.id)
+# split_layer_norm_add = split_task_dict["layer_norm"]["add"]["compute"]
+# split_layer_norm_add_output = split_task_dict["layer_norm"]["add"]["output"]
+# env.put_tasks_in(shared_memory0, split_layer_norm_add_output)
+# for i in range(size_x * size_y * HEAD):
+#     idx = i // SIZE_Y
+#     idy = i % SIZE_Y
+#     tensor_unit = create_mlcoord((0, 0), CHIP, (idx, idy), TENSOR_UNIT)
+#     env.put_in(tensor_unit, split_layer_norm_add[i].id)
 
-sqrt = task_dict["layer_norm"]["sqrt"]["compute"]
-sqrt_output = task_dict["layer_norm"]["sqrt"]["output"]
-env.put_in(shared_memory0, sqrt_output.id)
-tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
-env.put_in(tensor_unit, sqrt.id)
+# split_product = split_task_dict["layer_norm"]["product"]["compute"]
+# split_product_output = split_task_dict["layer_norm"]["product"]["output"]
+# env.put_tasks_in(shared_memory0, split_product_output)
+# for i in range(size_x * size_y * HEAD):
+#     idx = i // SIZE_Y
+#     idy = i % SIZE_Y
+#     tensor_unit = create_mlcoord((0, 0), CHIP, (idx, idy), TENSOR_UNIT)
+#     env.put_in(tensor_unit, split_product[i].id)
 
-split_div = split_task_dict["layer_norm"]["div"]["compute"]
-split_div_output = split_task_dict["layer_norm"]["div"]["output"]
-env.put_tasks_in(shared_memory0, split_div_output)
-for i in range(size_x * size_y * HEAD):
-    idx = i // SIZE_Y
-    idy = i % SIZE_Y
-    tensor_unit = create_mlcoord((0, 0), CHIP, (idx, idy), TENSOR_UNIT)
-    env.put_in(tensor_unit, split_div[i].id)
+# reduce_sum_var = task_dict["layer_norm"]["reduce_sum_var"]["compute"]
+# reduce_sum_var_output = task_dict["layer_norm"]["reduce_sum_var"]["output"]
+# env.put_in(shared_memory0, reduce_sum_var_output.id)
+# tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
+# env.put_in(tensor_unit, reduce_sum_var.id)
+
+# add_var = task_dict["layer_norm"]["add_var"]["compute"]
+# add_var_output = task_dict["layer_norm"]["add_var"]["output"]
+# env.put_in(shared_memory0, add_var_output.id)
+# tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
+# env.put_in(tensor_unit, add_var.id)
+
+# sqrt = task_dict["layer_norm"]["sqrt"]["compute"]
+# sqrt_output = task_dict["layer_norm"]["sqrt"]["output"]
+# env.put_in(shared_memory0, sqrt_output.id)
+# tensor_unit = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
+# env.put_in(tensor_unit, sqrt.id)
+
+# split_div = split_task_dict["layer_norm"]["div"]["compute"]
+# split_div_output = split_task_dict["layer_norm"]["div"]["output"]
+# env.put_tasks_in(shared_memory0, split_div_output)
+# for i in range(size_x * size_y * HEAD):
+#     idx = i // SIZE_Y
+#     idy = i % SIZE_Y
+#     tensor_unit = create_mlcoord((0, 0), CHIP, (idx, idy), TENSOR_UNIT)
+#     env.put_in(tensor_unit, split_div[i].id)
 
 # Edge Mapping
 env.auto_edge_map()
