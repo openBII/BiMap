@@ -75,6 +75,8 @@ class Edge():
 
         self._edge_id = id(self)
 
+        self._flux = None
+
     def __repr__(self):
         return "From Task {:d} to Task {:d}".format(self.in_task.id, self.out_task.id)
     
@@ -87,17 +89,18 @@ class Edge():
 
     @property
     def flux(self) -> int:
-        # TODO(huanyu): 当前的简化版本没有考虑索引
-        if TaskBlockType.is_storage_task(self._in_task.task_type):
-            return min(self._in_task.shape.volume, 
-                       self._out_task.shape.volume)
-        elif TaskBlockType.is_memory_operation(self._in_task.task_type):
-            if TaskBlockType.is_storage_task(self._out_task.task_type):
-                return self._out_task.shape.volume
+        if self._flux is None:
+            if TaskBlockType.is_storage_task(self._in_task.task_type):
+                self._flux = min(self._in_task.shape.volume, 
+                                 self._out_task.shape.volume)
+            elif TaskBlockType.is_memory_operation(self._in_task.task_type):
+                if TaskBlockType.is_storage_task(self._out_task.task_type):
+                    self._flux = self._out_task.shape.volume
+                else:
+                    self._flux = self._in_task.shape.volume
             else:
-                return self._in_task.shape.volume
-        else:
-            return self._out_task.shape.volume
+                self._flux = self._out_task.shape.volume
+        return self._flux
 
     @property
     def in_task(self):
