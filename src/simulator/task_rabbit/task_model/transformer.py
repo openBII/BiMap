@@ -165,13 +165,17 @@ def create_attention(task_graph: TaskGraph, embedding: TaskBlock,
                                        Shape(nr=d_key, nf=seq_len), precision,
                                        task_dict=task_dict["dot_product"], 
                                        weight=new_key_cache)
-    task_dict["scale"] = {}
-    scale_output, _ = create_scale(
-        task_graph, dot_product_output, precision, 
-        task_dict=task_dict["scale"], value=1 / sqrt(d_key))
+    # task_dict["scale"] = {}
+    # scale_output, _ = create_scale(
+    #     task_graph, dot_product_output, precision, 
+    #     task_dict=task_dict["scale"], value=1 / sqrt(d_key))
     task_dict["softmax"] = {}
-    softmax_output, _ = create_softmax(
-        task_graph, scale_output, precision, 
+    # softmax_output, _ = create_softmax(
+    #     task_graph, scale_output, precision, 
+    #     task_dict=task_dict["softmax"])
+    # including scale + softmax
+    softmax_output, _ = create_pointwise(
+        task_graph, dot_product_output, precision, TaskBlockType.CSSoftMax,
         task_dict=task_dict["softmax"])
     value_cache = create_data(task_graph, Shape(nr=seq_len - 1, nf=d_value), 
                               precision)
@@ -313,7 +317,7 @@ def create_div(task_graph: TaskGraph, inputs: Sequence[TaskBlock],
 
 def create_attention_block(task_graph: TaskGraph, embedding: TaskBlock,
                            d_model: int, d_key: int, d_value: int, 
-                           seq_len: int, head: int, epsilon: float,
+                           seq_len: int, head: int,
                            precision: Precision, is_output: bool = False, 
                            task_dict: Dict = None):
     task_dict = {} if task_dict is None else task_dict
@@ -326,15 +330,17 @@ def create_attention_block(task_graph: TaskGraph, embedding: TaskBlock,
                                embedding.shape, precision,
                                task_dict=task_dict["add"])
     task_dict["layer_norm"] = {}
-    output, _ = create_layer_norm(task_graph, add_output, precision, is_output,
-                                  task_dict=task_dict["layer_norm"], 
-                                  epsilon=epsilon)
+    # output, _ = create_layer_norm(task_graph, add_output, precision, is_output,
+    #                               task_dict=task_dict["layer_norm"], 
+    #                               epsilon=epsilon)
+    output, _ = create_pointwise(task_graph, add_output, precision,
+                                 TaskBlockType.CLayerNorm, is_output,
+                                 task_dict["layer_norm"])
     return output, task_dict
     
 def create_ffn_block(task_graph: TaskGraph, input: TaskBlock, inner_dim: int,
                      precision: Precision, activation_type: TaskBlockType,
-                     epsilon: float, is_output: bool = False,
-                     task_dict: Dict = None):
+                     is_output: bool = False, task_dict: Dict = None):
     task_dict = {} if task_dict is None else task_dict
     task_dict["ffn"] = {}
     ffn_output, _ = create_ffn(task_graph, input, inner_dim, precision,
@@ -344,33 +350,33 @@ def create_ffn_block(task_graph: TaskGraph, input: TaskBlock, inner_dim: int,
                                input.shape, precision,
                                task_dict=task_dict["add"])
     task_dict["layer_norm"] = {}
-    output, _ = create_layer_norm(task_graph, add_output, precision, is_output,
-                                  task_dict=task_dict["layer_norm"], 
-                                  epsilon=epsilon)
+    output, _ = create_pointwise(task_graph, add_output, precision,
+                                 TaskBlockType.CLayerNorm, is_output,
+                                 task_dict["layer_norm"])
     return output, task_dict
 
 def create_transformer_layer(task_graph: TaskGraph, embedding: TaskBlock,
                              d_key: int, d_value: int, 
-                             seq_len: int, head: int, epsilon: float,
-                             ffn_inner_dim: int, activation_type: TaskBlockType,
+                             seq_len: int, head: int, ffn_inner_dim: int, 
+                             activation_type: TaskBlockType,
                              precision: Precision, is_output: bool = False, 
                              task_dict: Dict = None):
     task_dict = {} if task_dict is None else task_dict
     task_dict["attention"] = {}
     attention_output, _ = create_attention_block(
         task_graph, embedding, embedding.shape.nf, d_key, d_value, seq_len, 
-        head, epsilon, precision, task_dict=task_dict["attention"])
+        head, precision, task_dict=task_dict["attention"])
     task_dict["ffn"] = {}
     output, _ = create_ffn_block(task_graph, attention_output, ffn_inner_dim,
-                                 precision, activation_type, epsilon,
-                                 is_output, task_dict["ffn"])
+                                 precision, activation_type, is_output, 
+                                 task_dict["ffn"])
     return output, task_dict
 
 def create_transformer(task_graph: TaskGraph, input_embedding: TaskBlock, 
                        position_encoding: TaskBlock, num_layers: int,
                        num_words: int, d_key: int, d_value: int, 
-                       seq_len: int, head: int, epsilon: float,
-                       ffn_inner_dim: int, activation_type: TaskBlockType,
+                       seq_len: int, head: int, ffn_inner_dim: int, 
+                       activation_type: TaskBlockType,
                        precision: Precision, task_dict: Dict = None):
     task_dict = {} if task_dict is None else task_dict
     task_dict["add"] = {}
@@ -382,7 +388,7 @@ def create_transformer(task_graph: TaskGraph, input_embedding: TaskBlock,
         task_dict[i] = {}
         new_embedding, _ = create_transformer_layer(
             task_graph, embeddings[i], d_key, d_value, 
-            seq_len, head, epsilon, ffn_inner_dim, activation_type, precision,
+            seq_len, head, ffn_inner_dim, activation_type, precision,
             task_dict=task_dict[i])
         embeddings.append(new_embedding)
     # task_dict[0] = {}
@@ -395,6 +401,7 @@ def create_transformer(task_graph: TaskGraph, input_embedding: TaskBlock,
                                Shape(nr=embedding.shape.nf, nf=num_words),
                                precision, task_dict=task_dict["mlp"])
     task_dict["softmax"] = {}
-    output, _ = create_softmax(task_graph, mlp_output, precision,
-                               True, task_dict["softmax"])
+    output, _ = create_pointwise(task_graph, mlp_output, precision, 
+                                 TaskBlockType.CSoftMax,
+                                 True, task_dict["softmax"])
     return output, task_dict

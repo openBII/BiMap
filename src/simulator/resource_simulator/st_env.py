@@ -331,9 +331,7 @@ class STEnv():
                         split_vector_act: SplitVector, 
                         split_vector_down: SplitVector,
                         add_split_vector: SplitVector,
-                        layer_norm_add_split_vector: SplitVector,
-                        layer_norm_product_split_vector: SplitVector,
-                        layer_norm_div_split_vector: SplitVector):
+                        layer_norm_split_vector: SplitVector):
         split_task_dict = {}
         assert add_split_vector.nf == split_vector_up.nr
         split_task_dict["ffn"] = self.split_ffn(
@@ -351,14 +349,25 @@ class STEnv():
             task_dict["add"]["compute"], task_dict["add"]["output"],
             add_split_vector, split_task_dict["add"])
 
+        add_output = task_dict["add"]["output"]
         split_add_output = split_task_dict["add"]["output"]
-        split_task_dict["layer_norm"] = self.split_layer_norm(
-            task_dict["add"]["output"], split_add_output,
-            task_dict["layer_norm"], layer_norm_add_split_vector,
-            layer_norm_product_split_vector, layer_norm_div_split_vector
-        )    
-        if "input" in split_task_dict["layer_norm"]["add"]:
-            split_task_dict["add"]["output"] = split_task_dict["layer_norm"]["add"]["input"]
+        layer_norm = task_dict["layer_norm"]["compute"]
+        layer_norm_output = task_dict["layer_norm"]["output"]
+        split_task_dict["layer_norm"] = {}
+        self.split_pointwise(
+            add_output, split_add_output,
+            layer_norm, layer_norm_output, 
+            layer_norm_split_vector, split_task_dict["layer_norm"]
+        )       
+        if "input" in split_task_dict["layer_norm"]:
+            split_task_dict["add"]["output"] = split_task_dict["layer_norm"]["input"]
+        # split_task_dict["layer_norm"] = self.split_layer_norm(
+        #     task_dict["add"]["output"], split_add_output,
+        #     task_dict["layer_norm"], layer_norm_add_split_vector,
+        #     layer_norm_product_split_vector, layer_norm_div_split_vector
+        # )    
+        # if "input" in split_task_dict["layer_norm"]["add"]:
+        #     split_task_dict["add"]["output"] = split_task_dict["layer_norm"]["add"]["input"]
         return split_task_dict
     
     def split_transformer_layer(self, task_dict: Dict,
@@ -367,22 +376,16 @@ class STEnv():
                                 key_split_vectors: List[SplitVector],
                                 value_split_vectors: List[SplitVector],
                                 dot_product_split_vectors: List[SplitVector],
-                                scale_split_vectors: List[SplitVector],
-                                softmax_exp_split_vectors: List[SplitVector],
-                                softmax_div_split_vectors: List[SplitVector],
+                                softmax_split_vectors: List[SplitVector],
                                 attention_split_vectors: List[SplitVector],
                                 mlp_split_vector: SplitVector,
                                 add_split_vector: SplitVector,
-                                layer_norm_add_split_vector: SplitVector,
-                                layer_norm_product_split_vector: SplitVector,
-                                layer_norm_div_split_vector: SplitVector,
+                                layer_norm_split_vector: SplitVector,
                                 split_vector_up: SplitVector, 
                                 split_vector_act: SplitVector, 
                                 split_vector_down: SplitVector,
                                 ffn_add_split_vector: SplitVector,
-                                ffn_layer_norm_add_split_vector: SplitVector,
-                                ffn_layer_norm_product_split_vector: SplitVector,
-                                ffn_layer_norm_div_split_vector: SplitVector,
+                                ffn_layer_norm_split_vector: SplitVector,
                                 embedding: TaskBlock = None):
         split_task_dict = {}
         split_task_dict["attention"] = self.split_attention_block(
@@ -393,28 +396,22 @@ class STEnv():
             key_split_vectors,
             value_split_vectors,
             dot_product_split_vectors,
-            scale_split_vectors,
-            softmax_exp_split_vectors,
-            softmax_div_split_vectors,
+            softmax_split_vectors,
             attention_split_vectors,
             mlp_split_vector,
             add_split_vector,
-            layer_norm_add_split_vector,
-            layer_norm_product_split_vector,
-            layer_norm_div_split_vector,
+            layer_norm_split_vector,
             embedding
         )
         split_task_dict["ffn"] = self.split_ffn_block(
             task_dict["ffn"],
-            task_dict["attention"]["layer_norm"]["div"]["output"],
-            split_task_dict["attention"]["layer_norm"]["div"]["output"],
+            task_dict["attention"]["layer_norm"]["output"],
+            split_task_dict["attention"]["layer_norm"]["output"],
             split_vector_up,
             split_vector_act,
             split_vector_down,
             ffn_add_split_vector,
-            ffn_layer_norm_add_split_vector,
-            ffn_layer_norm_product_split_vector,
-            ffn_layer_norm_div_split_vector
+            ffn_layer_norm_split_vector
         )
         return split_task_dict
     
@@ -424,15 +421,11 @@ class STEnv():
                               key_split_vectors: List[SplitVector],
                               value_split_vectors: List[SplitVector],
                               dot_product_split_vectors: List[SplitVector],
-                              scale_split_vectors: List[SplitVector],
-                              softmax_exp_split_vectors: List[SplitVector],
-                              softmax_div_split_vectors: List[SplitVector],
+                              softmax_split_vectors: List[SplitVector],
                               attention_split_vectors: List[SplitVector],
                               mlp_split_vector: SplitVector,
                               add_split_vector: SplitVector,
-                              layer_norm_add_split_vector: SplitVector,
-                              layer_norm_product_split_vector: SplitVector,
-                              layer_norm_div_split_vector: SplitVector,
+                              layer_norm_split_vector: SplitVector,
                               embedding: TaskBlock = None):
         split_task_dict = {}
         assert add_split_vector.nf == query_split_vectors[0].nr
@@ -444,9 +437,7 @@ class STEnv():
             key_split_vectors,
             value_split_vectors,
             dot_product_split_vectors,
-            scale_split_vectors,
-            softmax_exp_split_vectors,
-            softmax_div_split_vectors,
+            softmax_split_vectors,
             attention_split_vectors,
             mlp_split_vector,
             embedding)
@@ -458,13 +449,16 @@ class STEnv():
             add_split_vector, split_task_dict["add"])
         
         split_add_output = split_task_dict["add"]["output"]
-        split_task_dict["layer_norm"] = self.split_layer_norm(
+        layer_norm = task_dict["layer_norm"]["compute"]
+        layer_norm_output = task_dict["layer_norm"]["output"]
+        split_task_dict["layer_norm"] = {}
+        self.split_pointwise(
             task_dict["add"]["output"], split_add_output,
-            task_dict["layer_norm"], layer_norm_add_split_vector,
-            layer_norm_product_split_vector, layer_norm_div_split_vector
-        )    
-        if "input" in split_task_dict["layer_norm"]["add"]:
-            split_task_dict["add"]["output"] = split_task_dict["layer_norm"]["add"]["input"]
+            layer_norm, layer_norm_output, 
+            layer_norm_split_vector, split_task_dict["layer_norm"]
+        )       
+        if "input" in split_task_dict["layer_norm"]:
+            split_task_dict["add"]["output"] = split_task_dict["layer_norm"]["input"]
             
         return split_task_dict  
 
@@ -510,15 +504,61 @@ class STEnv():
 
         return split_task_dict
     
+    # def split_multi_head_attention(self, task_dict: Dict, 
+    #                                split_embedding: List[TaskBlock], head: int,
+    #                                query_split_vectors: List[SplitVector],
+    #                                key_split_vectors: List[SplitVector],
+    #                                value_split_vectors: List[SplitVector],
+    #                                dot_product_split_vectors: List[SplitVector],
+    #                                scale_split_vectors: List[SplitVector],
+    #                                softmax_exp_split_vectors: List[SplitVector],
+    #                                softmax_div_split_vectors: List[SplitVector],
+    #                                attention_split_vectors: List[SplitVector],
+    #                                mlp_split_vector: SplitVector,
+    #                                embedding: TaskBlock = None):
+    #     split_task_dict = {}
+    #     nr = query_split_vectors[0].nr
+    #     for i in range(head):
+    #         assert query_split_vectors[i].nr == nr
+    #         split_task_dict[i] = self.split_attention(
+    #             task_dict[i],
+    #             split_embedding,
+    #             query_split_vectors[i],
+    #             key_split_vectors[i],
+    #             value_split_vectors[i],
+    #             dot_product_split_vectors[i],
+    #             scale_split_vectors[i],
+    #             softmax_exp_split_vectors[i],
+    #             softmax_div_split_vectors[i],
+    #             attention_split_vectors[i],
+    #             embedding)
+            
+    #     concat = task_dict["concat"]["move"]
+    #     concat_output = task_dict["concat"]["output"]
+    #     split_concat_output = self.split_task(concat_output.id, SplitVector())
+    #     self.connect_tasks([concat], split_concat_output)
+    #     split_task_dict["concat"] = {}
+    #     split_task_dict["concat"]["output"] = split_concat_output
+    #     mlp_weight = task_dict["mlp"]["weight"]
+    #     mlp = task_dict["mlp"]["compute"]
+    #     mlp_output = task_dict["mlp"]["output"]
+    #     split_task_dict["mlp"] = {}
+    #     self.split_mlp(
+    #         split_concat_output, mlp_weight, mlp, mlp_output,
+    #         mlp_split_vector, input=concat_output,
+    #         task_dict=split_task_dict["mlp"])
+    #     if "input" in split_task_dict["mlp"]:
+    #         split_task_dict["concat"]["output"] = split_task_dict["mlp"]["input"]
+
+    #     return split_task_dict
+
     def split_multi_head_attention(self, task_dict: Dict, 
                                    split_embedding: List[TaskBlock], head: int,
                                    query_split_vectors: List[SplitVector],
                                    key_split_vectors: List[SplitVector],
                                    value_split_vectors: List[SplitVector],
                                    dot_product_split_vectors: List[SplitVector],
-                                   scale_split_vectors: List[SplitVector],
-                                   softmax_exp_split_vectors: List[SplitVector],
-                                   softmax_div_split_vectors: List[SplitVector],
+                                   softmax_split_vectors: List[SplitVector],
                                    attention_split_vectors: List[SplitVector],
                                    mlp_split_vector: SplitVector,
                                    embedding: TaskBlock = None):
@@ -533,9 +573,7 @@ class STEnv():
                 key_split_vectors[i],
                 value_split_vectors[i],
                 dot_product_split_vectors[i],
-                scale_split_vectors[i],
-                softmax_exp_split_vectors[i],
-                softmax_div_split_vectors[i],
+                softmax_split_vectors[i],
                 attention_split_vectors[i],
                 embedding)
             
@@ -558,15 +596,110 @@ class STEnv():
 
         return split_task_dict
 
+    # def split_attention(self, task_dict: Dict,
+    #                     split_embedding: List[TaskBlock],
+    #                     query_split_vector: SplitVector,
+    #                     key_split_vector: SplitVector,
+    #                     value_split_vector: SplitVector,
+    #                     dot_product_split_vector: SplitVector,
+    #                     scale_split_vector: SplitVector,
+    #                     softmax_exp_split_vector: SplitVector,
+    #                     softmax_div_split_vector: SplitVector,
+    #                     attention_split_vector: SplitVector,
+    #                     embedding: TaskBlock = None):
+    #     split_task_dict = {}
+
+    #     assert (query_split_vector.nr == key_split_vector.nr == 
+    #             value_split_vector.nr)
+
+    #     # MLP of query
+    #     query_mlp = task_dict["query"]["compute"]
+    #     query_weight = task_dict["query"]["weight"]
+    #     query = task_dict["query"]["output"]
+    #     split_task_dict["query"] = {}
+    #     self.split_mlp(split_embedding, query_weight, 
+    #                    query_mlp, query, query_split_vector,
+    #                    input=embedding, 
+    #                    task_dict=split_task_dict["query"])
+
+    #     # MLP of key
+    #     key_mlp = task_dict["key"]["compute"]
+    #     key_weight = task_dict["key"]["weight"]
+    #     key = task_dict["key"]["output"]
+    #     split_task_dict["key"] = {}
+    #     self.split_mlp(split_embedding, key_weight, 
+    #                    key_mlp, key, key_split_vector,
+    #                    task_dict=split_task_dict["key"])
+
+    #     # MLP of value
+    #     value_mlp = task_dict["value"]["compute"]
+    #     value_weight = task_dict["value"]["weight"]
+    #     value = task_dict["value"]["output"]
+    #     split_task_dict["value"] = {}
+    #     self.split_mlp(split_embedding, value_weight, 
+    #                    value_mlp, value, value_split_vector,
+    #                    task_dict=split_task_dict["value"])
+
+    #     # Dot product between query and key cache
+    #     dot_product = task_dict["dot_product"]["compute"]
+    #     dot_product_output = task_dict["dot_product"]["output"]
+    #     new_key_cache = task_dict["concat_key"]["output"]
+    #     split_query_output = split_task_dict["query"]["output"]
+    #     split_task_dict["dot_product"] = {}
+    #     self.split_dot_product(query, split_query_output, new_key_cache, 
+    #                            dot_product, dot_product_output, 
+    #                            dot_product_split_vector,
+    #                            task_dict=split_task_dict["dot_product"])
+
+    #     # Scale
+    #     scale = task_dict["scale"]["compute"]
+    #     scale_output = task_dict["scale"]["output"]
+    #     split_dot_product_output = split_task_dict["dot_product"]["output"]
+    #     split_task_dict["scale"] = {}
+    #     self.split_pointwise(dot_product_output, split_dot_product_output, 
+    #                          scale, scale_output, scale_split_vector, 
+    #                          task_dict=split_task_dict["scale"])
+
+    #     # SoftMax
+    #     softmax_exp = task_dict["softmax"]["exp"]["compute"]
+    #     softmax_exp_output = task_dict["softmax"]["exp"]["output"]
+    #     split_scale_output = split_task_dict["scale"]["output"]
+    #     split_task_dict["softmax"] = {}
+    #     split_task_dict["softmax"]["exp"] = {}
+    #     self.split_pointwise(scale_output, split_scale_output, softmax_exp,
+    #                          softmax_exp_output, softmax_exp_split_vector,
+    #                          task_dict=split_task_dict["softmax"]["exp"])
+
+    #     softmax_reduce_output = task_dict["softmax"]["reduction"]["output"]
+    #     softmax_div = task_dict["softmax"]["div"]["compute"]
+    #     softmax_div_output = task_dict["softmax"]["div"]["output"]
+    #     split_softmax_exp_output = split_task_dict["softmax"]["exp"]["output"]
+    #     split_task_dict["softmax"]["div"] = {}
+    #     self.split_scale(softmax_exp_output, split_softmax_exp_output, 
+    #                      softmax_div, softmax_reduce_output, softmax_div_output, 
+    #                      softmax_div_split_vector,
+    #                      task_dict=split_task_dict["softmax"]["div"])
+
+    #     # Attention
+    #     new_value_cache = task_dict["concat_value"]["output"]
+    #     attention = task_dict["attention"]["compute"]
+    #     attention_output = task_dict["attention"]["output"]
+    #     split_softmax_div_output = split_task_dict["softmax"]["div"]["output"]
+    #     split_task_dict["attention"] = {}
+    #     self.split_dot_product(softmax_div_output, split_softmax_div_output, 
+    #                            new_value_cache, attention, attention_output, 
+    #                            attention_split_vector,
+    #                            task_dict=split_task_dict["attention"])
+        
+    #     return split_task_dict
+
     def split_attention(self, task_dict: Dict,
                         split_embedding: List[TaskBlock],
                         query_split_vector: SplitVector,
                         key_split_vector: SplitVector,
                         value_split_vector: SplitVector,
                         dot_product_split_vector: SplitVector,
-                        scale_split_vector: SplitVector,
-                        softmax_exp_split_vector: SplitVector,
-                        softmax_div_split_vector: SplitVector,
+                        softmax_split_vector: SplitVector,
                         attention_split_vector: SplitVector,
                         embedding: TaskBlock = None):
         split_task_dict = {}
@@ -613,42 +746,22 @@ class STEnv():
                                dot_product_split_vector,
                                task_dict=split_task_dict["dot_product"])
 
-        # Scale
-        scale = task_dict["scale"]["compute"]
-        scale_output = task_dict["scale"]["output"]
-        split_dot_product_output = split_task_dict["dot_product"]["output"]
-        split_task_dict["scale"] = {}
-        self.split_pointwise(dot_product_output, split_dot_product_output, 
-                             scale, scale_output, scale_split_vector, 
-                             task_dict=split_task_dict["scale"])
-
         # SoftMax
-        softmax_exp = task_dict["softmax"]["exp"]["compute"]
-        softmax_exp_output = task_dict["softmax"]["exp"]["output"]
-        split_scale_output = split_task_dict["scale"]["output"]
+        softmax = task_dict["softmax"]["compute"]
+        softmax_output = task_dict["softmax"]["output"]
+        split_dot_product_output = split_task_dict["dot_product"]["output"]
         split_task_dict["softmax"] = {}
-        split_task_dict["softmax"]["exp"] = {}
-        self.split_pointwise(scale_output, split_scale_output, softmax_exp,
-                             softmax_exp_output, softmax_exp_split_vector,
-                             task_dict=split_task_dict["softmax"]["exp"])
-
-        softmax_reduce_output = task_dict["softmax"]["reduction"]["output"]
-        softmax_div = task_dict["softmax"]["div"]["compute"]
-        softmax_div_output = task_dict["softmax"]["div"]["output"]
-        split_softmax_exp_output = split_task_dict["softmax"]["exp"]["output"]
-        split_task_dict["softmax"]["div"] = {}
-        self.split_scale(softmax_exp_output, split_softmax_exp_output, 
-                         softmax_div, softmax_reduce_output, softmax_div_output, 
-                         softmax_div_split_vector,
-                         task_dict=split_task_dict["softmax"]["div"])
+        self.split_pointwise(dot_product_output, split_dot_product_output, 
+                             softmax, softmax_output, softmax_split_vector, 
+                             task_dict=split_task_dict["softmax"])
 
         # Attention
         new_value_cache = task_dict["concat_value"]["output"]
         attention = task_dict["attention"]["compute"]
         attention_output = task_dict["attention"]["output"]
-        split_softmax_div_output = split_task_dict["softmax"]["div"]["output"]
+        split_softmax_output = split_task_dict["softmax"]["output"]
         split_task_dict["attention"] = {}
-        self.split_dot_product(softmax_div_output, split_softmax_div_output, 
+        self.split_dot_product(softmax_output, split_softmax_output, 
                                new_value_cache, attention, attention_output, 
                                attention_split_vector,
                                task_dict=split_task_dict["attention"])

@@ -37,6 +37,9 @@ class TaskBlockType(Enum):
     CSQRT = 35
     CDIV = 36
     CRELU = 37
+    CSoftMax = 38
+    CSSoftMax = 39
+    CLayerNorm = 40
 
     INPUT = 50
     OUTPUT = 51
