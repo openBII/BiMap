@@ -4,6 +4,7 @@ from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
 from src.simulator.resource_simulator.st_model.hop import Hop, HopDict
 import heapq
+import math
 from src.simulator.resource_simulator.evaluation_model.recorder import CommunicationRecorder, CommunicationRecord
 from src.simulator.resource_simulator.evaluation_model.evaluator import Evaluator, EvaluationMode
 
@@ -29,9 +30,12 @@ class BandwidthDict:
 
 
 class CommunicationEvaluator(Evaluator):
-    def __init__(self, bandwidth: float, mode: EvaluationMode = EvaluationMode.STATIC) -> None:
+    def __init__(self, bandwidth: float,
+                 mode: EvaluationMode = EvaluationMode.STATIC,
+                 size: Tuple[int] = None) -> None:
         super().__init__(mode)
         self.bandwidth = bandwidth
+        self.size = size
         self.edge_map: Dict[Tuple[Edge, int], List[Hop]] = {}
         # results: {(Edge, iteration, Hop): CommunicationRecord}
         self.recorder = CommunicationRecorder()
@@ -46,6 +50,9 @@ class CommunicationEvaluator(Evaluator):
             return self.eval_by_execution(input, deadline)
         else:
             raise ValueError('Unsupported evaluation mode')
+        
+    def eval_area(self):
+        return math.prod(self.size) * 0.025
 
     def is_edge_mapped(self, edge: Edge, iteration: int):
         if (edge, iteration) in self.edge_map:
@@ -283,7 +290,8 @@ class CommunicationEvaluator(Evaluator):
 
 
 class CoreCommunicationEvaluator(CommunicationEvaluator):
-    def __init__(self, bandwidth: BandwidthDict, mode: EvaluationMode = EvaluationMode.STATIC) -> None:
+    def __init__(self, bandwidth: BandwidthDict,
+                 mode: EvaluationMode = EvaluationMode.STATIC) -> None:
         super().__init__(bandwidth, mode)
 
     def generate_hops(self, edge: Edge, iteration: int, src: Coord, dst: Coord, link_id: int):
@@ -292,11 +300,16 @@ class CoreCommunicationEvaluator(CommunicationEvaluator):
             self.append_hop(edge, iteration, Hop(Coord(0), dst, link_id))
         else:
             self.append_hop(edge, iteration, Hop(src, dst, link_id))
+
+    def eval_area(self):
+        return 0
     
 
 class SharedMemoryCommunicationEvaluator(CommunicationEvaluator):
-    def __init__(self, bandwidth: float, shared_memory_coord: Coord, arbitrator_coord: Coord, mode: EvaluationMode = EvaluationMode.STATIC) -> None:
-        super().__init__(bandwidth, mode)
+    def __init__(self, bandwidth: float, shared_memory_coord: Coord, 
+                 arbitrator_coord: Coord, size: Tuple[int] = None,
+                 mode: EvaluationMode = EvaluationMode.STATIC) -> None:
+        super().__init__(bandwidth, mode, size)
         self.shared_memory_coord = shared_memory_coord
         self.arbitrator_coord = arbitrator_coord
 
@@ -316,12 +329,14 @@ class SharedMemoryCommunicationEvaluator(CommunicationEvaluator):
 
 
 class BoardCommunicationEvaluator(CommunicationEvaluator):
-    def __init__(self, bandwidth: float, mode: EvaluationMode = EvaluationMode.STATIC) -> None:
+    def __init__(self, bandwidth: float, 
+                 mode: EvaluationMode = EvaluationMode.STATIC) -> None:
         super().__init__(bandwidth, mode)
 
 
 class ServerCommunicationEvaluator(CommunicationEvaluator):
-    def __init__(self, bandwidth: float, mode: EvaluationMode = EvaluationMode.STATIC) -> None:
+    def __init__(self, bandwidth: float, 
+                 mode: EvaluationMode = EvaluationMode.STATIC) -> None:
         super().__init__(bandwidth, mode)
 
 

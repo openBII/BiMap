@@ -1,11 +1,13 @@
 from __future__ import annotations
-from typing import Dict
+from typing import Tuple
 from src.simulator.resource_simulator.evaluation_model.communication_evaluator import BandwidthDict
 
 
 class CommunicationConfig:
-    def __init__(self, bandwidth: float | BandwidthDict = None) -> None:
+    def __init__(self, bandwidth: float | BandwidthDict = None,
+                 size: Tuple[int] = None) -> None:
         self.bandwidth = bandwidth
+        self.size = size
 
 
 class CoreCommunicationConfig(CommunicationConfig):
@@ -17,8 +19,9 @@ class CoreCommunicationConfig(CommunicationConfig):
                  buffer2vector_params: float,
                  vector2buffer: float,
                  buffer2router: float,
-                 router2buffer: float) -> None:
-        super().__init__()
+                 router2buffer: float,
+                 size: Tuple[int] = None) -> None:
+        super().__init__(size=size)
         self.buffer2array_input = buffer2array_input
         self.buffer2array_weight = buffer2array_weight
         self.array2buffer = array2buffer

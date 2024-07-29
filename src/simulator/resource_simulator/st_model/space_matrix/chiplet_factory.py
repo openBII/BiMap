@@ -26,7 +26,8 @@ class ComputeChipletFactory(Factory):
         arbitrator_coord = Coord((size_x, size_y // 2))
 
         if config.network["topology"] == "star":
-            communication_config = CommunicationConfig(config.network["bandwidth"])
+            communication_config = CommunicationConfig(config.network["bandwidth"],
+                                                       (size_x, size_y))
             communication_network = SharedMemoryCommunicationPoint(communication_config, shared_memory_coord, arbitrator_coord)
         elif config.network["topology"] == "crossbar":
             raise NotImplementedError

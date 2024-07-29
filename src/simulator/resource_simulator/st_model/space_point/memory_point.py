@@ -1,4 +1,5 @@
 from src.simulator.resource_simulator.st_model.st_point import STPoint
+from src.simulator.resource_simulator.evaluation_model.memory_evaluator import MemoryEvaluator
 from src.simulator.resource_simulator.evaluation_model.recorder import MemoryRecorder
 from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
 from src.simulator.task_rabbit.task_model.output_task_block import OutputTaskBlock
@@ -14,6 +15,7 @@ class MemoryPoint(STPoint):
         super().__init__()
         self.capacity = capacity
         self.recorder = MemoryRecorder()
+        self.evaluator = MemoryEvaluator(capacity)
 
     def __repr__(self):
         return 'capacity: ' + repr(self.capacity) + '\n'

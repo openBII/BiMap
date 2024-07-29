@@ -92,11 +92,11 @@ class STEnv():
     def get_ml_coord(self, task_id):
         return self._context.get_ml_coord(task_id)
 
-    def get_space_point(self, ml_coord: MLCoord):
+    def get_hardware(self, ml_coord: MLCoord):
         return self._st_matrix.get_element(ml_coord)
     
     def get_communication_network(self, ml_coord: MLCoord, network_id: int = 0):
-        space_matrix = self.get_space_point(ml_coord)
+        space_matrix = self.get_hardware(ml_coord)
         return space_matrix.communication_networks[network_id]
 
     def get_space(self, space_coord):
@@ -195,6 +195,13 @@ class STEnv():
             _, end = self.get_task_time(output, iteration)
             latency = max(end, latency)
         return latency 
+    
+    def eval_area(self, ml_coord: MLCoord):
+        hardware = self.get_hardware(ml_coord)
+        if isinstance(hardware, STMatrix):
+            return hardware.area
+        else:  # Space Point
+            return hardware.evaluator.eval_area()
 
     def get_computation(self, ml_coord):
         pass
@@ -206,7 +213,7 @@ class STEnv():
         pass
 
     def get_memory(self, ml_coord: MLCoord, tasks: Iterable[STaskBlock] = None):
-        memory_point = self.get_space_point(ml_coord)
+        memory_point = self.get_hardware(ml_coord)
         storage = 0
         if tasks is None:
             for task in memory_point._tasks:
@@ -217,7 +224,7 @@ class STEnv():
         return storage
 
     def does_memory_overflow(self, memory_coord: MLCoord, tasks: Iterable[STaskBlock] = None):
-        memory_point: MemoryPoint = self.get_space_point(memory_coord)
+        memory_point: MemoryPoint = self.get_hardware(memory_coord)
         if isinstance(memory_point, DRAMPoint):
             return self.get_memory(memory_coord, tasks) > memory_point.capacity * 1024 * 1024 * 1024
         else:

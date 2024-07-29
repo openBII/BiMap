@@ -4,7 +4,7 @@ from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
 from src.simulator.resource_simulator.st_model.space_point.communication_point import CoreCommunicationPoint
 from src.simulator.resource_simulator.st_model.space_point.computation_point import MACArrayPoint, VectorPoint
 from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint
-from src.simulator.resource_simulator.config.computation_config import MACArrayConfig, VectorUnitConfig
+from src.simulator.resource_simulator.config.computation_config import ComputationConfig
 from src.simulator.resource_simulator.config.communication_config import CoreCommunicationConfig
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.resource_simulator.st_model.st_coord import Coord
@@ -27,21 +27,21 @@ class CoreFactory(Factory):
             buffer2vector_params=config.network['buffer2vector_params'],
             vector2buffer=config.network['vector2buffer'],
             buffer2router=config.network['buffer2router'],
-            router2buffer=config.network['router2buffer']
+            router2buffer=config.network['router2buffer'],
+            size=(4, )
         )
         communication_network = CoreCommunicationPoint(communication_config)
         core.add_communication_network(communication_network)
 
-        mac_array_config = MACArrayConfig()
+        mac_array_config = ComputationConfig()
         mac_array_config[Precision.FLOAT_16] = config.mac_array['fp16']
         mac_array_config[Precision.FLOAT_32] = config.mac_array['fp32']
         mac_array = MACArrayPoint(mac_array_config)
         core.add_element(coord=Coord(1), element=mac_array)
 
-        vector_unit_config = VectorUnitConfig()
-        vector_unit_config['ReLU'] = config.vector_unit['ReLU']
-        vector_unit_config['BN'] = config.vector_unit['BN']
-        vector_unit_config['SoftMax'] = config.vector_unit['SoftMax']
+        vector_unit_config = ComputationConfig()
+        vector_unit_config[Precision.FLOAT_16] = config.vector_unit['fp16']
+        vector_unit_config[Precision.FLOAT_32] = config.vector_unit['fp32']
         vector_unit = VectorPoint(vector_unit_config)
         core.add_element(coord=Coord(2), element=vector_unit)
 

@@ -254,6 +254,17 @@ class STMatrix():
     
     def generate_path(self, src: MLCoord, dst: MLCoord) -> List[MLCoord]:
         raise NotImplementedError
+    
+    @property
+    def area(self):
+        area = 0
+        for coord in self._container:
+            element = self._container[coord]
+            if isinstance(element, STPoint):
+                area += element.evaluator.eval_area()
+            else:
+                area += element.area
+        return area
 
 
     # def process(self, edges: List[Edge]) -> List[Edge]:

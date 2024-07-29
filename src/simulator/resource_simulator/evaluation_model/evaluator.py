@@ -27,3 +27,9 @@ class Evaluator():
     
     def eval_by_execution(self, input):
         raise NotImplementedError
+    
+    def eval_area(self) -> float:
+        raise NotImplementedError
+    
+    def eval_energy(self):
+        raise NotImplementedError

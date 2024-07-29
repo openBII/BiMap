@@ -1,5 +1,4 @@
 import heapq
-from copy import copy
 from typing import List, Dict, Union, Tuple
 from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
@@ -15,7 +14,7 @@ class CommunicationPoint(STPoint):
         super().__init__()
         self.bandwidth: Union[float, BandwidthDict] = self.config_handler(config)
         self._edge_map: Dict[Edge, List[Tuple[MLCoord, int]]] = {}
-        self.evaluator = CommunicationEvaluator(self.bandwidth)
+        self.evaluator = CommunicationEvaluator(self.bandwidth, config.size)
 
     def update_bandwidth(self, value: float):
         self.bandwidth = value
@@ -85,7 +84,8 @@ class CommunicationPoint(STPoint):
 class CoreCommunicationPoint(CommunicationPoint):
     def __init__(self, config: CoreCommunicationConfig):
         super().__init__(config)
-        self.set_evaluator(CoreCommunicationEvaluator(self.bandwidth))
+        self.set_evaluator(CoreCommunicationEvaluator(self.bandwidth,
+                                                      config.size))
 
     def config_handler(self, config: CoreCommunicationConfig):
         bandwidth_dict = BandwidthDict()
@@ -102,9 +102,13 @@ class CoreCommunicationPoint(CommunicationPoint):
     
 
 class SharedMemoryCommunicationPoint(CommunicationPoint):
-    def __init__(self, config: CommunicationConfig, shared_memory_coord: Coord, arbitrator_coord: Coord):
+    def __init__(self, config: CommunicationConfig, shared_memory_coord: Coord, 
+                 arbitrator_coord: Coord):
         super().__init__(config)
-        evaluator = SharedMemoryCommunicationEvaluator(self.bandwidth, shared_memory_coord, arbitrator_coord)
+        evaluator = SharedMemoryCommunicationEvaluator(self.bandwidth, 
+                                                       shared_memory_coord, 
+                                                       arbitrator_coord,
+                                                       config.size)
         self.set_evaluator(evaluator)
 
 
