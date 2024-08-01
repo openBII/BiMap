@@ -84,8 +84,7 @@ class CommunicationPoint(STPoint):
 class CoreCommunicationPoint(CommunicationPoint):
     def __init__(self, config: CoreCommunicationConfig):
         super().__init__(config)
-        self.set_evaluator(CoreCommunicationEvaluator(self.bandwidth,
-                                                      config.size))
+        self.set_evaluator(CoreCommunicationEvaluator(self.bandwidth))
 
     def config_handler(self, config: CoreCommunicationConfig):
         bandwidth_dict = BandwidthDict()

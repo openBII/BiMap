@@ -42,7 +42,7 @@ class VectorUnitEvaluator(ComputationEvaluator):
     def eval_by_model(self, task: CTaskBlock):
         in_precision = task.in_precision
         precision = min(in_precision)
-        num_pe = self.config[precision]
+        num_pe = self.config[precision][0]
         if task.task_type == TaskBlockType.CRELU:
             return task.shape.volume / num_pe
         elif task.task_type == TaskBlockType.CSSoftMax:

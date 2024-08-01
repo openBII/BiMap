@@ -35,12 +35,13 @@ class GPUServerMatrix(STMatrix):
                 SHARED_MEMORY = coord
                 break
         TENSOR_UNIT = Coord(1)
+        VECTOR_UNIT = Coord(2)
         ROUTER = Coord(3)
         if ((src.level == 2 and src.bottom_coord == DRAM) or 
             (src.level == 2 and src.bottom_coord == PHY)):
             if dst.level == 3 and dst.bottom_coord == SHARED_MEMORY:  # DRAM -> Shared Memory
                 return [src, dst.outer_coord]
-            elif dst.level == 4 and dst.bottom_coord == TENSOR_UNIT:  # DRAM -> Tensor Unit
+            elif dst.level == 4 and dst.bottom_coord in (TENSOR_UNIT, VECTOR_UNIT):  # DRAM -> Tensor Unit / Vector Unit
                 shared_memory = dst.outer_coord.create_mlcoord_with_different_bottom_coord(SHARED_MEMORY)
                 router = dst.create_mlcoord_with_different_bottom_coord(ROUTER)
                 return [src, shared_memory, router, dst]
@@ -54,19 +55,19 @@ class GPUServerMatrix(STMatrix):
                 (dst.level == 2 and dst.bottom_coord == PHY)):  # Shared Memory -> DRAM / PHY
                 chip = src.outer_coord
                 return [chip, dst]
-            elif dst.level == 4 and dst.bottom_coord == TENSOR_UNIT:  # Shared Memory -> Tensor Unit
+            elif dst.level == 4 and dst.bottom_coord in (TENSOR_UNIT, VECTOR_UNIT):  # Shared Memory -> Tensor Unit / Vector Unit
                 router = dst.create_mlcoord_with_different_bottom_coord(ROUTER)
                 return [src, router, dst]
             elif dst.level == 3 and dst.bottom_coord == SHARED_MEMORY:
                 return [src, dst]
             else:
                 raise NotImplementedError
-        elif src.level == 4 and src.bottom_coord == TENSOR_UNIT:
-            if dst.level == 3 and dst.bottom_coord == SHARED_MEMORY:  # Tensor Unit -> Shared Memory
+        elif src.level == 4 and src.bottom_coord in (TENSOR_UNIT, VECTOR_UNIT):
+            if dst.level == 3 and dst.bottom_coord == SHARED_MEMORY:  # Tensor Unit / Vector Unit -> Shared Memory
                 router = src.create_mlcoord_with_different_bottom_coord(ROUTER)
                 return [src, router, dst]
             elif ((dst.level == 2 and dst.bottom_coord == DRAM) or 
-                  (dst.level == 2 and dst.bottom_coord == PHY)):  # Tensor Unit -> DRAM / PHY
+                  (dst.level == 2 and dst.bottom_coord == PHY)):  # Tensor Unit / Vector Unit -> DRAM / PHY
                 shared_memory = src.outer_coord.create_mlcoord_with_different_bottom_coord(SHARED_MEMORY)
                 router = src.create_mlcoord_with_different_bottom_coord(ROUTER)
                 return [src, router, shared_memory, dst]

@@ -28,7 +28,6 @@ class CoreFactory(Factory):
             vector2buffer=config.network['vector2buffer'],
             buffer2router=config.network['buffer2router'],
             router2buffer=config.network['router2buffer'],
-            size=(4, )
         )
         communication_network = CoreCommunicationPoint(communication_config)
         core.add_communication_network(communication_network)
