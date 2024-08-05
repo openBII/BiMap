@@ -5,7 +5,7 @@
 ActionModel 类负责各种动作的响应
 """
 import logging
-from copy import deepcopy
+from copy import copy, deepcopy
 from typing import List, Union, Tuple, Iterable, Dict
 from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.task_rabbit.task_model.bias_type import BiasType
@@ -258,24 +258,31 @@ class ActionModel():
                   output: Union[STaskBlock, OutputTaskBlock], 
                   split_vector: SplitVector, task_dict: Dict = None):
         task_dict = {} if task_dict is None else task_dict
-
-        weight_on_chip: TaskBlock = self.copy_task(weight.id)
-        split_weight = self.split_task(weight_on_chip.id, SplitVector(nf=split_vector.nf, nr=split_vector.nr))
+        # tile weight
+        split_weight = self.split_task(
+            weight.id, SplitVector(nf=split_vector.nf, nr=split_vector.nr))
         self.connect_tasks([weight], split_weight)
-
-        split_mlp = self.split_task(compute.id, SplitVector(nf=split_vector.nf, nr=split_vector.nr))
+        # tile computation
+        split_mlp = self.split_task(
+            compute.id, 
+            SplitVector(batch=split_vector.batch, token=split_vector.token,
+                        nf=split_vector.nf, nr=split_vector.nr))
         self.connect_tasks(split_weight, split_mlp)
-
-        if len(split_inputs) == split_vector.nr:
+        # tile input
+        required_num_inputs = (split_vector.nr * split_vector.batch * 
+                               split_vector.token)
+        if len(split_inputs) == required_num_inputs:
             self.connect_tasks(split_inputs, split_mlp)
-        elif len(split_inputs) > split_vector.nr:
-            assert len(split_inputs) % split_vector.nr == 0
-            num_grouped_inputs = len(split_inputs) // split_vector.nr
+        elif len(split_inputs) > required_num_inputs:
+            assert len(split_inputs) % required_num_inputs == 0
+            num_grouped_inputs = len(split_inputs) // required_num_inputs
             concats = []
-            for _ in range(split_vector.nr):
+            concat_shape = copy(split_inputs[0].shape)
+            concat_shape.nf = concat_shape.nf * num_grouped_inputs
+            for _ in range(required_num_inputs):
                 concat = create_compute(
                     task_graph=self._task_graph,
-                    shape=Shape(nf=split_inputs[0].shape.nf * num_grouped_inputs), 
+                    shape=concat_shape, 
                     type=TaskBlockType.MCONCAT,
                     precision=split_inputs[0].precision
                 )
@@ -284,13 +291,14 @@ class ActionModel():
             self.connect_tasks(concats, split_mlp)
             task_dict["concat"] = concats
         else:
-            assert split_vector.nr % len(split_inputs) == 0
-            num_split = split_vector.nr // len(split_inputs)
+            assert required_num_inputs % len(split_inputs) == 0
+            num_split = required_num_inputs // len(split_inputs)
             new_split_inputs = []
             last_compute = []
             for task in split_inputs:
                 last_compute.extend(list(task.in_tasks))
-                new_split_inputs.extend(self.split_task(task.id, SplitVector(nf=num_split)))
+                new_split_inputs.extend(
+                    self.split_task(task.id, SplitVector(nf=num_split)))
                 # self.delete_task(task.id)
                 self.disable_task(task.id)
             self.connect_tasks(last_compute, new_split_inputs)
@@ -320,7 +328,11 @@ class ActionModel():
         #         self.connect_tasks(new_split_inputs, split_mlp[split_vector.nr * i:split_vector.nr * (i + 1)])
         #     new_tasks.append(new_split_inputs)
 
-        split_mlp_output: List[TaskBlock] = self.split_and_copy_task(output.id, SplitVector(nf=split_vector.nf), num=split_vector.nr - 1)
+        split_mlp_output: List[TaskBlock] = self.split_and_copy_task(
+            output.id, 
+            SplitVector(batch=split_vector.batch, token=split_vector.token,
+                        nf=split_vector.nf), 
+            num=split_vector.nr - 1)
         self.connect_tasks(split_mlp, split_mlp_output)
         task_dict["weight"] = split_weight
         task_dict["compute"] = split_mlp
@@ -329,36 +341,38 @@ class ActionModel():
         
         if split_vector.nr > 1:
             add_tasks: List[TaskBlock] = []
-            for _ in range(split_vector.nf):
+            add_shape = copy(split_mlp_output[0].shape)
+            add_shape.branch = split_vector.nr
+            required_num_outputs = (split_vector.batch * split_vector.token * 
+                                    split_vector.nf)
+            for _ in range(required_num_outputs):
                 add_task = create_compute(
                     task_graph=self._task_graph,
-                    shape=Shape(nf=split_mlp_output[0].shape.nf, branch=split_vector.nr),
+                    shape=add_shape,
                     type=TaskBlockType.CADD,
                     precision=compute.precision
                 )
                 add_tasks.append(add_task)
             self.connect_tasks(split_mlp_output, add_tasks)
 
-            split_add_output = self.split_task(output.id, SplitVector(nf=split_vector.nf))
+            split_add_output = self.split_task(
+                output.id, 
+                SplitVector(batch=split_vector.batch, token=split_vector.token, 
+                            nf=split_vector.nf))
             self.connect_tasks(add_tasks, split_add_output)
             task_dict["add"] = add_tasks
             task_dict["add_output"] = split_add_output
             task_dict["output"] = split_add_output
 
         # self.delete_tasks([input, compute, weight_on_chip])
-        self.delete_task(weight_on_chip.id)
         if input is None:
             self.disable_tasks([compute, output])
         else:
             self.disable_tasks([input, compute, output])
 
         if len(output.out_tasks) != 0:
-            if split_vector.nr > 1:
-                for out_task in output.out_tasks:
-                    self.connect_tasks(split_add_output, [out_task])
-            else:
-                for out_task in output.out_tasks:
-                    self.connect_tasks(split_mlp_output, [out_task])
+            for out_task in output.out_tasks:
+                self.connect_tasks(task_dict["output"], [out_task])
 
         # return new_split_inputs, split_weight, split_mlp, split_mlp_output, add_tasks, split_add_output
         return task_dict
