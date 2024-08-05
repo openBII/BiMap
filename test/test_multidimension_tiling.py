@@ -39,13 +39,7 @@ def test_split_mlp():
                     width='1920px', height='1080px')
     
 def test_split_mlps():
-    # split_vector0 = SplitVector(batch=2, token=2, nf=2)
-    # split_vector1 = SplitVector(batch=2, token=2, nr=2)
-
-    # split_vector0 = SplitVector(batch=2, token=2, nf=2)
-    # split_vector1 = SplitVector(batch=2, token=2, nf=2)
-
-    split_vector0 = SplitVector(batch=2, token=2, nr=2)
+    split_vector0 = SplitVector(batch=2, token=2, nf=2)
     split_vector1 = SplitVector(batch=2, token=2, nr=2)
 
     # Construct a task graph
@@ -75,6 +69,39 @@ def test_split_mlps():
         mlp_input.id, 
         SplitVector(batch=split_vector0.batch, token=split_vector0.token))
     env.add_nodes_between(mlp_input, task_dict[0]["compute"], split_inputs)
+    split_task_dict = {}
+    split_task_dict[0] = {}
+    env.split_mlp(split_inputs, task_dict[0]["weight"], 
+                  task_dict[0]["compute"], mlp_output, split_vector0, 
+                  task_dict=split_task_dict[0])
+    split_task_dict[1] = {}
+    env.split_mlp(split_task_dict[0]["output"], task_dict[1]["weight"],
+                  task_dict[1]["compute"], output, split_vector1,
+                  task_dict=split_task_dict[1])
+    env.connect_tasks(split_task_dict[1]["output"], [output])
+    env.enable_task(output.id)
+    env.undo()
+    env.undo()
+
+    split_vector0 = SplitVector(batch=2, token=2, nf=2)
+    split_vector1 = SplitVector(batch=2, token=2, nf=2)
+    split_task_dict = {}
+    split_task_dict[0] = {}
+    env.split_mlp(split_inputs, task_dict[0]["weight"], 
+                  task_dict[0]["compute"], mlp_output, split_vector0, 
+                  task_dict=split_task_dict[0])
+    split_task_dict[1] = {}
+    env.split_mlp(split_task_dict[0]["output"], task_dict[1]["weight"],
+                  task_dict[1]["compute"], output, split_vector1,
+                  task_dict=split_task_dict[1])
+    env.connect_tasks(split_task_dict[1]["output"], [output])
+    env.enable_task(output.id)
+    env.undo()
+    env.undo()
+
+
+    split_vector0 = SplitVector(batch=2, token=2, nr=2)
+    split_vector1 = SplitVector(batch=2, token=2, nr=2)
     split_task_dict = {}
     split_task_dict[0] = {}
     env.split_mlp(split_inputs, task_dict[0]["weight"], 
