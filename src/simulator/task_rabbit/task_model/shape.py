@@ -1,7 +1,7 @@
 import operator
 from functools import reduce
 from typing import Tuple
-from copy import deepcopy
+from copy import copy
 
 
 class Shape():
@@ -12,7 +12,8 @@ class Shape():
     如果某个维度大小为0，则意味着不存在这一维度
     """
 
-    def __init__(self, nx=0, nr=0, nf=0, ny=0, nky=0, nkx=0, niy=0, nix=0, batch=1, branch=1):
+    def __init__(self, nx=0, nr=0, nf=0, ny=0, nky=0, nkx=0, niy=0, nix=0, 
+                 batch=1, branch=1, token=1):
         self.nx = nx
         self.nr = nr
         self.nf = nf
@@ -26,6 +27,8 @@ class Shape():
         self.batch = batch
 
         self.branch = branch
+
+        self.token = token
 
         # self.additional_dims    # for extension
 
@@ -59,7 +62,8 @@ class Shape():
 
     @property
     def dim_tuple(self) -> Tuple[int]:
-        return (self.ny, self.nx, self.nf, self.nr, self.nky, self.nkx)
+        return (self.ny, self.nx, self.nf, self.nr, self.nky, self.nkx, 
+                self.token, self.batch)
 
     @property
     def dim_num(self) -> int:
@@ -183,12 +187,12 @@ class Shape():
 
 
 class SplitVector(Shape):
-    def __init__(self, nx=1, nr=1, nf=1, ny=1, batch=1):
-        super().__init__(nx, nr, nf, ny, batch=batch)
+    def __init__(self, nx=1, nr=1, nf=1, ny=1, batch=1, token=1):
+        super().__init__(nx, nr, nf, ny, batch=batch, token=token)
 
     @property
     def num_slices(self):
-        return self.batch * self.ny * self.nx * self.nf * self.nr
+        return self.batch * self.ny * self.nx * self.nf * self.nr * self.token
     
     @staticmethod
     def split_integer(n: int, k: int):
@@ -198,7 +202,10 @@ class SplitVector(Shape):
         return result
 
     def generate_slice_shapes(self, task_shape: Shape):
-        self.batch_slices = SplitVector.split_integer(task_shape.batch, self.batch)
+        self.batch_slices = SplitVector.split_integer(task_shape.batch, 
+                                                      self.batch)
+        self.token_slices = SplitVector.split_integer(task_shape.token, 
+                                                      self.token)
         self.y_slices = SplitVector.split_integer(task_shape.ny, self.ny)
         self.x_slices = SplitVector.split_integer(task_shape.nx, self.nx)
         self.f_slices = SplitVector.split_integer(task_shape.nf, self.nf)
@@ -206,23 +213,27 @@ class SplitVector(Shape):
     
     def slice_shape_generator(self, task_shape: Shape):
         for b in range(self.batch):
-            for y in range(self.ny):
-                for x in range(self.nx):
-                    for f in range(self.nf):
-                        for r in range(self.nr):
-                            slice_shape = deepcopy(task_shape)
-                            slice_shape.batch = self.batch_slices[b]
-                            slice_shape.ny = self.y_slices[y]
-                            slice_shape.nx = self.x_slices[x]
-                            slice_shape.nf = self.f_slices[f]
-                            slice_shape.nr = self.r_slices[r]
-                            yield slice_shape
+            for t in range(self.token):
+                for y in range(self.ny):
+                    for x in range(self.nx):
+                        for f in range(self.nf):
+                            for r in range(self.nr):
+                                slice_shape = copy(task_shape)
+                                slice_shape.batch = self.batch_slices[b]
+                                slice_shape.token = self.token_slices[t]
+                                slice_shape.ny = self.y_slices[y]
+                                slice_shape.nx = self.x_slices[x]
+                                slice_shape.nf = self.f_slices[f]
+                                slice_shape.nr = self.r_slices[r]
+                                yield slice_shape
     
     def __hash__(self) -> int:
-        return hash(str(self.batch) + str(self.ny) + str(self.nx) + str(self.nf) + str(self.nr))
+        return hash(str(self.batch) + str(self.token) + str(self.ny) +
+                    str(self.nx) + str(self.nf) + str(self.nr))
     
     def __iter__(self):
-        return iter([self.batch, self.ny, self.nx, self.nf, self.nr])
+        return iter([self.batch, self.token, self.ny, self.nx, self.nf, 
+                     self.nr])
 
 
 if __name__ == "__main__":
