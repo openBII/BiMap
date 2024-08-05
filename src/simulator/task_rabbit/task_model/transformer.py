@@ -1,6 +1,5 @@
-from copy import deepcopy
+from copy import copy
 from typing import Dict, Union, Iterable, Sequence
-from math import sqrt
 from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
@@ -67,16 +66,41 @@ def create_ffn(task_graph: TaskGraph, input: TaskBlock, inner_dim: int,
 def create_mlp(task_graph: TaskGraph, input: TaskBlock, shape: Shape, 
                precision: Precision, is_output: bool = False, 
                task_dict: Dict = None, weight: TaskBlock = None):
+    assert (input.shape.nf == shape.nr or input.shape.nr == shape.nr)
     task_dict = {} if task_dict is None else task_dict
-    weight = create_static(task_graph, shape, precision) if weight is None else weight
-    mlp = create_compute(task_graph, shape, TaskBlockType.CVM, precision)
-    output = create_data(task_graph, Shape(nf=shape.nf), precision, is_output)
+    if weight is None:
+        weight = create_static(task_graph, Shape(nr=shape.nr, nf=shape.nf), 
+                               precision)
+    compute_shape = Shape(batch=input.shape.batch, token=input.shape.token,
+                          nr=shape.nr, nf=shape.nf)
+    mlp = create_compute(task_graph, compute_shape, TaskBlockType.CVM, 
+                         precision)
+    output_shape = Shape(batch=input.shape.batch, token=input.shape.token,
+                         nf=shape.nf)
+    output = create_data(task_graph, output_shape, precision, is_output)
     task_graph.connect(weight.id, mlp.id)
     task_graph.connect_tasks_in_sequence([input, mlp, output])
     task_dict["compute"] = mlp
     task_dict["weight"] = weight
     task_dict["output"] = output
     return output, task_dict
+
+# def create_mm(task_graph: TaskGraph, input: TaskBlock, shape: Shape,
+#               precision: Precision, is_output: bool = False,
+#               task_dict: Dict = None, weight: TaskBlock = None):
+#     task_dict = {} if task_dict is None else task_dict
+#     weight = create_static(task_graph, Shape(nr=shape.nr, nf=shape.nf))
+#     mm = create_compute(task_graph, shape, TaskBlockType.CMM, precision)
+#     output = create_data(task_graph, 
+#                          Shape(token=shape.token, nf=shape.nf), 
+#                          precision, is_output)
+#     task_graph.connect(weight.id, mm.id)
+#     task_graph.connect_tasks_in_sequence([input, mm, output])
+#     task_dict["compute"] = mm
+#     task_dict["input"] = input
+#     task_dict["weight"] = weight
+#     task_dict["output"] = output
+#     return output, task_dict
 
 def create_pointwise(task_graph: TaskGraph, input: TaskBlock,
                      precision: Precision, type: TaskBlockType, 
@@ -127,7 +151,7 @@ def create_concat(task_graph: TaskGraph, inputs: Iterable[TaskBlock],
                   shape: Shape, precision: Precision,
                   is_output: bool = False, task_dict: Dict = None):
     task_dict = {} if task_dict is None else task_dict
-    concat_shape = deepcopy(shape)
+    concat_shape = copy(shape)
     concat_shape.branch = len(inputs)
     concat = create_compute(task_graph, concat_shape, 
                             TaskBlockType.MCONCAT, precision)
@@ -138,6 +162,91 @@ def create_concat(task_graph: TaskGraph, inputs: Iterable[TaskBlock],
     if task_dict is not None:
         task_dict["move"] = concat
         task_dict["output"] = output
+    return output, task_dict
+
+def create_prefill_attention(task_graph: TaskGraph, embedding: TaskBlock,
+                             d_key: int, d_value: int, 
+                             precision: Precision,
+                             is_output: bool = False, task_dict: Dict = None):
+    task_dict = {} if task_dict is None else task_dict
+    num_tokens = embedding.shape.token
+    d_model = max(embedding.shape.nf, embedding.shape.nr)
+    task_dict["query"] = {}
+    query, _ = create_mlp(
+        task_graph, embedding, 
+        Shape(nr=d_model, nf=d_key), 
+        precision, task_dict=task_dict["query"])
+    task_dict["key"] = {}
+    key, _ = create_mlp(task_graph, embedding, 
+                        Shape(nr=d_model, nf=d_key), 
+                        precision, task_dict=task_dict["key"])
+    task_dict["value"] = {}
+    value, _ = create_mlp(
+        task_graph, embedding, 
+        Shape(nr=d_model, nf=d_value), 
+        precision, task_dict=task_dict["key"])
+    task_dict["dot_product"] = {}
+    dot_product_output, _ = create_mlp(
+        task_graph, query, 
+        Shape(nr=d_key, nf=num_tokens), 
+        precision, task_dict["dot_product"], key)
+    task_dict["add"] = {}
+    mask = create_static(task_graph, Shape(token=num_tokens, nf=num_tokens),
+                         precision)
+    task_dict["add"]["mask"] = mask
+    add_output, _ = create_add(task_graph, [dot_product_output, mask], 
+                               mask.shape, precision, 
+                               task_dict=task_dict["add"])
+    task_dict["softmax"] = {}
+    softmax_output, _ = create_pointwise(
+        task_graph, add_output, precision, TaskBlockType.CSSoftMax,
+        task_dict=task_dict["softmax"])
+    task_dict["attention"] = {}
+    output, _ = create_mlp(
+        task_graph, softmax_output, 
+        Shape(nr=d_key, nf=d_value), 
+        precision, is_output, task_dict["attention"], value)
+    return output, task_dict
+
+def create_final_prefill_attention(task_graph: TaskGraph, embedding: TaskBlock,
+                                   d_key: int, d_value: int, 
+                                   precision: Precision, 
+                                   is_output: bool = False, 
+                                   task_dict: Dict = None):
+    # 2MM + Attention
+    task_dict = {} if task_dict is None else task_dict
+    num_tokens = embedding.shape.token
+    d_model = embedding.shape.nr
+    last_embedding = create_data(task_graph, Shape(nf=embedding.shape.nf), 
+                                 precision)
+    task_graph.connect(embedding.id, last_embedding.id)
+    task_dict["query"] = {}
+    query, _ = create_mlp(task_graph, last_embedding, 
+                          Shape(nr=d_model, nf=d_key), 
+                          precision, task_dict=task_dict["query"])
+    task_dict["key"] = {}
+    key, _ = create_mlp(task_graph, embedding, 
+                        Shape(nr=d_model, nf=d_key), 
+                        precision, task_dict=task_dict["key"])
+    task_dict["value"] = {}
+    value, _ = create_mlp(
+        task_graph, embedding, 
+        Shape(nr=d_model, nf=d_value), 
+        precision, task_dict=task_dict["key"])
+    task_dict["dot_product"] = {}
+    dot_product_output, _ = create_mlp(task_graph, query,
+                                       Shape(nr=d_key, nf=num_tokens), 
+                                       precision,
+                                       task_dict=task_dict["dot_product"], 
+                                       weight=key)
+    task_dict["softmax"] = {}
+    softmax_output, _ = create_pointwise(
+        task_graph, dot_product_output, precision, TaskBlockType.CSSoftMax,
+        task_dict=task_dict["softmax"])
+    task_dict["attention"] = {}
+    output, _ = create_mlp(
+        task_graph, softmax_output, Shape(nr=num_tokens, nf=d_value), precision, 
+        is_output, task_dict["attention"], value)
     return output, task_dict
 
 def create_attention(task_graph: TaskGraph, embedding: TaskBlock,
@@ -218,9 +327,65 @@ def create_multi_head_attention(task_graph: TaskGraph, embedding: TaskBlock,
                                      task_dict=task_dict["concat"])
     task_dict["mlp"] = {}
     output, _ = create_mlp(task_graph, concat_output,
-                            Shape(nr=d_value, nf=d_model), 
-                            precision, is_output, task_dict=task_dict["mlp"])
+                           Shape(nr=d_value, nf=d_model), 
+                           precision, is_output, task_dict=task_dict["mlp"])
     
+    return output, task_dict
+
+def create_prefill_multi_head_attention(task_graph: TaskGraph, 
+                                        embedding: TaskBlock,
+                                        d_key: int, d_value: int, 
+                                        head: int, precision: Precision, 
+                                        is_output: bool = False, 
+                                        task_dict: Dict = None):
+    task_dict = {} if task_dict is None else task_dict
+    num_tokens = embedding.shape.token
+    d_model = embedding.shape.nf
+    new_d_key = d_key // head
+    new_d_value = d_value // head
+    outputs = []
+    for i in range(head):
+        task_dict[i] = {}
+        output, _ = create_prefill_attention(task_graph, embedding, 
+                                             new_d_key, new_d_value,
+                                             precision, task_dict=task_dict[i])
+        outputs.append(output)
+    task_dict["concat"] = {}
+    concat_output, _ = create_concat(task_graph, outputs, 
+                                     Shape(token=num_tokens, nf=d_value), 
+                                     precision, task_dict=task_dict["concat"])
+    task_dict["mlp"] = {}
+    output, _ = create_mlp(task_graph, concat_output,
+                           Shape(nr=d_value, nf=d_model), 
+                           precision, is_output, task_dict=task_dict["mlp"])
+    return output, task_dict
+
+def create_final_prefill_multi_head_attention(task_graph: TaskGraph, 
+                                              embedding: TaskBlock,
+                                              d_key: int, d_value: int, 
+                                              head: int, precision: Precision, 
+                                              is_output: bool = False, 
+                                              task_dict: Dict = None):
+    task_dict = {} if task_dict is None else task_dict
+    d_model = embedding.shape.nf
+    new_d_key = d_key // head
+    new_d_value = d_value // head
+    outputs = []
+    for i in range(head):
+        task_dict[i] = {}
+        output, _ = create_final_prefill_attention(task_graph, embedding, 
+                                                   new_d_key, new_d_value,
+                                                   precision, 
+                                                   task_dict=task_dict[i])
+        outputs.append(output)
+    task_dict["concat"] = {}
+    concat_output, _ = create_concat(task_graph, outputs, 
+                                     Shape(nf=d_value), 
+                                     precision, task_dict=task_dict["concat"])
+    task_dict["mlp"] = {}
+    output, _ = create_mlp(task_graph, concat_output,
+                           Shape(nr=d_value, nf=d_model), 
+                           precision, is_output, task_dict=task_dict["mlp"])
     return output, task_dict
 
 def create_layer_norm(task_graph: TaskGraph, input: TaskBlock,
@@ -277,10 +442,10 @@ def create_add(task_graph: TaskGraph, inputs: Iterable[TaskBlock],
                shape: Shape, precision: Precision, is_output: bool = False,
                task_dict: Dict = None, constant: float = None):
     task_dict = {} if task_dict is None else task_dict
-    add = create_compute(
-        task_graph, 
-        Shape(ny=shape.ny, nx=shape.nx, nf=shape.nf, branch=len(inputs)), 
-        TaskBlockType.CADD, precision, constant)
+    compute_shape = copy(shape)
+    compute_shape.branch = len(inputs)
+    add = create_compute(task_graph, compute_shape, 
+                         TaskBlockType.CADD, precision, constant)
     output = create_data(task_graph, shape, precision, is_output)
     for input in inputs:
         task_graph.connect(input.id, add.id)
@@ -337,6 +502,35 @@ def create_attention_block(task_graph: TaskGraph, embedding: TaskBlock,
                                  TaskBlockType.CLayerNorm, is_output,
                                  task_dict["layer_norm"])
     return output, task_dict
+
+def create_prefill_attention_block(task_graph: TaskGraph, embedding: TaskBlock,
+                                   d_key: int, d_value: int, 
+                                   head: int, precision: Precision, 
+                                   is_output: bool = False, 
+                                   task_dict: Dict = None,
+                                   is_final: bool = False):
+    '''
+    This function can be applied to prefill and final prefill
+    '''
+    task_dict = {} if task_dict is None else task_dict
+    task_dict["multi_head_attention"] = {}
+    if is_final:
+        attention_output, _ = create_final_prefill_multi_head_attention(
+            task_graph, embedding, d_key, d_value, head, 
+            precision, task_dict=task_dict["multi_head_attention"])
+    else:
+        attention_output, _ = create_prefill_multi_head_attention(
+            task_graph, embedding, d_key, d_value, head, 
+            precision, task_dict=task_dict["multi_head_attention"])
+    task_dict["add"] = {}
+    add_output, _ = create_add(task_graph, [embedding, attention_output],
+                               embedding.shape, precision,
+                               task_dict=task_dict["add"])
+    task_dict["layer_norm"] = {}
+    output, _ = create_pointwise(task_graph, add_output, precision,
+                                 TaskBlockType.CLayerNorm, is_output,
+                                 task_dict["layer_norm"])
+    return output, task_dict
     
 def create_ffn_block(task_graph: TaskGraph, input: TaskBlock, inner_dim: int,
                      precision: Precision, activation_type: TaskBlockType,
@@ -370,6 +564,61 @@ def create_transformer_layer(task_graph: TaskGraph, embedding: TaskBlock,
     output, _ = create_ffn_block(task_graph, attention_output, ffn_inner_dim,
                                  precision, activation_type, is_output, 
                                  task_dict["ffn"])
+    return output, task_dict
+
+def create_prefill_transformer_layer(task_graph: TaskGraph, 
+                                     embedding: TaskBlock,
+                                     d_key: int, d_value: int, 
+                                     head: int, ffn_inner_dim: int, 
+                                     activation_type: TaskBlockType,
+                                     precision: Precision, 
+                                     is_output: bool = False, 
+                                     task_dict: Dict = None,
+                                     is_final: bool = False):
+    task_dict = {} if task_dict is None else task_dict
+    task_dict["attention"] = {}
+    attention_output, _ = create_prefill_attention_block(
+        task_graph, embedding, d_key, d_value, head, 
+        precision, task_dict=task_dict["attention"], is_final=is_final)
+    task_dict["ffn"] = {}
+    output, _ = create_ffn_block(task_graph, attention_output, ffn_inner_dim,
+                                 precision, activation_type, is_output, 
+                                 task_dict["ffn"])
+    return output, task_dict
+
+def create_prefill_transformer(task_graph: TaskGraph, 
+                               input_embedding: TaskBlock, 
+                               position_encoding: TaskBlock, num_layers: int,
+                               num_words: int, d_key: int, d_value: int, 
+                               head: int, ffn_inner_dim: int, 
+                               activation_type: TaskBlockType,
+                               precision: Precision, task_dict: Dict = None):
+    task_dict = {} if task_dict is None else task_dict
+    task_dict["add"] = {}
+    embedding, _ = create_add(task_graph, [input_embedding, position_encoding],
+                              input_embedding.shape, precision,
+                              task_dict=task_dict["add"])
+    embeddings = [embedding]
+    for i in range(num_layers - 1):
+        task_dict[i] = {}
+        new_embedding, _ = create_prefill_transformer_layer(
+            task_graph, embeddings[i], d_key, d_value, 
+            head, ffn_inner_dim, activation_type, precision,
+            task_dict=task_dict[i])
+        embeddings.append(new_embedding)
+    new_embedding, _ = create_prefill_transformer_layer(
+        task_graph, embeddings[i], d_key, d_value, 
+        head, ffn_inner_dim, activation_type, precision,
+        task_dict=task_dict[i], is_final=True
+    )
+    task_dict["mlp"] = {}
+    mlp_output, _ = create_mlp(task_graph, new_embedding, 
+                               Shape(nr=embedding.shape.nf, nf=num_words),
+                               precision, task_dict=task_dict["mlp"])
+    task_dict["softmax"] = {}
+    output, _ = create_pointwise(task_graph, mlp_output, precision, 
+                                 TaskBlockType.CSoftMax,
+                                 True, task_dict["softmax"])
     return output, task_dict
 
 def create_transformer(task_graph: TaskGraph, input_embedding: TaskBlock, 
