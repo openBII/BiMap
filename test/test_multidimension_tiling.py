@@ -2,10 +2,13 @@ from src.simulator.resource_simulator.st_env import STEnv
 from src.simulator.task_rabbit.task_model.shape import Shape, SplitVector
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
+from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from src.simulator.resource_simulator.config.matrix_config import ServerConfig
-from src.simulator.resource_simulator.st_model.space_matrix.server_factory import ServerFactory
+from src.simulator.resource_simulator.st_model.space_matrix.server_factory \
+    import ServerFactory
 from src.simulator.resource_simulator.st_draw import STDraw
-from src.simulator.task_rabbit.task_model.transformer import create_input, create_mlp
+from src.simulator.task_rabbit.task_model.transformer import create_input, \
+    create_mlp, create_pointwise
 
 
 def test_split_mlp():
@@ -115,7 +118,36 @@ def test_split_mlps():
     env.enable_task(output.id)
     STDraw.draw_graph(task_graph, out_path='temp/tiled_mlp2.task.html',
                       width='1920px', height='1080px')
+    
+def test_split_pointwise():
+    split_vector = SplitVector(batch=2, token=2, nf=2)
+
+    # Construct a task graph
+    task_graph = TaskGraph()
+    _, input = create_input(task_graph, Shape(batch=64, token=128, nf=2048), 
+                            Precision.FLOAT_16)
+    output, task_dict = create_pointwise(task_graph, input, Precision.FLOAT_16,
+                                         TaskBlockType.CRELU, True)
+    STDraw.draw_graph(task_graph, out_path='temp/pointwise.task.html',
+                      width='1920px', height='1080px')
+
+    # Construct a hardware
+    config = ServerConfig("top/gpu_server.toml")
+    server = ServerFactory.create_matrix(config)
+    # Construct a simulation environment
+    env = STEnv(task_graph, server)
+
+    split_inputs = env.split_task(
+        input.id, 
+        SplitVector(batch=split_vector.batch, token=split_vector.token))
+    env.add_nodes_between(input, task_dict["compute"], split_inputs)
+    task_dict = env.split_pointwise(split_inputs, task_dict["compute"],
+                                    output, split_vector)
+    env.connect_tasks(task_dict["output"], [output])
+    env.enable_task(output.id)
+    STDraw.draw_graph(task_graph, out_path='temp/tiled_pointwise.task.html',
+                      width='1920px', height='1080px')
 
 
 if __name__ == "__main__":
-    test_split_mlps()
+    test_split_pointwise()

@@ -814,10 +814,11 @@ class STEnv():
         self._history.push_state(reverse_call)
         return task_dict
     
-    def split_pointwise(self, input: STaskBlock, split_inputs: List[STaskBlock], 
+    def split_pointwise(self, split_inputs: List[STaskBlock], 
                         compute: CTaskBlock, 
                         output: Union[STaskBlock, OutputTaskBlock], 
                         split_vector: SplitVector,
+                        input: STaskBlock = None,
                         task_dict: Dict = None):
         task_dict = self._actor.split_pointwise(input, split_inputs, compute, 
                                                 output, split_vector,
@@ -828,7 +829,7 @@ class STEnv():
         reverse_call = Call(self._actor.reverse_split, new_tasks, 
                             [compute, output] + split_inputs)
         self._history.push_state(reverse_call)
-        return new_tasks
+        return task_dict
     
     def split_elementwise(self, inputs: List[STaskBlock],
                           split_inputs: List[List[STaskBlock]],

@@ -365,10 +365,7 @@ class ActionModel():
             task_dict["output"] = split_add_output
 
         # self.delete_tasks([input, compute, weight_on_chip])
-        if input is None:
-            self.disable_tasks([compute, output])
-        else:
-            self.disable_tasks([input, compute, output])
+        self.disable_tasks([input, compute, output])
 
         if len(output.out_tasks) != 0:
             for out_task in output.out_tasks:
@@ -386,25 +383,30 @@ class ActionModel():
 
         split_compute = self.split_task(compute.id, split_vector)
 
-        if len(split_inputs) >= split_vector.nf:
-            assert len(split_inputs) % split_vector.nf == 0
+        required_num_inputs = (split_vector.batch * split_vector.token *
+                               split_vector.nf)
+        if len(split_inputs) >= required_num_inputs:
+            assert len(split_inputs) % required_num_inputs == 0
             self.connect_tasks(split_inputs, split_compute)
         else:
-            assert split_vector.nf % len(split_inputs) == 0
-            num_split = split_vector.nf // len(split_inputs)
+            assert required_num_inputs % len(split_inputs) == 0
+            num_split = required_num_inputs // len(split_inputs)
             new_split_inputs = []
             last_compute = []
             for task in split_inputs:
                 last_compute.extend(list(task.in_tasks))
-                new_split_inputs.extend(self.split_task(task.id, SplitVector(nf=num_split)))
-                # self.delete_task(task.id)
+                new_split_inputs.extend(
+                    self.split_task(task.id, SplitVector(nf=num_split)))
                 self.disable_task(task.id)
             self.connect_tasks(last_compute, new_split_inputs)
             self.connect_tasks(new_split_inputs, split_compute)
             task_dict["input"] = new_split_inputs
 
         if output.shape.nr != 0:
-            split_output = self.split_task(output.id, SplitVector(nx=split_vector.nx, ny=split_vector.ny, nr=split_vector.nf))
+            output_split_vector = copy(split_vector)
+            output_split_vector.nr = split_vector.nf
+            output_split_vector.nf = 1
+            split_output = self.split_task(output.id, output_split_vector)
         else:
             split_output = self.split_task(output.id, split_vector)
         self.connect_tasks(split_compute, split_output)
@@ -415,7 +417,6 @@ class ActionModel():
             for out_task in output.out_tasks:
                 self.connect_tasks(split_output, [out_task])
 
-        # self.delete_tasks([compute, input])
         self.disable_tasks([compute, input, output])
 
         return task_dict
@@ -783,7 +784,8 @@ class ActionModel():
 
     def disable_tasks(self, tasks: Iterable[TaskBlock]):
         for task in tasks:
-            self.disable_task(task.id)
+            if isinstance(task, TaskBlock):
+                self.disable_task(task.id)
 
     def disable_task(self, task_id):
         self._task_graph.disable_node(task_id)
