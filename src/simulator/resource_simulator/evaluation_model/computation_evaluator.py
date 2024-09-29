@@ -10,6 +10,7 @@ class ComputationEvaluator(Evaluator):
                  mode: EvaluationMode = EvaluationMode.STATIC) -> None:
         super().__init__(mode)
         self.config = config
+        self._latency = config.latency
     
 
 class MACArrayEvaluator(ComputationEvaluator):

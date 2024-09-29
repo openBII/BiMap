@@ -25,6 +25,7 @@ server = ServerFactory.create_matrix(config)
 
 # Construct a simulation environment
 env = STEnv(task_graph, server)
+env.enable_pipeline()
 
 # Define some constants for writing coordinates
 SIZE_X, SIZE_Y = config.PCB.chiplet.size

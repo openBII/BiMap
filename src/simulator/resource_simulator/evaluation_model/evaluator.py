@@ -8,8 +8,10 @@ class EvaluationMode(Enum):
 
 
 class Evaluator():
-    def __init__(self, mode: EvaluationMode = EvaluationMode.STATIC) -> None:
+    def __init__(self, mode: EvaluationMode = EvaluationMode.STATIC,
+                 latency: float = None) -> None:
         self.mode = mode
+        self._latency = latency
 
     def __call__(self, input):
         return self.eval(input)

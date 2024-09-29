@@ -1,4 +1,5 @@
 from copy import copy
+from enum import Enum
 from typing import Dict, Union, Iterable, Sequence
 from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
@@ -11,6 +12,12 @@ from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
+
+
+class AttentionType(Enum):
+    PREFILL = 0
+    DECODE = 1
+
 
 def create_data(task_graph: TaskGraph, shape: Shape, 
                 precision: Precision, is_output: bool = False):
@@ -147,10 +154,12 @@ def create_scale(task_graph: TaskGraph, input: TaskBlock, precision: Precision,
     task_dict["output"] = output
     return output, task_dict
 
-def create_concat(task_graph: TaskGraph, inputs: Iterable[TaskBlock],
+def create_concat(task_graph: TaskGraph, inputs: Sequence[TaskBlock],
                   shape: Shape, precision: Precision,
                   is_output: bool = False, task_dict: Dict = None):
     task_dict = {} if task_dict is None else task_dict
+    shape.batch = inputs[0].shape.batch
+    shape.token = inputs[0].shape.token
     concat_shape = copy(shape)
     concat_shape.branch = len(inputs)
     concat = create_compute(task_graph, concat_shape, 
@@ -184,18 +193,18 @@ def create_prefill_attention(task_graph: TaskGraph, embedding: TaskBlock,
     value, _ = create_mlp(
         task_graph, embedding, 
         Shape(nr=d_model, nf=d_value), 
-        precision, task_dict=task_dict["key"])
+        precision, task_dict=task_dict["value"])
     task_dict["dot_product"] = {}
     dot_product_output, _ = create_mlp(
         task_graph, query, 
         Shape(nr=d_key, nf=num_tokens), 
-        precision, task_dict["dot_product"], key)
+        precision, task_dict=task_dict["dot_product"], weight=key)
     task_dict["add"] = {}
     mask = create_static(task_graph, Shape(token=num_tokens, nf=num_tokens),
                          precision)
     task_dict["add"]["mask"] = mask
     add_output, _ = create_add(task_graph, [dot_product_output, mask], 
-                               mask.shape, precision, 
+                               dot_product_output.shape, precision, 
                                task_dict=task_dict["add"])
     task_dict["softmax"] = {}
     softmax_output, _ = create_pointwise(
@@ -204,7 +213,7 @@ def create_prefill_attention(task_graph: TaskGraph, embedding: TaskBlock,
     task_dict["attention"] = {}
     output, _ = create_mlp(
         task_graph, softmax_output, 
-        Shape(nr=d_key, nf=d_value), 
+        Shape(nr=num_tokens, nf=d_value), 
         precision, is_output, task_dict["attention"], value)
     return output, task_dict
 
@@ -217,8 +226,9 @@ def create_final_prefill_attention(task_graph: TaskGraph, embedding: TaskBlock,
     task_dict = {} if task_dict is None else task_dict
     num_tokens = embedding.shape.token
     d_model = embedding.shape.nr
-    last_embedding = create_data(task_graph, Shape(nf=embedding.shape.nf), 
-                                 precision)
+    last_embedding = create_data(
+        task_graph, Shape(batch=embedding.shape.batch, nf=embedding.shape.nf), 
+        precision)
     task_graph.connect(embedding.id, last_embedding.id)
     task_dict["query"] = {}
     query, _ = create_mlp(task_graph, last_embedding, 
@@ -351,9 +361,10 @@ def create_prefill_multi_head_attention(task_graph: TaskGraph,
                                              precision, task_dict=task_dict[i])
         outputs.append(output)
     task_dict["concat"] = {}
-    concat_output, _ = create_concat(task_graph, outputs, 
-                                     Shape(token=num_tokens, nf=d_value), 
-                                     precision, task_dict=task_dict["concat"])
+    concat_output, _ = create_concat(
+        task_graph, outputs, 
+        Shape(nf=d_value), 
+        precision, task_dict=task_dict["concat"])
     task_dict["mlp"] = {}
     output, _ = create_mlp(task_graph, concat_output,
                            Shape(nr=d_value, nf=d_model), 

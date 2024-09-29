@@ -29,7 +29,7 @@ from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord, P
 from src.simulator.resource_simulator.sync.sync_task import SyncTask
 from src.simulator.resource_simulator.sync.sync_table import SyncTable
 from src.simulator.task_rabbit.task_model.precision import Precision
-from src.simulator.task_rabbit.task_model.transformer import create_compute
+from src.simulator.task_rabbit.task_model.transformer import create_compute, create_concat
 
 
 class ActionModel():
@@ -53,19 +53,41 @@ class ActionModel():
             split_tasks.append(new_task)
         return split_tasks
     
-    def connect_tasks(self, in_tasks: Iterable[TaskBlock], out_tasks: Iterable[TaskBlock]):
+    def connect_tasks(self, in_tasks: Iterable[TaskBlock], 
+                      out_tasks: Iterable[TaskBlock]):
         if len(in_tasks) > len(out_tasks):
             for i, in_task in enumerate(in_tasks):
-                self._task_graph.connect(in_task.id, out_tasks[i % len(out_tasks)].id)
+                self._task_graph.connect(in_task.id, 
+                                         out_tasks[i % len(out_tasks)].id)
         else:
             for i, out_task in enumerate(out_tasks):
-                self._task_graph.connect(in_tasks[i % len(in_tasks)].id, out_task.id)
+                self._task_graph.connect(in_tasks[i % len(in_tasks)].id, 
+                                         out_task.id)
+                
+    def connect_tasks_permuted(self, in_tasks: Iterable[TaskBlock], 
+                               out_tasks: Iterable[TaskBlock]):
+        if len(in_tasks) > len(out_tasks):
+            group = len(in_tasks) // len(out_tasks)
+            for i, in_task in enumerate(in_tasks):
+                self._task_graph.connect(
+                    in_task.id, 
+                    out_tasks[min(i // group, len(out_tasks) - 1)].id)
+        else:
+            group = len(out_tasks) // len(in_tasks)
+            for i, out_task in enumerate(out_tasks):
+                self._task_graph.connect(
+                    in_tasks[min(i // group, len(in_tasks) - 1)].id, 
+                    out_task.id)
 
-    def add_nodes_between(self, source: TaskBlock, destination: TaskBlock,
+    def add_nodes_between(self, source: TaskBlock, 
+                          destination: Union[TaskBlock, Iterable[TaskBlock]],
                           nodes: List[TaskBlock]):
         self.connect_tasks([source], nodes)
-        self.connect_tasks(nodes, [destination])
-        self.delete_edge(source, destination)
+        if isinstance(destination, TaskBlock):
+            destination = [destination]
+        for task in destination:
+            self.connect_tasks(nodes, [task])
+            self.delete_edge(source, task)
 
     def delete_edge(self, src_task: TaskBlock, dst_task: TaskBlock):
         edge = self._task_graph.get_edge(src_task.id, dst_task.id)
@@ -254,58 +276,307 @@ class ActionModel():
         return task_dict
     
     def split_mlp(self, input: STaskBlock, split_inputs: List[STaskBlock], 
-                  weight: StaticTaskBlock, compute: CTaskBlock, 
+                  weight: Union[StaticTaskBlock, STaskBlock], 
+                  compute: CTaskBlock, 
                   output: Union[STaskBlock, OutputTaskBlock], 
-                  split_vector: SplitVector, task_dict: Dict = None):
+                  split_vector: SplitVector, task_dict: Dict = None,
+                  split_weights: List[STaskBlock] = None,
+                  transpose: bool = False):
         task_dict = {} if task_dict is None else task_dict
-        # tile weight
-        split_weight = self.split_task(
-            weight.id, SplitVector(nf=split_vector.nf, nr=split_vector.nr))
-        self.connect_tasks([weight], split_weight)
+
         # tile computation
         split_mlp = self.split_task(
             compute.id, 
             SplitVector(batch=split_vector.batch, token=split_vector.token,
                         nf=split_vector.nf, nr=split_vector.nr))
-        self.connect_tasks(split_weight, split_mlp)
+        task_dict["compute"] = split_mlp
+        
+        # tile weight
+        if isinstance(weight, StaticTaskBlock):
+            split_weight = self.split_task(
+                weight.id, SplitVector(nf=split_vector.nf, nr=split_vector.nr))
+            self.connect_tasks([weight], split_weight)
+            self.connect_tasks(split_weight, split_mlp)
+            task_dict["weight"] = split_weight
+        else:
+            # new_split_weights = self.split_task(
+            #     weight.id, 
+            #     SplitVector(nf=split_vector.nf, nr=split_vector.nr))
+            # (weight_input_task, ) = weight.in_tasks
+            # self.connect_tasks([weight_input_task], split_weight)
+            # self.connect_tasks(split_weight, split_mlp)
+            # self.disable_task(weight.id)
+            # task_dict["weight"] = split_weight
+            if split_weights is None:
+                self.enable_task(weight.id)
+                split_weight = self.split_task(
+                    weight.id, SplitVector(nf=split_vector.nf, 
+                                           nr=split_vector.nr))
+                self.connect_tasks(list(weight.in_tasks), split_weight)
+                self.connect_tasks(split_weight, split_mlp)
+                task_dict["weight"] = split_weight
+                self.disable_task(weight.id)
+            else:
+                if len(split_weights) > 1:
+                    self.enable_task(weight.id)
+                    if transpose:
+                        new_split_weights = self.split_task(
+                            weight.id, 
+                            SplitVector(token=split_vector.nr, 
+                                        nf=split_vector.nf),
+                            record=False)
+                    else:
+                        new_split_weights = self.split_task(
+                            weight.id, 
+                            SplitVector(token=split_vector.nf, 
+                                        nf=split_vector.nr),
+                            record=False)
+                    if new_split_weights[0].shape == split_weights[0].shape:
+                        self.connect_tasks_permuted(split_weights, split_mlp)
+                    else:
+                        concat_shape = copy(weight.shape)
+                        concat = create_compute(
+                            task_graph=self._task_graph,
+                            shape=concat_shape, 
+                            type=TaskBlockType.MCONCAT,
+                            precision=weight.precision
+                        )
+                        self.connect_tasks(split_weights, [concat])
+                        if transpose:
+                            new_split_weights = self.split_task(
+                                weight.id, 
+                                SplitVector(token=split_vector.nr, nf=split_vector.nf))
+                        else:
+                            new_split_weights = self.split_task(
+                                weight.id, 
+                                SplitVector(token=split_vector.nf, nf=split_vector.nr))
+                        self.connect_tasks([concat], new_split_weights)
+                        self.connect_tasks_permuted(new_split_weights, split_mlp)
+                        task_dict["weight_concat"] = concat
+                        task_dict["weight"] = new_split_weights
+                    self.disable_task(weight.id)
+                else:
+                    if transpose:
+                        new_split_weights = self.split_task(
+                            split_weights[0].id, 
+                            SplitVector(token=split_vector.nr, nf=split_vector.nf))
+                    else:
+                        new_split_weights = self.split_task(
+                            split_weights[0].id, 
+                            SplitVector(token=split_vector.nf, nf=split_vector.nr))
+                    self.connect_tasks(list(split_weights[0].in_tasks), 
+                                       new_split_weights)
+                    self.connect_tasks_permuted(new_split_weights, split_mlp)
+                    self.disable_task(split_weights[0].id)
+                    task_dict["weight"] = new_split_weights
+                
+            #     if transpose:
+            #         weight_nf = len(weight) // (split_vector.token * 
+            #                                     split_vector.batch)
+            #         weight_nr = split_vector.token
+            #     else:
+            #         weight_nr = len(weight) // (split_vector.token * 
+            #                                     split_vector.batch)
+            #         weight_nf = split_vector.token
+            #     if (weight_nr == split_vector.nr and 
+            #         weight_nf == split_vector.nf):
+            #         self.connect_tasks(weight, split_mlp)
+            #         task_dict["weight"] = weight
+            #     elif weight_nr > split_vector.nr:
+            #         assert weight_nr % split_vector.nr == 0
+            #         if weight_nf >= split_vector.nf:
+            #             assert weight_nf % split_vector.nf == 0
+            #             num_grouped_weights_nr = weight_nr // split_vector.nr
+            #             num_grouped_weights_nf = weight_nf // split_vector.nf
+            #             num_grouped_weights = (num_grouped_weights_nr * 
+            #                                    num_grouped_weights_nf)
+            #             concats = []
+            #             concat_shape = copy(weight[0].shape)
+            #             concat_shape.nf *= num_grouped_weights_nr
+            #             concat_shape.token *= num_grouped_weights_nf
+            #             for _ in range(len(weight) // num_grouped_weights):
+            #                 concat = create_compute(
+            #                     task_graph=self._task_graph,
+            #                     shape=concat_shape, 
+            #                     type=TaskBlockType.MCONCAT,
+            #                     precision=weight[0].precision)
+            #                 concats.append(concat)
+            #             self.connect_tasks(weight, concats)
+            #             self.connect_tasks(concats, split_mlp)
+            #             task_dict["weight_concat"] = concats
+            #             task_dict["weight"] = weight
+            #         else:
+            #             assert split_vector.nf % weight_nf == 0
+            #             # split in the dimension of token (f)
+            #             num_split = split_vector.nf // weight_nf
+            #             new_split_weights: List[TaskBlock] = []
+            #             last_compute = []
+            #             for task in weight:
+            #                 last_compute.extend(list(task.in_tasks))
+            #                 if transpose:
+            #                     new_split_weights.extend(
+            #                         self.split_task(
+            #                             task.id, SplitVector(nf=num_split)))
+            #                 else:
+            #                     new_split_weights.extend(
+            #                         self.split_task(
+            #                             task.id, SplitVector(token=num_split)))
+            #                 self.disable_task(task.id)
+            #             self.connect_tasks(last_compute, new_split_weights)
+            #             task_dict["weight"] = new_split_weights
+            #             # concat in the dimension of f (token)
+            #             # Change the order in new_split_weights
+            #             rearranged_split_weights = []
+            #             for i in range(num_split):
+            #                 j = i
+            #                 while j < len(new_split_weights):
+            #                     rearranged_split_weights.append(
+            #                         new_split_weights[j])
+            #                     j += num_split
+            #             num_grouped_weights = weight_nr // split_vector.nr
+            #             concats = []
+            #             concat_shape = copy(new_split_weights[0].shape)
+            #             if transpose:
+            #                 concat_shape.token *= num_grouped_weights
+            #             else:
+            #                 concat_shape.nf *= num_grouped_weights
+            #             for _ in range(len(new_split_weights) // 
+            #                            num_grouped_weights):
+            #                 concat = create_compute(
+            #                     task_graph=self._task_graph,
+            #                     shape=concat_shape, 
+            #                     type=TaskBlockType.MCONCAT,
+            #                     precision=weight[0].precision)
+            #                 concats.append(concat)
+            #             self.connect_tasks(rearranged_split_weights, concats)
+            #             self.connect_tasks(concats, split_mlp)
+            #             task_dict["weight_concat"] = concats
+            #     else:
+            #         assert split_vector.nr % weight_nr == 0
+            #         if split_vector.nf >= weight_nf:
+            #             assert split_vector.nf % weight_nf == 0
+            #             num_split_nf = split_vector.nf // weight_nf
+            #             num_split_nr = split_vector.nr // weight_nr
+            #             new_split_weights: List[TaskBlock] = []
+            #             last_compute = []
+            #             for task in weight:
+            #                 last_compute.extend(list(task.in_tasks))
+            #                 new_split_weights.extend(
+            #                     self.split_task(task.id, 
+            #                                     SplitVector(token=num_split_nf,
+            #                                                 nf=num_split_nr)))
+            #                 self.disable_task(task.id)
+            #             self.connect_tasks(last_compute, new_split_weights)
+            #             self.connect_tasks(new_split_weights, split_mlp)
+            #             task_dict["weight"] = new_split_weights
+            #         else:
+            #             assert weight_nf % split_vector.nf == 0
+            #             # split in the dimension of f
+            #             num_split = split_vector.nr // weight_nr
+            #             new_split_weights: List[TaskBlock] = []
+            #             last_compute = []
+            #             for task in weight:
+            #                 last_compute.extend(list(task.in_tasks))
+            #                 new_split_weights.extend(
+            #                     self.split_task(task.id, 
+            #                                     SplitVector(nf=num_split)))
+            #                 self.disable_task(task.id)
+            #             self.connect_tasks(last_compute, new_split_weights)
+            #             task_dict["weight"] = new_split_weights
+            #             # concat in the dimension of token
+            #             num_grouped_weights = weight_nf // split_vector.nf
+            #             concats = []
+            #             concat_shape = copy(new_split_weights[0].shape)
+            #             concat_shape.token *= num_grouped_weights
+            #             for _ in range(len(new_split_weights) //
+            #                            num_grouped_weights):
+            #                 concat = create_compute(
+            #                     task_graph=self._task_graph,
+            #                     shape=concat_shape, 
+            #                     type=TaskBlockType.MCONCAT,
+            #                     precision=weight[0].precision)
+            #                 concats.append(concat)
+            #             self.connect_tasks(new_split_weights, concats)
+            #             self.connect_tasks(concats, split_mlp)
+            #             task_dict["weight_concat"] = concats
+
         # tile input
-        required_num_inputs = (split_vector.nr * split_vector.batch * 
-                               split_vector.token)
-        if len(split_inputs) == required_num_inputs:
-            self.connect_tasks(split_inputs, split_mlp)
-        elif len(split_inputs) > required_num_inputs:
-            assert len(split_inputs) % required_num_inputs == 0
-            num_grouped_inputs = len(split_inputs) // required_num_inputs
-            concats = []
-            concat_shape = copy(split_inputs[0].shape)
-            concat_shape.nf = concat_shape.nf * num_grouped_inputs
-            for _ in range(required_num_inputs):
+        if len(split_inputs) == 1:
+            new_split_inputs = self.split_task(
+                split_inputs[0].id, 
+                SplitVector(batch=split_vector.batch,
+                            token=split_vector.token,
+                            nf=split_vector.nr))
+            self.connect_tasks(list(split_inputs[0].in_tasks), new_split_inputs)
+            self.connect_tasks(new_split_inputs, split_mlp)
+            self.disable_task(split_inputs[0].id)
+            task_dict["input"] = new_split_inputs
+        else:
+            self.enable_task(input.id)
+            new_split_inputs = self.split_task(
+                input.id, 
+                SplitVector(batch=split_vector.batch,
+                            token=split_vector.token, 
+                            nf=split_vector.nr),
+                record=False)
+            if split_inputs[0].shape != new_split_inputs[0].shape:
+                concat_shape = copy(input.shape)
                 concat = create_compute(
                     task_graph=self._task_graph,
                     shape=concat_shape, 
                     type=TaskBlockType.MCONCAT,
-                    precision=split_inputs[0].precision
+                    precision=input.precision
                 )
-                concats.append(concat)
-            self.connect_tasks(split_inputs, concats)
-            self.connect_tasks(concats, split_mlp)
-            task_dict["concat"] = concats
-        else:
-            assert required_num_inputs % len(split_inputs) == 0
-            num_split = required_num_inputs // len(split_inputs)
-            new_split_inputs = []
-            last_compute = []
-            for task in split_inputs:
-                last_compute.extend(list(task.in_tasks))
-                new_split_inputs.extend(
-                    self.split_task(task.id, SplitVector(nf=num_split)))
-                # self.delete_task(task.id)
-                self.disable_task(task.id)
-            self.connect_tasks(last_compute, new_split_inputs)
-            # for i in range(split_vector.nf):
-            #     self.connect_tasks(new_split_inputs, split_mlp[split_vector.nr * i:split_vector.nr * (i + 1)])
-            self.connect_tasks(new_split_inputs, split_mlp)
-            task_dict["input"] = new_split_inputs
+                self.connect_tasks(split_inputs, [concat])
+                new_split_inputs = self.split_task(
+                    input.id, 
+                    SplitVector(batch=split_vector.batch,
+                                token=split_vector.token, 
+                                nf=split_vector.nr))
+                self.connect_tasks([concat], new_split_inputs)
+                self.connect_tasks(new_split_inputs, split_mlp)
+                task_dict["input_concat"] = concat
+                task_dict["input"] = new_split_inputs
+            else:
+                self.connect_tasks(split_inputs, split_mlp)
+                task_dict["input"] = split_inputs
+        # required_num_inputs = (split_vector.nr * split_vector.batch * 
+        #                        split_vector.token)
+        # if len(split_inputs) == required_num_inputs:
+        #     self.connect_tasks(split_inputs, split_mlp)
+        # elif len(split_inputs) > required_num_inputs:
+        #     assert len(split_inputs) % required_num_inputs == 0
+        #     num_grouped_inputs = len(split_inputs) // required_num_inputs
+        #     concats = []
+        #     concat_shape = copy(split_inputs[0].shape)
+        #     concat_shape.nf = concat_shape.nf * num_grouped_inputs
+        #     for _ in range(required_num_inputs):
+        #         concat = create_compute(
+        #             task_graph=self._task_graph,
+        #             shape=concat_shape, 
+        #             type=TaskBlockType.MCONCAT,
+        #             precision=split_inputs[0].precision
+        #         )
+        #         concats.append(concat)
+        #     self.connect_tasks(split_inputs, concats)
+        #     self.connect_tasks(concats, split_mlp)
+        #     task_dict["concat"] = concats
+        # else:
+        #     assert required_num_inputs % len(split_inputs) == 0
+        #     num_split = required_num_inputs // len(split_inputs)
+        #     new_split_inputs = []
+        #     last_compute = []
+        #     for task in split_inputs:
+        #         last_compute.extend(list(task.in_tasks))
+        #         new_split_inputs.extend(
+        #             self.split_task(task.id, SplitVector(nf=num_split)))
+        #         # self.delete_task(task.id)
+        #         self.disable_task(task.id)
+        #     self.connect_tasks(last_compute, new_split_inputs)
+        #     # for i in range(split_vector.nf):
+        #     #     self.connect_tasks(new_split_inputs, split_mlp[split_vector.nr * i:split_vector.nr * (i + 1)])
+        #     self.connect_tasks(new_split_inputs, split_mlp)
+        #     task_dict["input"] = new_split_inputs
 
         # if len(split_inputs) >= split_vector.nr:
         #     assert len(split_inputs) % split_vector.nr == 0
@@ -334,8 +605,6 @@ class ActionModel():
                         nf=split_vector.nf), 
             num=split_vector.nr - 1)
         self.connect_tasks(split_mlp, split_mlp_output)
-        task_dict["weight"] = split_weight
-        task_dict["compute"] = split_mlp
         task_dict["mlp_output"] = split_mlp_output
         task_dict["output"] = split_mlp_output
         
@@ -378,10 +647,18 @@ class ActionModel():
                         compute: CTaskBlock, 
                         output: Union[STaskBlock, OutputTaskBlock], 
                         split_vector: SplitVector,
-                        task_dict: Dict = None):
+                        task_dict: Dict = None,
+                        static: StaticTaskBlock = None):
         task_dict = {} if task_dict is None else task_dict
 
         split_compute = self.split_task(compute.id, split_vector)
+        if static is not None:
+            static_split_vector = copy(split_vector)
+            static_split_vector.batch = 1
+            split_static = self.split_task(static.id, static_split_vector)
+            self.connect_tasks([static], split_static)
+            self.connect_tasks(split_static, split_compute)
+            task_dict["static"] = split_static
 
         required_num_inputs = (split_vector.batch * split_vector.token *
                                split_vector.nf)

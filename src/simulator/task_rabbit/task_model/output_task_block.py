@@ -24,16 +24,25 @@ class OutputTaskBlock(TaskBlock):
     def accept(self, visitor):
         visitor.visit_OUTPUT(self)
 
-    def consume(self) -> Tuple[int, int, int]:
+    def consume(self, is_pipeline: bool = False) -> Tuple[int, int, int]:
         start_time = float("inf")
         available_time = 0
         for edge in self.enabled_input_edges:
             received_tick = edge.consume_tick()
-            # find the time of the earliest input as the start time of this task
-            if received_tick.time < start_time:
-                start_time = received_tick.time
-            if received_tick.time > available_time:
-                available_time = received_tick.time
+            if is_pipeline:
+                if received_tick.start_time < start_time:
+                    start_time = received_tick.start_time
+                end_time = max(
+                    received_tick.time, 
+                    received_tick.compute_time + received_tick.latency)
+                if end_time > available_time:
+                    available_time = end_time
+            else:
+                # find the time of the earliest input as the start time of this task
+                if received_tick.time < start_time:
+                    start_time = received_tick.time
+                if received_tick.time > available_time:
+                    available_time = received_tick.time
         return start_time, available_time - start_time, received_tick.iteration
 
     def copy_like(self, shape: Shape = None) -> STaskBlock:

@@ -17,6 +17,9 @@ class Tick():
         self.start_callback = start_callback
         self.edge_callback: Callable = None
         self.edge = None
+        self.compute_time = None
+        self.start_time = time
+        self.latency = 0
         
     def __str__(self):
         return 'tick' + str(self.task_id) + '.' + str(self.iteration)

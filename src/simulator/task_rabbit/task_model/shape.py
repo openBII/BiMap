@@ -91,6 +91,9 @@ class Shape():
 
     def __str__(self) -> str:
         return str(self.dim_tuple)
+    
+    def __repr__(self) -> str:
+        return "(y={:d}, x={:d}, f={:d}, r={:d}, ky={:d}, kx={:d}, token={:d}, batch={:d})".format(*self.dim_tuple)
 
     def __getitem__(self, idx) -> int:
         if idx > 7 or idx < -8:
@@ -242,3 +245,5 @@ if __name__ == "__main__":
     split_vector.generate_slice_shapes(task_shape)
     for slice_shape in split_vector.slice_shape_generator(task_shape):
         print(slice_shape)
+
+    

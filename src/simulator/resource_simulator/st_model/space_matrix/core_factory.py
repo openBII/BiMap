@@ -28,6 +28,7 @@ class CoreFactory(Factory):
             vector2buffer=config.network['vector2buffer'],
             buffer2router=config.network['buffer2router'],
             router2buffer=config.network['router2buffer'],
+            latency=config.network["latency"]
         )
         communication_network = CoreCommunicationPoint(communication_config)
         core.add_communication_network(communication_network)
@@ -35,12 +36,14 @@ class CoreFactory(Factory):
         mac_array_config = ComputationConfig()
         mac_array_config[Precision.FLOAT_16] = config.mac_array['fp16']
         mac_array_config[Precision.FLOAT_32] = config.mac_array['fp32']
+        mac_array_config.latency = config.mac_array["latency"]
         mac_array = MACArrayPoint(mac_array_config)
         core.add_element(coord=Coord(1), element=mac_array)
 
         vector_unit_config = ComputationConfig()
         vector_unit_config[Precision.FLOAT_16] = config.vector_unit['fp16']
         vector_unit_config[Precision.FLOAT_32] = config.vector_unit['fp32']
+        vector_unit_config.latency = config.vector_unit["latency"]
         vector_unit = VectorPoint(vector_unit_config)
         core.add_element(coord=Coord(2), element=vector_unit)
 

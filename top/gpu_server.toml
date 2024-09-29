@@ -1,0 +1,49 @@
+size = [2, 2]
+
+[network]
+topology = "mesh"
+bandwidth = 40  # B/cycle
+latency = 5000
+
+[PCB.DRAM]
+capacity = 40  # GB
+
+[PCB.network]
+bandwidth = 1024  # B/cycle
+latency = 100
+
+[PCB.chiplet]
+size = [16, 8]
+
+[PCB.chiplet.network]
+topology = "star"
+bandwidth = 5120  # B/cycle
+latency = 10
+
+[PCB.chiplet.shared_memory]
+capacity = 40960  # KB
+
+[PCB.chiplet.core.network]
+buffer2array_input = 25600  # B/cycle
+buffer2array_weight = 25600
+array2buffer = 25600
+array2vector = 25600
+buffer2vector_input = 25600
+buffer2vector_params = 25600
+vector2buffer = 25600
+buffer2router = 25600
+router2buffer = 25600
+latency = 1
+
+[PCB.chiplet.core.mac_array]  # for mixed-precision, [[mac_array]] for multiple units
+fp16 = [4, 64]
+fp32 = [4, 32]
+latency = 1  # different precisions can have different latencies?
+
+[PCB.chiplet.core.vector_unit]
+fp16 = 128
+fp32 = 64
+latency = 1
+
+[PCB.chiplet.core.local_memory]
+capacity = 448  # KB

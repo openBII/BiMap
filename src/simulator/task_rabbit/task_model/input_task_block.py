@@ -25,6 +25,8 @@ class InputTaskBlock(TaskBlock):
         for i in range(tick_num):
             for edge in self._output_edges:
                 tick = Tick(self._id, i, 0)
+                tick.latency = 0
+                tick.compute_time = 0
                 if input_type == InputType.PIPELINE and i != 0:
                     raise NotImplementedError
                     # tick.start_callback = True

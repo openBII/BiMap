@@ -2,10 +2,10 @@ size = [2, 2]
 
 [network]
 topology = "mesh"
-bandwidth = 40
+bandwidth = 10
 
 [PCB.DRAM]
-capacity = 16  # GB
+capacity = 1073741824  # KB
 
 [PCB.network]
 bandwidth = 100  # GB/s
@@ -18,7 +18,7 @@ topology = "star"
 bandwidth = 2000  # GB/s
 
 [PCB.chiplet.shared_memory]
-capacity = 4096  # KB
+capacity = 41943040  # B
 
 [PCB.chiplet.core.network]
 buffer2array_input = 10000  # GB/s
@@ -41,4 +41,4 @@ BN = 32
 SoftMax = 32
 
 [PCB.chiplet.core.local_memory]
-capacity = 128  # KB
+capacity = 857.6  # KB

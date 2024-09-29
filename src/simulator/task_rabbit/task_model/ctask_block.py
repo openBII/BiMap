@@ -22,7 +22,6 @@ class CTaskBlock(TaskBlock):
         self.bias_type = bias_type
         self._type = task_type
         self.constant = constant
-
         self._halide_func = None
 
     def _construct_storage(self) -> None:
@@ -38,29 +37,42 @@ class CTaskBlock(TaskBlock):
     def accept(self, visitor):
         visitor.visit_C(self)
 
-    def fire(self, iteration: int, time: int):
+    def fire(self, iteration: int, end_time: float, is_pipeline: bool = False,
+             start_time: float = None, latency: float = None):
         for edge in self.enabled_output_edges:
-            tick = Tick(self._id, iteration, time)
+            if is_pipeline:
+                tick = Tick(self._id, iteration, start_time + latency)
+                tick.compute_time = end_time
+                tick.start_time = start_time + latency
+            else:
+                tick = Tick(self._id, iteration, end_time)
             edge.add_tick(tick)
 
-    def callback(self, time: int, consumed_ticks: List[Tick], duration: int):
+    def callback(self, time: float, consumed_ticks: List[Tick], 
+                 duration: float):
         for tick in consumed_ticks:
             if tick.callback is not None:
                 tick.callback(tick.task_id, tick.iteration, time)
             if tick.edge_callback is not None:
                 tick.edge_callback(tick, time - duration - tick.time)
 
-    def consume(self) -> Tuple[int, int, List[Tick]]:
+    def consume(self, is_pipeline: bool = False) -> Tuple[int, int, List[Tick]]:
         # 处理一下没有输入边的情况
         start_time = 0
+        end_time = 0
         consumed_ticks: List[Tick] = []
         for edge in self.enabled_input_edges:
             received_tick = edge.consume_tick()
             consumed_ticks.append(received_tick)
-            # find the time of the latest input as the start time of this task
-            if received_tick.time > start_time:
-                start_time = received_tick.time
-        return start_time, received_tick.iteration, consumed_ticks
+            # Time of the first packet arrived
+            if received_tick.start_time > start_time:
+                start_time = received_tick.start_time
+            if received_tick.time > end_time:
+                end_time = received_tick.time
+        if is_pipeline:
+            return start_time, end_time, received_tick.iteration, consumed_ticks
+        else:
+            return end_time, received_tick.iteration, consumed_ticks
     
     def put_back(self, ticks: List[Tick]):
         assert len(ticks) == len(self.enabled_input_edges)

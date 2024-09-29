@@ -43,14 +43,22 @@ weight: TaskBlock = task_dict["weight"]
 # Graph Transformation
 split_inputs = env.split_task(mlp_input.id, SplitVector(nf=4))
 env.add_nodes_between(mlp_input, mlp, split_inputs)
-new_tasks = env.split_mlp(
+split_task_dict = env.split_mlp(
     split_inputs=split_inputs,
     weight=weight,
     compute=mlp,
     output=output,
     split_vector=SplitVector(nf=2, nr=2)
 )
-split_concat, split_weight, split_mlp, split_mlp_output, split_add, split_add_output = new_tasks
+
+# Parse tasks after tiling
+split_concat = split_task_dict["concat"]
+split_weight = split_task_dict["weight"]
+split_mlp = split_task_dict["compute"]
+split_mlp_output = split_task_dict["mlp_output"]
+split_add = split_task_dict["add"]
+split_add_output = split_task_dict["add_output"]
+
 output.enable()
 env.connect_tasks(split_add_output, [output])
 
@@ -58,9 +66,9 @@ STDraw.draw_graph(task_graph, out_path='temp/tiled_mlp0.task.html',
                   width='1920px', height='1080px')
 
 # 测试undo功能
-# env.undo()
-# STDraw.draw_graph(task_graph, out_path='temp/tiled_mlp1.task.html',
-#                   width='1920px', height='1080px')
+env.undo()
+STDraw.draw_graph(task_graph, out_path='temp/tiled_mlp1.task.html',
+                  width='1920px', height='1080px')
 
 # Map the task graph onto the hardware
 dram0 = create_mlcoord((0, 0), DRAM)
@@ -101,7 +109,7 @@ env.auto_edge_map()
 # env.map_edge(mlp_input.output_edge, [dram0, pciephy0, board1, pciephy1, dram1, shared_memory, router, mac_array])
 # env.map_edge(mlp.output_edge, [mac_array, router, shared_memory, dram1, pciephy1, board3, pciephy3, dram3])
 # env.map_edge(weight.output_edge, [dram1, shared_memory, router, buffer, (mac_array, 0, 1)])  # domain, link
-STDraw.draw_graph(task_graph, out_path='temp/tiled_mlp1.task.html',
+STDraw.draw_graph(task_graph, out_path='temp/tiled_mlp2.task.html',
                   width='1920px', height='1080px')
 
 # Simulate

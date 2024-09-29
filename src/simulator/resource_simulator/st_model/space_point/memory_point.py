@@ -42,20 +42,24 @@ class MemoryPoint(STPoint):
         self.increment_pc()
 
         if isinstance(task, OutputTaskBlock):
-            start_time, duration, iteration = task.consume()
+            start_time, duration, iteration = task.consume(self._is_pipeline)
             self.recorder.record(task_id, iteration, start_time, duration)
             return True
         elif isinstance(task, StaticTaskBlock):
             start_time, iteration = task.consume()
-            self.recorder.record(task_id, iteration, start_time, time_duration=0)
+            start_time = max(start_time, self.recorder.max_time)
+            self.recorder.record(task_id, iteration, start_time, 0)
             task.fire(iteration, start_time)
             return True
         elif isinstance(task, STaskBlock):
-            start_time, available_time, iteration, input_flag = task.consume()
+            start_time, available_time, iteration, input_flag = task.consume(
+                self._is_pipeline
+            )
             self.recorder.record(task_id, iteration, start_time, 0)
             available_time = max(available_time, self.recorder.max_time)
             if input_flag:
-                task.fire(iteration, available_time, self.recorder.update, self.recorder.update_start_time)
+                task.fire(iteration, available_time, self.recorder.update, 
+                          self.recorder.update_start_time)
             else:
                 task.fire(iteration, available_time, self.recorder.update)
             return True

@@ -37,6 +37,7 @@ from src.simulator.task_rabbit.task_model.output_task_block import OutputTaskBlo
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint, DRAMPoint
 from src.simulator.resource_simulator.state.call import Call
+from src.simulator.task_rabbit.task_model.transformer import AttentionType
 
 
 class STEnv():
@@ -202,6 +203,9 @@ class STEnv():
             return hardware.area
         else:  # Space Point
             return hardware.evaluator.eval_area()
+        
+    def enable_pipeline(self):
+        self._st_matrix.enable_pipeline()
 
     def get_computation(self, ml_coord):
         pass
@@ -302,7 +306,9 @@ class STEnv():
                   up_input: STaskBlock, split_up_input: List[STaskBlock],
                   split_vector_up: SplitVector, 
                   split_vector_act: SplitVector, 
-                  split_vector_down: SplitVector):
+                  split_vector_down: SplitVector,
+                  num_batch_split: int = 1,
+                  num_token_split: int = 1):
         split_task_dict: Dict[str, Dict[str, List[TaskBlock]]] = dict()
         split_task_dict["up"] = dict()
         split_task_dict["activation"] = dict()
@@ -315,13 +321,20 @@ class STEnv():
         down_weight = task_dict["down"]["weight"]
         down_mlp = task_dict["down"]["compute"]
         down_output = task_dict["down"]["output"]
+        split_vector_up.batch = num_batch_split
+        split_vector_up.token = num_token_split
+        split_vector_act.batch = num_batch_split
+        split_vector_act.token = num_token_split
+        split_vector_down.batch = num_batch_split
+        split_vector_down.token = num_token_split
 
         self.split_mlp(split_up_input, up_weight, up_mlp, up_output, 
                        split_vector_up, up_input, split_task_dict["up"])
 
         split_up_output = split_task_dict["up"]["output"]
-        new_tasks = self.split_pointwise(up_output, split_up_output, activation, 
+        new_tasks = self.split_pointwise(split_up_output, activation, 
                                          activation_output, split_vector_act,
+                                         up_output, 
                                          split_task_dict["activation"])
  
         split_activation_output = split_task_dict["activation"]["output"]
@@ -337,22 +350,28 @@ class STEnv():
                         split_vector_up: SplitVector, 
                         split_vector_act: SplitVector, 
                         split_vector_down: SplitVector,
-                        add_split_vector: SplitVector,
-                        layer_norm_split_vector: SplitVector):
+                        layer_norm_split_vector: SplitVector,
+                        num_batch_split: int = 1,
+                        num_token_split: int = 1):
         split_task_dict = {}
-        assert add_split_vector.nf == split_vector_up.nr
         split_task_dict["ffn"] = self.split_ffn(
             task_dict["ffn"],
             up_input,
             split_up_input,
             split_vector_up,
             split_vector_act,
-            split_vector_down
+            split_vector_down,
+            num_batch_split,
+            num_token_split
         )
+
+        add_split_vector = SplitVector(batch=num_batch_split,
+                                       token=num_token_split,
+                                       nf=split_vector_up.nr)
         split_task_dict["add"] = {}
         self.split_elementwise(
             [task_dict["ffn"]["down"]["output"], up_input],
-            [split_task_dict["ffn"]["down"]["output"], split_up_input if "input" not in split_task_dict["ffn"]["up"] else split_task_dict["ffn"]["up"]["input"]],
+            [split_task_dict["ffn"]["down"]["output"], split_task_dict["ffn"]["up"]["input"]],
             task_dict["add"]["compute"], task_dict["add"]["output"],
             add_split_vector, split_task_dict["add"])
 
@@ -360,11 +379,13 @@ class STEnv():
         split_add_output = split_task_dict["add"]["output"]
         layer_norm = task_dict["layer_norm"]["compute"]
         layer_norm_output = task_dict["layer_norm"]["output"]
+        layer_norm_split_vector.batch = num_batch_split
         split_task_dict["layer_norm"] = {}
         self.split_pointwise(
-            add_output, split_add_output,
+            split_add_output,
             layer_norm, layer_norm_output, 
-            layer_norm_split_vector, split_task_dict["layer_norm"]
+            layer_norm_split_vector, add_output,
+            split_task_dict["layer_norm"]
         )       
         if "input" in split_task_dict["layer_norm"]:
             split_task_dict["add"]["output"] = split_task_dict["layer_norm"]["input"]
@@ -386,14 +407,15 @@ class STEnv():
                                 softmax_split_vectors: List[SplitVector],
                                 attention_split_vectors: List[SplitVector],
                                 mlp_split_vector: SplitVector,
-                                add_split_vector: SplitVector,
                                 layer_norm_split_vector: SplitVector,
                                 split_vector_up: SplitVector, 
                                 split_vector_act: SplitVector, 
                                 split_vector_down: SplitVector,
-                                ffn_add_split_vector: SplitVector,
                                 ffn_layer_norm_split_vector: SplitVector,
-                                embedding: TaskBlock = None):
+                                attention_type: AttentionType,
+                                embedding: TaskBlock = None,
+                                num_batch_split: int = 1,
+                                num_token_split: int = 1):
         split_task_dict = {}
         split_task_dict["attention"] = self.split_attention_block(
             task_dict["attention"],
@@ -406,9 +428,11 @@ class STEnv():
             softmax_split_vectors,
             attention_split_vectors,
             mlp_split_vector,
-            add_split_vector,
             layer_norm_split_vector,
-            embedding
+            attention_type,
+            embedding,
+            num_batch_split,
+            num_token_split
         )
         split_task_dict["ffn"] = self.split_ffn_block(
             task_dict["ffn"],
@@ -417,8 +441,9 @@ class STEnv():
             split_vector_up,
             split_vector_act,
             split_vector_down,
-            ffn_add_split_vector,
-            ffn_layer_norm_split_vector
+            ffn_layer_norm_split_vector,
+            num_batch_split,
+            num_token_split
         )
         return split_task_dict
     
@@ -431,11 +456,12 @@ class STEnv():
                               softmax_split_vectors: List[SplitVector],
                               attention_split_vectors: List[SplitVector],
                               mlp_split_vector: SplitVector,
-                              add_split_vector: SplitVector,
                               layer_norm_split_vector: SplitVector,
-                              embedding: TaskBlock = None):
+                              attention_type: AttentionType,
+                              embedding: TaskBlock = None,
+                              num_batch_split: int = 1,
+                              num_token_split: int = 1):
         split_task_dict = {}
-        assert add_split_vector.nf == query_split_vectors[0].nr
         split_task_dict["multi_head_attention"] = self.split_multi_head_attention(
             task_dict["multi_head_attention"],
             split_embedding,
@@ -447,11 +473,18 @@ class STEnv():
             softmax_split_vectors,
             attention_split_vectors,
             mlp_split_vector,
-            embedding)
+            attention_type,
+            embedding,
+            num_batch_split,
+            num_token_split)
+        
+        add_split_vector = SplitVector(batch=num_batch_split,
+                                       token=num_token_split,
+                                       nf=query_split_vectors[0].nr)
         split_task_dict["add"] = {}
         self.split_elementwise(
             [task_dict["multi_head_attention"]["mlp"]["output"], embedding],
-            [split_task_dict["multi_head_attention"]["mlp"]["output"], split_embedding if "input" not in split_task_dict["multi_head_attention"][0]["query"] else split_task_dict["multi_head_attention"][0]["query"]["input"]],
+            [split_task_dict["multi_head_attention"]["mlp"]["output"], split_task_dict["multi_head_attention"][0]["query"]["input"]],
             task_dict["add"]["compute"], task_dict["add"]["output"],
             add_split_vector, split_task_dict["add"])
         
@@ -459,15 +492,18 @@ class STEnv():
         layer_norm = task_dict["layer_norm"]["compute"]
         layer_norm_output = task_dict["layer_norm"]["output"]
         split_task_dict["layer_norm"] = {}
+        layer_norm_split_vector.batch = num_batch_split
         self.split_pointwise(
-            task_dict["add"]["output"], split_add_output,
+            split_add_output,
             layer_norm, layer_norm_output, 
-            layer_norm_split_vector, split_task_dict["layer_norm"]
+            layer_norm_split_vector, 
+            task_dict["add"]["output"],
+            split_task_dict["layer_norm"]
         )       
         if "input" in split_task_dict["layer_norm"]:
             split_task_dict["add"]["output"] = split_task_dict["layer_norm"]["input"]
             
-        return split_task_dict  
+        return split_task_dict
 
     def split_layer_norm(self, input: STaskBlock, split_input: List[STaskBlock],
                          task_dict: Dict,
@@ -568,7 +604,10 @@ class STEnv():
                                    softmax_split_vectors: List[SplitVector],
                                    attention_split_vectors: List[SplitVector],
                                    mlp_split_vector: SplitVector,
-                                   embedding: TaskBlock = None):
+                                   attention_type: AttentionType,
+                                   embedding: TaskBlock = None,
+                                   num_batch_split: int = 1,
+                                   num_token_split: int = 1):
         split_task_dict = {}
         nr = query_split_vectors[0].nr
         for i in range(head):
@@ -582,7 +621,10 @@ class STEnv():
                 dot_product_split_vectors[i],
                 softmax_split_vectors[i],
                 attention_split_vectors[i],
-                embedding)
+                attention_type,
+                embedding,
+                num_batch_split,
+                num_token_split)
             
         concat = task_dict["concat"]["move"]
         concat_output = task_dict["concat"]["output"]
@@ -594,6 +636,8 @@ class STEnv():
         mlp = task_dict["mlp"]["compute"]
         mlp_output = task_dict["mlp"]["output"]
         split_task_dict["mlp"] = {}
+        mlp_split_vector.batch = num_batch_split
+        mlp_split_vector.token = num_token_split
         self.split_mlp(
             split_concat_output, mlp_weight, mlp, mlp_output,
             mlp_split_vector, input=concat_output,
@@ -708,11 +752,29 @@ class STEnv():
                         dot_product_split_vector: SplitVector,
                         softmax_split_vector: SplitVector,
                         attention_split_vector: SplitVector,
-                        embedding: TaskBlock = None):
+                        attention_type: AttentionType,
+                        embedding: TaskBlock = None,
+                        num_batch_split: int = 1,
+                        num_token_split: int = 1):
         split_task_dict = {}
 
-        assert (query_split_vector.nr == key_split_vector.nr == 
+        assert (query_split_vector.nr == key_split_vector.nr ==
                 value_split_vector.nr)
+        
+        if attention_type == AttentionType.DECODE:
+            num_token_split = 1
+        query_split_vector.batch = num_batch_split
+        query_split_vector.token = num_token_split
+        key_split_vector.batch = num_batch_split
+        key_split_vector.token = num_token_split
+        value_split_vector.batch = num_batch_split
+        value_split_vector.token = num_token_split
+        dot_product_split_vector.batch = num_batch_split
+        dot_product_split_vector.token = num_token_split
+        softmax_split_vector.batch = num_batch_split
+        softmax_split_vector.token = num_token_split
+        attention_split_vector.batch = num_batch_split
+        attention_split_vector.token = num_token_split
 
         # MLP of query
         query_mlp = task_dict["query"]["compute"]
@@ -721,17 +783,18 @@ class STEnv():
         split_task_dict["query"] = {}
         self.split_mlp(split_embedding, query_weight, 
                        query_mlp, query, query_split_vector,
-                       input=embedding, 
-                       task_dict=split_task_dict["query"])
+                       embedding, split_task_dict["query"])
 
         # MLP of key
         key_mlp = task_dict["key"]["compute"]
         key_weight = task_dict["key"]["weight"]
         key = task_dict["key"]["output"]
         split_task_dict["key"] = {}
+        if "input" in split_task_dict["query"]:
+            split_embedding = split_task_dict["query"]["input"]
         self.split_mlp(split_embedding, key_weight, 
-                       key_mlp, key, key_split_vector,
-                       task_dict=split_task_dict["key"])
+                       key_mlp, key, key_split_vector, 
+                       embedding, split_task_dict["key"])
 
         # MLP of value
         value_mlp = task_dict["value"]["compute"]
@@ -740,38 +803,62 @@ class STEnv():
         split_task_dict["value"] = {}
         self.split_mlp(split_embedding, value_weight, 
                        value_mlp, value, value_split_vector,
-                       task_dict=split_task_dict["value"])
+                       embedding, split_task_dict["value"])
 
         # Dot product between query and key cache
+        if attention_type == AttentionType.DECODE:
+            key = task_dict["concat_key"]["output"]
+            split_key = None
+        else:
+            split_key = split_task_dict["key"]["output"]
         dot_product = task_dict["dot_product"]["compute"]
         dot_product_output = task_dict["dot_product"]["output"]
-        new_key_cache = task_dict["concat_key"]["output"]
         split_query_output = split_task_dict["query"]["output"]
         split_task_dict["dot_product"] = {}
-        self.split_dot_product(query, split_query_output, new_key_cache, 
-                               dot_product, dot_product_output, 
-                               dot_product_split_vector,
-                               task_dict=split_task_dict["dot_product"])
+        self.split_mlp(split_query_output, key,
+                       dot_product, dot_product_output,
+                       dot_product_split_vector, query,
+                       split_task_dict["dot_product"], split_key)
+
+        # Add mask
+        if attention_type == AttentionType.PREFILL:
+            add = task_dict["add"]["compute"]
+            add_output = task_dict["add"]["output"]
+            add_mask = task_dict["add"]["mask"]
+            split_dot_product_output = split_task_dict["dot_product"]["output"]
+            split_task_dict["add"] = {}
+            self.split_pointwise(split_dot_product_output, add, add_output, 
+                                 dot_product_split_vector,
+                                 task_dict=split_task_dict["add"],
+                                 static=add_mask)
 
         # SoftMax
         softmax = task_dict["softmax"]["compute"]
         softmax_output = task_dict["softmax"]["output"]
-        split_dot_product_output = split_task_dict["dot_product"]["output"]
+        if attention_type == AttentionType.PREFILL:
+            split_softmax_input = split_task_dict["add"]["output"]
+        else:
+            split_softmax_input = split_task_dict["dot_product"]["output"]
         split_task_dict["softmax"] = {}
-        self.split_pointwise(dot_product_output, split_dot_product_output, 
+        self.split_pointwise(split_softmax_input, 
                              softmax, softmax_output, softmax_split_vector, 
                              task_dict=split_task_dict["softmax"])
 
         # Attention
-        new_value_cache = task_dict["concat_value"]["output"]
+        if attention_type == AttentionType.DECODE:
+            value = task_dict["concat_value"]["output"]
+            split_value = None
+        else:
+            split_value = split_task_dict["value"]["output"]
         attention = task_dict["attention"]["compute"]
         attention_output = task_dict["attention"]["output"]
         split_softmax_output = split_task_dict["softmax"]["output"]
         split_task_dict["attention"] = {}
-        self.split_dot_product(softmax_output, split_softmax_output, 
-                               new_value_cache, attention, attention_output, 
-                               attention_split_vector,
-                               task_dict=split_task_dict["attention"])
+        self.split_mlp(split_softmax_output, 
+                       value, attention, attention_output, 
+                       attention_split_vector, softmax_output,
+                       task_dict=split_task_dict["attention"],
+                       split_weights=split_value, transpose=True)
         
         return split_task_dict
 
@@ -797,20 +884,27 @@ class STEnv():
         self._history.push_state(reverse_call)
         return new_tasks
 
-    def split_mlp(self, split_inputs: List[STaskBlock], weight: StaticTaskBlock, 
+    def split_mlp(self, split_inputs: List[STaskBlock], 
+                  weight: Union[StaticTaskBlock, STaskBlock], 
                   compute: CTaskBlock, 
                   output: Union[STaskBlock, OutputTaskBlock], 
                   split_vector: SplitVector,
                   input: STaskBlock = None,
-                  task_dict: Dict = None):
+                  task_dict: Dict = None,
+                  split_weights: List[STaskBlock] = None,
+                  transpose: bool = False):
         task_dict = self._actor.split_mlp(input, split_inputs, weight, compute, 
-                                          output, split_vector, task_dict)
+                                          output, split_vector, task_dict,
+                                          split_weights, transpose)
         new_tasks = []
         for name in task_dict:
             if name != "output":
                 new_tasks.append(task_dict[name])
-        reverse_call = Call(self._actor.reverse_split, new_tasks, 
-                            [compute, output] + split_inputs)
+        if isinstance(weight, StaticTaskBlock):
+            old_tasks = [compute, output] + split_inputs
+        else:
+            old_tasks = [compute, weight, output] + split_inputs
+        reverse_call = Call(self._actor.reverse_split, new_tasks, old_tasks)
         self._history.push_state(reverse_call)
         return task_dict
     
@@ -819,10 +913,11 @@ class STEnv():
                         output: Union[STaskBlock, OutputTaskBlock], 
                         split_vector: SplitVector,
                         input: STaskBlock = None,
-                        task_dict: Dict = None):
+                        task_dict: Dict = None,
+                        static: StaticTaskBlock = None):
         task_dict = self._actor.split_pointwise(input, split_inputs, compute, 
                                                 output, split_vector,
-                                                task_dict)
+                                                task_dict, static)
         new_tasks = []
         for name in task_dict:
             new_tasks.append(task_dict[name])
@@ -873,7 +968,8 @@ class STEnv():
                       out_tasks: Iterable[TaskBlock]):
         self._actor.connect_tasks(in_tasks, out_tasks)
 
-    def add_nodes_between(self, source: TaskBlock, destination: TaskBlock, 
+    def add_nodes_between(self, source: TaskBlock, 
+                          destination: Union[TaskBlock, List[TaskBlock]], 
                           nodes: List[TaskBlock]):
         self._actor.add_nodes_between(source, destination, nodes)
 

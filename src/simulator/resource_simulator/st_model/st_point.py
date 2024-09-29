@@ -13,15 +13,18 @@ from src.simulator.resource_simulator.evaluation_model.evaluator import Evaluato
 from src.simulator.resource_simulator.evaluation_model.recorder import Recorder
 from src.simulator.resource_simulator.sync.sync_task import SyncTask
 from src.simulator.resource_simulator.sync.sync_table import SyncTable
+from src.simulator.resource_simulator.evaluation_model.recorder import MemoryRecorder
 
 
 class STPoint():
     def __init__(self):
-        #TODO: Slots
+        # TODO: Slots
         self._tasks: List[TaskBlock] = []
         self._pc = 0
         self.evaluator = Evaluator()
         self.recorder = Recorder()
+        # Whether pipeline the memory access and computation
+        self._is_pipeline: bool = False
 
     def pop(self, task_id):
         for i, task in enumerate(self._tasks):
@@ -53,6 +56,8 @@ class STPoint():
                 sync_table.update(sync_task)
             if sync_table.synchronized(sync_task.sync_id):
                 self.increment_pc()
+                if isinstance(self.recorder, MemoryRecorder):
+                    self.recorder.barrier_time = self.recorder.max_time
                 self.recorder.max_time = sync_table.get_time(sync_task.sync_id)
                 return True
             else:

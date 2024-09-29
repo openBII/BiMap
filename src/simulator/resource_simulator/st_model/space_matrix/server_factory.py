@@ -22,7 +22,9 @@ class ServerFactory(Factory):
                 server.add_element(coord=Coord((i, j)), element=board)
 
         if config.network["topology"] == "mesh":
-            communication_config = CommunicationConfig(config.network["bandwidth"])
+            communication_config = CommunicationConfig(
+                config.network["bandwidth"],
+                latency=config.network["latency"])
             communication_network = ServerCommunicationPoint(communication_config)
         else:
             raise NotImplementedError

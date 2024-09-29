@@ -14,7 +14,8 @@ from src.simulator.resource_simulator.st_model.space_point.communication_point i
 
 # 为什么不选择直接继承dict的方式
 class STMatrix():
-    def __init__(self, dim: int, space_level: int, communication_networks: List[CommunicationPoint] = None):
+    def __init__(self, dim: int, space_level: int, 
+                 communication_networks: List[CommunicationPoint] = None):
         # TODO: 改成OrderedDict
         self._container: Dict[Coord, Union[STMatrix, STPoint]] = {}
 
@@ -265,6 +266,14 @@ class STMatrix():
             else:
                 area += element.area
         return area
+    
+    def enable_pipeline(self):
+        for coord in self._container:
+            element = self._container[coord]
+            if isinstance(element, STPoint):
+                element._is_pipeline = True
+            else:
+                element.enable_pipeline()
 
 
     # def process(self, edges: List[Edge]) -> List[Edge]:

@@ -44,12 +44,14 @@ class STaskBlock(TaskBlock):
     def accept(self, visitor):
         visitor.visit_S(self)
 
-    def fire(self, iteration: int, time: int, callback: Callable, start_callback: Callable = None):
+    def fire(self, iteration: int, time: int, callback: Callable, 
+             start_callback: Callable = None):
         for edge in self.enabled_output_edges:
             tick = Tick(self._id, iteration, time, callback, start_callback)
+            tick.start_time = time
             edge.add_tick(tick)
 
-    def consume(self) -> Tuple[int, int, int, bool]:
+    def consume(self, is_pipeline: bool = False) -> Tuple[int, int, int, bool]:
         start_time = float("inf")
         available_time = 0
         input_flag = False
@@ -58,10 +60,19 @@ class STaskBlock(TaskBlock):
             if received_tick.start_callback:
                 input_flag = True
             # find the time of the earliest input as the start time of this task
-            if received_tick.time < start_time:
-                start_time = received_tick.time
-            if received_tick.time > available_time:
-                available_time = received_tick.time
+            if is_pipeline:
+                if received_tick.start_time < start_time:
+                    start_time = received_tick.start_time
+                end_time = max(
+                    received_tick.time, 
+                    received_tick.compute_time + received_tick.latency)
+                if end_time > available_time:
+                    available_time = end_time
+            else:
+                if received_tick.time < start_time:
+                    start_time = received_tick.time
+                if received_tick.time > available_time:
+                    available_time = received_tick.time
         return start_time, available_time, received_tick.iteration, input_flag
 
     def copy_like(self, shape: Shape = None) -> TaskBlock:

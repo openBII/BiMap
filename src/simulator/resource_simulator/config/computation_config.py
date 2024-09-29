@@ -6,6 +6,7 @@ class ComputationConfig:
     def __init__(self) -> None:
         super().__init__()
         self.dict: Dict[Precision, Tuple[int]] = {}
+        self.latency = 0
 
     def __getitem__(self, precision: Precision):
         return self.dict[precision]
@@ -26,4 +27,5 @@ class ComputationConfig:
         string  = ''
         for precision in self.dict:
             string += precision.name + ': ' + repr(self.dict[precision]) + '\n'
+        string += 'latency: ' + str(self.latency) + '\n'
         return string

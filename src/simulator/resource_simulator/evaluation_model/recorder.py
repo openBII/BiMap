@@ -36,10 +36,9 @@ class ComputationRecorder(Recorder):
                 return True
         return False
 
-    def record(self, id: int, iteration: int, min_start: float, time_duration: float):
-        allow_time = max(min_start, self.max_time)
-        self.max_time = allow_time + time_duration
-        time_record = {(id, iteration): [float(allow_time), float(self.max_time)]}
+    def record(self, id: int, iteration: int, start: float, end: float):
+        self.max_time = end
+        time_record = {(id, iteration): [float(start), float(end)]}
         self.recorder_time.update(time_record)
 
     def remove(self, id: int, iteration: int):
@@ -52,9 +51,11 @@ class ComputationRecorder(Recorder):
 class MemoryRecorder(Recorder):
     def __init__(self, slot=1):
         super().__init__(slot)
+        self.barrier_time = 0
 
-    def record(self, id: int, iteration: int, min_start: float, time_duration: float):
-        allow_time = max(min_start, self.max_time)
+    def record(self, id: int, iteration: int, min_start: float, 
+               time_duration: float):
+        allow_time = max(min_start, self.barrier_time)
         time_record = {(id, iteration): [allow_time, allow_time + time_duration]}
         self.recorder_time.update(time_record)
 
@@ -74,12 +75,25 @@ class CommunicationRecord:
         self.end_time = end_time
         self.percent = percent
 
+    def __repr__(self) -> str:
+        return "[" + str(self.start_time) + "," + str(self.end_time) + \
+               str(self.percent) + "]"
+
 
 class CommunicationRecorder(Recorder):
     def __init__(self, slot=1):
         super().__init__(slot)
         # recorder: {(Edge, iteration, Hop): CommunicationRecord}
         self.recorder_time: Dict[Tuple[Edge, int, Hop], CommunicationRecord] = {}
+
+    def __repr__(self):
+        recorder = ""
+        for key in self.recorder_time:
+            record = "(Edge: " + repr(key[0]) + " Iter: " + str(key[1]) + \
+                     " Hop: " + repr(key[2]) + ") " + \
+                     repr(self.recorder_time[key]) + "\n"
+            recorder += record
+        return recorder
 
     def __iter__(self):
         self._iter_keys = iter(self.recorder_time.keys())

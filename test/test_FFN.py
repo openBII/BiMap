@@ -38,29 +38,34 @@ task_graph.connect(down_weight.id, down_mlp.id)
 task_graph.connect(down_mlp.id, output.id)
 
 # Construct a hardware
-config = ServerConfig("top/server.toml")
+config = ServerConfig("top/gpu_server.toml")
 server = ServerFactory.create_matrix(config)
 
 # Construct a simulation environment
 st_env = STEnv(task_graph, server)
 
 # Graph Transformation
-# up_input_on_chip = st_env.copy_task(up_input.id)
-# split_up_input = st_env.split_task(up_input_on_chip.id, SplitVector(nr=2))
-# st_env.connect_tasks([up_input], split_up_input)
-# split_up_input, split_up_weight, split_up_mlp, split_up_mlp_output, split_up_add, split_up_add_output = st_env.split_mlp(up_input_on_chip, split_up_input, up_weight, up_mlp, relu_input, SplitVector(nf=2, nr=2))
-# split_relu_input, split_relu, split_down_input = st_env.split_pointwise(relu_input, split_up_add_output, relu, down_input, SplitVector(nf=4))
-# split_down_input, split_down_weight, split_down_mlp, split_down_mlp_output, split_down_add, split_down_add_output = st_env.split_mlp(down_input, split_down_input, down_weight, down_mlp, output, SplitVector(nf=2, nr=2))
-# st_env.connect_tasks(split_down_add_output, [output])
-
 up_input_on_chip = st_env.copy_task(up_input.id)
 split_up_input = st_env.split_task(up_input_on_chip.id, SplitVector(nr=2))
 st_env.connect_tasks([up_input], split_up_input)
-task_dict = st_env.split_FFN(SplitVector(nf=2, nr=2), SplitVector(nf=4), SplitVector(nf=2, nr=2),
-                             up_input_on_chip, split_up_input, up_weight, up_mlp, relu_input,
-                             relu, down_input, down_weight, down_mlp, output)
-st_env.connect_tasks(task_dict["down"]["add_output"], [output])
+split_up_weight, split_up_mlp, split_up_mlp_output, split_up_add, split_up_add_output = st_env.split_mlp(up_input_on_chip, split_up_input, up_weight, up_mlp, relu_input, SplitVector(nf=2, nr=2))
+split_relu_input, split_relu, split_down_input = st_env.split_pointwise(relu_input, split_up_add_output, relu, down_input, SplitVector(nf=4))
+split_down_weight, split_down_mlp, split_down_mlp_output, split_down_add, split_down_add_output = st_env.split_mlp(down_input, split_down_input, down_weight, down_mlp, output, SplitVector(nf=2, nr=2))
+st_env.connect_tasks(split_down_add_output, [output])
+st_env.enable_task(output.id)
 
+# up_input_on_chip = st_env.copy_task(up_input.id)
+# split_up_input = st_env.split_task(up_input_on_chip.id, SplitVector(nr=2))
+# st_env.connect_tasks([up_input], split_up_input)
+# task_dict = st_env.split_FFN(SplitVector(nf=2, nr=2), SplitVector(nf=4), SplitVector(nf=2, nr=2),
+#                              up_input_on_chip, split_up_input, up_weight, up_mlp, relu_input,
+#                              relu, down_input, down_weight, down_mlp, output)
+# st_env.connect_tasks(task_dict["down"]["add_output"], [output])
+
+st_env.undo()
+st_env.undo()
+st_env.undo()
+st_env.delete_tasks(split_up_input)
 STDraw.draw_graph(task_graph, out_path='test/FFN.task.html',
                   width='1920px', height='1080px')
 
@@ -68,6 +73,7 @@ STDraw.draw_graph(task_graph, out_path='test/FFN.task.html',
 dram_coord = MLCoord(Coord((0, 0)), Coord(1))
 chip_coord = MLCoord(Coord((0, 0)), Coord(0))
 st_env.put_in(dram_coord, up_input.id)
+st_env.undo()
 st_env.put_in(dram_coord, up_weight.id)
 st_env.put_in(dram_coord, down_weight.id)
 st_env.put_in(dram_coord, output.id)

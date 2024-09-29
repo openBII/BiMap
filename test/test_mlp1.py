@@ -43,14 +43,21 @@ weight: TaskBlock = task_dict["weight"]
 # Graph Transformation
 split_inputs = env.split_task(mlp_input.id, SplitVector(nf=4))
 env.add_nodes_between(mlp_input, mlp, split_inputs)
-new_tasks = env.split_mlp(
+split_task_dict = env.split_mlp(
     split_inputs=split_inputs,
     weight=weight,
     compute=mlp,
     output=output,
     split_vector=SplitVector(nr=4)
 )
-split_weight, split_mlp, split_mlp_output, split_add, split_add_output = new_tasks
+
+# Parse tasks after tiling
+split_weight = split_task_dict["weight"]
+split_mlp = split_task_dict["compute"]
+split_mlp_output = split_task_dict["mlp_output"]
+split_add = split_task_dict["add"]
+split_add_output = split_task_dict["add_output"]
+
 output.enable()
 env.connect_tasks(split_add_output, [output])
 

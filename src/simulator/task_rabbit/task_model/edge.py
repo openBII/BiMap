@@ -75,7 +75,7 @@ class Edge():
 
         self._edge_id = id(self)
 
-        self._flux = None
+        # self._flux = None
 
     def __repr__(self):
         return "From Task {:d} to Task {:d}".format(self.in_task.id, self.out_task.id)
@@ -89,18 +89,18 @@ class Edge():
 
     @property
     def flux(self) -> int:
-        if self._flux is None:
-            if TaskBlockType.is_storage_task(self._in_task.task_type):
-                self._flux = min(self._in_task.shape.volume, 
-                                 self._out_task.shape.volume)
-            elif TaskBlockType.is_memory_operation(self._in_task.task_type):
-                if TaskBlockType.is_storage_task(self._out_task.task_type):
-                    self._flux = self._out_task.shape.volume
-                else:
-                    self._flux = self._in_task.shape.volume
-            else:
-                self._flux = self._out_task.shape.volume
-        return self._flux
+        # if TaskBlockType.is_storage_task(self._in_task.task_type):
+        #     return min(self._in_task.shape.volume, 
+        #                self._out_task.shape.volume)
+        # elif TaskBlockType.is_memory_operation(self._in_task.task_type):
+        #     if TaskBlockType.is_storage_task(self._out_task.task_type):
+        #         return self._out_task.shape.volume
+        #     else:
+        #         return self._in_task.shape.volume
+        # else:
+        #     return self._out_task.shape.volume
+        return min(self._in_task.shape.volume, 
+                   self._out_task.shape.volume)
 
     @property
     def in_task(self):
@@ -187,11 +187,16 @@ class Edge():
         assert not self._input_ticks.empty()
         return self._input_ticks.get()
 
-    def _fire(self, tick: Tick, time: int = None, callback: Callable = None):
+    def _fire(self, tick: Tick, time: float = None, callback: Callable = None,
+              start_time: float = None, latency: float = None):
         """Add a tick into the output tick queue of this edge.
         """
         if time is not None:
             tick.time = time
+        if start_time is not None:
+            tick.start_time = start_time
+        if latency is not None:
+            tick.latency += latency
         if tick.start_callback is not None:
             tick.edge_callback = callback
             tick.edge = self
