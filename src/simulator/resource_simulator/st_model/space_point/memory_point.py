@@ -55,7 +55,8 @@ class MemoryPoint(STPoint):
             start_time, available_time, iteration, input_flag = task.consume(
                 self._is_pipeline
             )
-            self.recorder.record(task_id, iteration, start_time, 0)
+            self.recorder.record(task_id, iteration, start_time, 
+                                 available_time - start_time)
             available_time = max(available_time, self.recorder.max_time)
             if input_flag:
                 task.fire(iteration, available_time, self.recorder.update, 
