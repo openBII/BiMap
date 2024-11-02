@@ -8,7 +8,7 @@ from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
 from src.simulator.task_rabbit.task_model.static_task_block import StaticTaskBlock
 from src.simulator.task_rabbit.task_model.output_task_block import OutputTaskBlock
 from src.simulator.task_rabbit.task_model.input_task_block import InputTaskBlock
-from src.simulator.task_rabbit.task_model.shape import Shape
+from src.simulator.task_rabbit.task_model.shape import Shape, SplitVector
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
@@ -90,6 +90,101 @@ def create_mlp(task_graph: TaskGraph, input: TaskBlock, shape: Shape,
     task_dict["compute"] = mlp
     task_dict["weight"] = weight
     task_dict["output"] = output
+    return output, task_dict
+
+def create_tiled_mlp_cyclic_weight(split_vector: SplitVector,
+                                   task_graph: TaskGraph, input: TaskBlock, 
+                                   shape: Shape, precision: Precision,
+                                   is_output: bool = False,
+                                   task_dict: Dict = None,
+                                   static_weight: bool = True,
+                                   output_offchip: bool = False,
+                                   is_input_on_chip: bool = True):
+    """
+    映射策略为: 拆分batch和token维度, 循环权重完成计算
+    """
+    assert (input.shape.nf == shape.nr or input.shape.nr == shape.nr)
+    task_dict = {} if task_dict is None else task_dict
+    batch = input.shape.batch
+    token = input.shape.token
+    nf = shape.nf // split_vector.nf
+    nr = shape.nr // split_vector.nr
+    if static_weight:
+        weight_shape = Shape(nr=nr, nf=nf)
+    else:
+        weight_shape = Shape(batch=batch, token=nf, nf=nr)
+    if not is_input_on_chip:
+        input_on_chip = create_data(task_graph, input.shape, precision)
+    weight = create_static(task_graph, weight_shape, precision)
+    weight_on_chip = create_data(task_graph, weight_shape, precision)
+    compute_shape = Shape(batch=batch, token=token, nr=nr, nf=nf)
+    mlp = create_compute(task_graph, compute_shape, TaskBlockType.CVM, 
+                         precision)
+    output_shape = Shape(batch=batch, token=token, nf=shape.nf)
+    if output_offchip:
+        output = create_data(task_graph, output_shape, precision)
+    else:
+        output = create_data(task_graph, output_shape, precision, is_output)
+    task_graph.connect_tasks_in_sequence([weight, weight_on_chip, mlp])
+    if not is_input_on_chip:
+        task_graph.connect_tasks_in_sequence(
+            [input, input_on_chip, mlp, output])
+    else:
+        task_graph.connect_tasks_in_sequence(
+            [input, mlp, output])
+    task_dict["compute"] = mlp
+    task_dict["weight_offchip"] = weight
+    task_dict["weight_on_chip"] = weight_on_chip
+    task_dict["output_on_chip"] = output
+    if not is_input_on_chip:
+        task_dict["input_on_chip"] = input_on_chip
+    # 循环权重
+    cyclic_weight = create_static(task_graph, weight_shape,
+                                  precision)
+    cyclic_mlp = create_compute(task_graph, compute_shape, TaskBlockType.CVM, 
+                                precision)
+    if output_offchip:
+        cyclic_output = create_data(task_graph, output_shape, precision, 
+                                    is_output)
+    task_graph.connect_tasks_in_sequence([cyclic_weight, cyclic_mlp])
+    if output_offchip:
+        if not is_input_on_chip:
+            task_graph.connect_tasks_in_sequence(
+                [input_on_chip, cyclic_mlp, output, cyclic_output])
+        else:
+            task_graph.connect_tasks_in_sequence(
+                [input, cyclic_mlp, output, cyclic_output])
+    else:
+        if not is_input_on_chip:
+            task_graph.connect_tasks_in_sequence(
+                [input_on_chip, cyclic_mlp, output])
+        else:
+            task_graph.connect_tasks_in_sequence(
+                [input, cyclic_mlp, output])
+    task_dict["cyclic_compute"] = cyclic_mlp
+    task_dict["cyclic_weight_on_chip"] = cyclic_weight
+    if output_offchip:
+        task_dict["output_offchip"] = cyclic_output
+    if output_offchip:
+        return cyclic_output, task_dict
+    else:
+        return output, task_dict
+
+def create_tiled_elementwise(task_graph: TaskGraph, input: TaskBlock,
+                             precision: Precision, type: TaskBlockType, 
+                             is_output: bool = False, task_dict: Dict = None):
+    task_dict = {} if task_dict is None else task_dict
+    mask = create_static(task_graph, input.shape, precision)
+    mask_on_chip = create_data(task_graph, input.shape, precision)
+    special_function = create_compute(task_graph, input.shape, type, precision)
+    output = create_data(task_graph, input.shape, precision, is_output)
+    task_graph.connect(input.id, special_function.id)
+    task_graph.connect(special_function.id, output.id)
+    task_graph.connect_tasks_in_sequence([mask, mask_on_chip, special_function])
+    task_dict["compute"] = special_function
+    task_dict["output"] = output
+    task_dict["mask_offchip"] = mask
+    task_dict["mask_on_chip"] = mask_on_chip
     return output, task_dict
 
 # def create_mm(task_graph: TaskGraph, input: TaskBlock, shape: Shape,

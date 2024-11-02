@@ -5,7 +5,7 @@ topology = "mesh"
 bandwidth = 10
 
 [PCB.DRAM]
-capacity = 1073741824  # KB
+capacity = 83886080  # KB, 80G
 
 [PCB.network]
 bandwidth = 100  # GB/s
