@@ -40,6 +40,13 @@ from src.simulator.resource_simulator.state.call import Call
 from src.simulator.task_rabbit.task_model.transformer import AttentionType
 
 
+class LoopInfo:
+    def __init__(self, start: int, end: int, num: int):
+        self.start = start
+        self.end = end
+        self.num = num
+
+
 class STEnv():
     def __init__(self, task_graph: TaskGraph, st_matrix: STMatrix):
         self._task_graph = task_graph
@@ -162,11 +169,11 @@ class STEnv():
         else:
             space_matrix = self.st_matrix.get_element(container_coord)
         recorder = space_matrix.communication_networks[network_id].evaluator.recorder
-        time_dict: Dict[Hop, CommunicationRecord] = {}
+        # time_dict: Dict[Hop, CommunicationRecord] = {}
         for key, record in recorder:
             if key[0] == edge and key[1] == iteration:
-                time_dict[key[2]] = record
-        return container_coord, network_id, time_dict
+                # time_dict[key[2]] = record
+                return container_coord, network_id, record
     
     def show_overall_time(self, tick_num: int = 1):
         for iteration in range(tick_num):
@@ -180,21 +187,34 @@ class STEnv():
                         if not edge.is_enable():
                             continue
                         while True:
-                            container_coord, network_id, time_dict = self.get_edge_time(edge, iteration)
-                            for hop in time_dict:
-                                assert time_dict[hop].percent == 1, "Unfinished edge"
-                                print("From Task {:d} to {:d} Network {:s} Hop {:s}: [{:2f}, {:2f}]".format(edge.in_task.id, edge.out_task.id, repr(container_coord) + '.' + str(network_id), repr(hop), time_dict[hop].start_time, time_dict[hop].end_time))
+                            # container_coord, network_id, time_dict = self.get_edge_time(edge, iteration)
+                            # for hop in time_dict:
+                            #     assert time_dict[hop].percent == 1, "Unfinished edge"
+                            #     print("From Task {:d} to {:d} Network {:s} Hop {:s}: [{:2f}, {:2f}]".format(edge.in_task.id, edge.out_task.id, repr(container_coord) + '.' + str(network_id), repr(hop), time_dict[hop].start_time, time_dict[hop].end_time))
+                            container_coord, network_id, record = self.get_edge_time(edge, iteration)
+                            assert record.percent == 1, "Unfinished edge"
+                            print("From Task {:d} to {:d} Network {:s}: [{:2f}, {:2f}]".format(edge.in_task.id, edge.out_task.id, repr(container_coord) + '.' + str(network_id), record.start_time, record.end_time))
                             if isinstance(edge.out_task, VTaskBlock):
                                 edge = edge.out_task.output_edges[0]
                             else:
                                 break
 
-    def get_latency(self, iteration: int = 0):
+    def get_latency(self, iteration: int = 0, 
+                    loops: Union[LoopInfo, List[LoopInfo]] = None):
         latency = 0
         for output_id in self._task_graph._outputs:
             output = self._task_graph[output_id]
             _, end = self.get_task_time(output, iteration)
             latency = max(end, latency)
+        if loops is not None:
+            if isinstance(loops, LoopInfo):
+                loops = [loops]
+            for loop in loops:
+                start_task = self._task_graph[loop.start]
+                end_task = self._task_graph[loop.end]
+                start, _ = self.get_task_time(start_task, iteration)
+                _, end = self.get_task_time(end_task, iteration)
+                latency += (end - start) * loop.num
         return latency 
     
     def eval_area(self, ml_coord: MLCoord):
@@ -234,20 +254,73 @@ class STEnv():
         else:
             return self.get_memory(memory_coord, tasks) > memory_point.capacity * 1024
     
-    def does_mlp_memory_overflow(self, input: STaskBlock, weight: StaticTaskBlock, output: Union[STaskBlock, OutputTaskBlock], memory_coord: MLCoord, split_vector: SplitVector):
-        split_input = self.split_task(input.id, SplitVector(nr=split_vector.nr), record=False)
-        split_weight = self.split_task(weight.id, split_vector, record=False)
-        split_output = self.split_task(output.id, SplitVector(nf=split_vector.nf), record=False)
-        if self.does_memory_overflow(memory_coord, [split_input[0], split_weight[0], split_output[0]]):
+    def does_mlp_memory_overflow(self, input: STaskBlock, 
+                                 weight: Union[StaticTaskBlock, STaskBlock], 
+                                 output: Union[STaskBlock, OutputTaskBlock], 
+                                 memory_coord: MLCoord, 
+                                 split_vector: SplitVector,
+                                 is_static: bool = True,
+                                 does_transpose: bool = True):
+        split_input = self.split_task(input.id, 
+                                      SplitVector(batch=split_vector.batch,
+                                                  token=split_vector.token,
+                                                  nr=split_vector.nr), 
+                                      record=False)
+        if is_static:
+            split_weight = self.split_task(
+                weight.id, SplitVector(nr=split_vector.nr, nf=split_vector.nf), 
+                record=False)
+        else:
+            if does_transpose:
+                split_weight = self.split_task(
+                    weight.id, 
+                    SplitVector(batch=split_vector.batch,
+                                token=split_vector.nf,
+                                nf=split_vector.nr), 
+                    record=False)
+            else:
+                split_weight = self.split_task(
+                    weight.id,
+                    SplitVector(batch=split_vector.batch,
+                                token=split_vector.nr,
+                                nf=split_vector.nf), 
+                    record=False)
+        split_output = self.split_task(output.id, 
+                                       SplitVector(batch=split_vector.batch,
+                                                   token=split_vector.token,
+                                                   nf=split_vector.nf), 
+                                       record=False)
+        basic_tasks = [split_input[0], split_weight[0], split_output[0]]
+        if self.does_memory_overflow(
+            memory_coord, basic_tasks):
             return True
         if split_vector.nr > 1:
-            if self.does_memory_overflow(memory_coord, ([split_output[0]] * split_vector.nr) + [split_output[0]]):
+            if self.does_memory_overflow(memory_coord, basic_tasks + [split_output[0]] * split_vector.nr):
                 return True
         return False
 
-    def does_pointwise_memory_overflow(self, input: STaskBlock, memory_coord: MLCoord, split_vector: SplitVector):
-        split_input = self.split_task(input.id, SplitVector(nf=split_vector.nf), record=False)
+    def does_pointwise_memory_overflow(self, input: STaskBlock, 
+                                       memory_coord: MLCoord, 
+                                       split_vector: SplitVector):
+        split_input = self.split_task(input.id, 
+                                      SplitVector(batch=split_vector.batch,
+                                                  token=split_vector.token,
+                                                  nf=split_vector.nf), 
+                                      record=False)
         if self.does_memory_overflow(memory_coord, [split_input[0]] * 2):
+            return True
+        else:
+            return False
+        
+    def does_elementwise_memory_overflow(self, input: STaskBlock, 
+                                         memory_coord: MLCoord, 
+                                         split_vector: SplitVector):
+        split_input = self.split_task(input.id, 
+                                      SplitVector(batch=split_vector.batch,
+                                                  token=split_vector.token,
+                                                  nf=split_vector.nf), 
+                                      record=False)
+        if self.does_memory_overflow(memory_coord, [split_input[0]] * 3):
             return True
         else:
             return False
