@@ -1,7 +1,7 @@
 from src.simulator.resource_simulator.config.matrix_config import ServerConfig
 from src.simulator.resource_simulator.st_model.space_matrix.factory import Factory
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
-from src.simulator.resource_simulator.st_model.space_point.communication_point import ServerCommunicationPoint
+from src.simulator.resource_simulator.st_model.space_point.communication_point import CommunicationPoint
 from src.simulator.resource_simulator.config.communication_config import CommunicationConfig
 from src.simulator.resource_simulator.st_model.st_coord import Coord
 from src.simulator.resource_simulator.st_model.space_matrix.board_factory import BoardFactory
@@ -25,7 +25,7 @@ class ServerFactory(Factory):
             communication_config = CommunicationConfig(
                 config.network["bandwidth"],
                 latency=config.network["latency"])
-            communication_network = ServerCommunicationPoint(communication_config)
+            communication_network = CommunicationPoint(communication_config)
         else:
             raise NotImplementedError
         server.add_communication_network(communication_network)

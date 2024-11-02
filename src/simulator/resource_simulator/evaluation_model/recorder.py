@@ -76,7 +76,7 @@ class CommunicationRecord:
         self.percent = percent
 
     def __repr__(self) -> str:
-        return "[" + str(self.start_time) + "," + str(self.end_time) + \
+        return "[" + str(self.start_time) + "," + str(self.end_time) + "," + \
                str(self.percent) + "]"
 
 
@@ -84,13 +84,16 @@ class CommunicationRecorder(Recorder):
     def __init__(self, slot=1):
         super().__init__(slot)
         # recorder: {(Edge, iteration, Hop): CommunicationRecord}
-        self.recorder_time: Dict[Tuple[Edge, int, Hop], CommunicationRecord] = {}
+        # self.recorder_time: Dict[Tuple[Edge, int, Hop], CommunicationRecord] = {}
+        self.recorder_time: Dict[Tuple[Edge, int], CommunicationRecord] = {}
 
     def __repr__(self):
         recorder = ""
         for key in self.recorder_time:
-            record = "(Edge: " + repr(key[0]) + " Iter: " + str(key[1]) + \
-                     " Hop: " + repr(key[2]) + ") " + \
+            # record = "(Edge: " + repr(key[0]) + " Iter: " + str(key[1]) + \
+            #          " Hop: " + repr(key[2]) + ") " + \
+            #          repr(self.recorder_time[key]) + "\n"
+            record = "(Edge: " + repr(key[0]) + " Iter: " + str(key[1]) + ") " + \
                      repr(self.recorder_time[key]) + "\n"
             recorder += record
         return recorder
@@ -106,21 +109,21 @@ class CommunicationRecorder(Recorder):
         except StopIteration:
             raise StopIteration
 
-    def __contains__(self, key: Tuple[Edge, int, Hop]):
+    def __contains__(self, key):
         return key in self.recorder_time
         # for key in self.recorder_time:
         #     if __key[0] == key[0] and __key[1] == key[1] and __key[2].src == key[2].src and __key[2].dst == key[2].dst and __key[2].link_id == key[2].link_id:
         #         return True
         # return False
     
-    def __getitem__(self, key: Tuple[Edge, int, Hop]):
+    def __getitem__(self, key):
         return self.recorder_time[key]
         # for key in self.recorder_time:
         #     if __key[0] == key[0] and __key[1] == key[1] and __key[2].src == key[2].src and __key[2].dst == key[2].dst and __key[2].link_id == key[2].link_id:
         #         return self.recorder_time[key]
         # return self.recorder_time[__key]
     
-    def update(self, key: Tuple[Edge, int, Hop], value: CommunicationRecord):
+    def update(self, key, value: CommunicationRecord):
         self.recorder_time.update({key: value})
         # for key in self.recorder_time:
         #     if __key[0] == key[0] and __key[1] == key[1] and __key[2].src == key[2].src and __key[2].dst == key[2].dst and __key[2].link_id == key[2].link_id:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from enum import Enum
+from src.simulator.resource_simulator.evaluation_model.area.process_node import ProcessNode
 
 
 class EvaluationMode(Enum):
@@ -8,8 +9,10 @@ class EvaluationMode(Enum):
 
 
 class Evaluator():
-    def __init__(self, mode: EvaluationMode = EvaluationMode.STATIC,
+    def __init__(self, process_node: ProcessNode,
+                 mode: EvaluationMode = EvaluationMode.STATIC,
                  latency: float = None) -> None:
+        self.process_node = process_node
         self.mode = mode
         self._latency = latency
 

@@ -1,12 +1,32 @@
 import toml
+from typing import Union
+from src.simulator.resource_simulator.evaluation_model.area.process_node import ProcessNode
+
+
+def convert_process_node(process_node: Union[int, ProcessNode]):
+    if type(process_node) is int:
+        if process_node == 5:
+            return ProcessNode.FIVE
+        elif process_node == 6:
+            return ProcessNode.SIX
+        elif process_node == 7:
+            return ProcessNode.SEVEN
+        else:
+            raise NotImplementedError
+    else:
+        return process_node
 
 
 class Config:
-    def __init__(self, config) -> None:
+    def __init__(self, config, process_node: int = None) -> None:
         if type(config) is str:
             self.config = toml.load(config)
         else:
             self.config = config
+        if process_node is not None:
+            self.process_node = convert_process_node(process_node)
+        else:
+            self.process_node = None
         self.handler()
     
     def handler(self):
@@ -14,8 +34,8 @@ class Config:
 
 
 class CoreConfig(Config):
-    def __init__(self, config) -> None:
-        super().__init__(config)
+    def __init__(self, config, process_node = None):
+        super().__init__(config, process_node)
 
     def handler(self):
         self.network = self.config["network"]
@@ -25,29 +45,31 @@ class CoreConfig(Config):
 
 
 class ComputeChipletConfig(Config):
-    def __init__(self, config) -> None:
-        super().__init__(config)
+    def __init__(self, config, process_node = None):
+        super().__init__(config, process_node)
 
     def handler(self):
-        self.core = CoreConfig(self.config["core"])
+        self.core = CoreConfig(self.config["core"], self.process_node)
         self.size = self.config["size"]
         self.network = self.config["network"]
-        self.shared_memory = self.config["shared_memory"]
+        if "shared_memory" in self.config:
+            self.shared_memory = self.config["shared_memory"]
 
 
 class BoardConfig(Config):
-    def __init__(self, config) -> None:
-        super().__init__(config)
+    def __init__(self, config, process_node=None):
+        super().__init__(config, process_node)
 
     def handler(self):
-        self.chiplet = ComputeChipletConfig(self.config["chiplet"])
+        self.chiplet = ComputeChipletConfig(self.config["chiplet"], 
+                                            self.process_node)
         self.DRAM = self.config["DRAM"]
         self.network = self.config["network"]
 
 
 class ServerConfig(Config):
-    def __init__(self, config) -> None:
-        super().__init__(config)
+    def __init__(self, config, process_node = None):
+        super().__init__(config, process_node)
 
     def handler(self):
         self.PCB = BoardConfig(self.config["PCB"])

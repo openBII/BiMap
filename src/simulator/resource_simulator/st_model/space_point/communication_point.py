@@ -6,7 +6,7 @@ from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
 from src.simulator.resource_simulator.st_model.hop import Hop
 from src.simulator.resource_simulator.st_model.tick import Tick
 from src.simulator.resource_simulator.st_model.st_point import STPoint
-from src.simulator.resource_simulator.evaluation_model.communication_evaluator import CommunicationEvaluator, SharedMemoryCommunicationEvaluator, BoardCommunicationEvaluator, ServerCommunicationEvaluator, CoreCommunicationEvaluator, NetworkParameterDict
+from src.simulator.resource_simulator.evaluation_model.communication_evaluator import CommunicationEvaluator, SharedMemoryCommunicationEvaluator, CoreCommunicationEvaluator, NetworkParameterDict
 from src.simulator.resource_simulator.config.communication_config import CoreCommunicationConfig, CommunicationConfig
 
 
@@ -15,7 +15,10 @@ class CommunicationPoint(STPoint):
         super().__init__()
         self.bandwidth, self.latency = self.config_handler(config)
         self._edge_map: Dict[Edge, List[Tuple[MLCoord, int]]] = {}
-        self.evaluator = CommunicationEvaluator(self.bandwidth, config.size)
+        self.evaluator = CommunicationEvaluator(self.bandwidth, 
+                                                process_node=config.process_node,
+                                                size=config.size,
+                                                latency=self.latency)
 
     def update_bandwidth(self, value: float):
         self.bandwidth = value
@@ -97,23 +100,23 @@ class CommunicationPoint(STPoint):
     
 
 class CoreCommunicationPoint(CommunicationPoint):
-    def __init__(self, config: CoreCommunicationConfig):
+    def __init__(self, config: CommunicationConfig):
         super().__init__(config)
         self.set_evaluator(CoreCommunicationEvaluator(self.bandwidth,
                                                       latency=self.latency))
 
-    def config_handler(self, config: CoreCommunicationConfig):
-        bandwidth_dict = NetworkParameterDict()
-        bandwidth_dict[Hop(Coord(0), Coord(1))] = config.buffer2array_input
-        bandwidth_dict[Hop(Coord(0), Coord(1), 1)] = config.buffer2array_weight
-        bandwidth_dict[Hop(Coord(1), Coord(0))] = config.array2buffer
-        bandwidth_dict[Hop(Coord(1), Coord(2))] = config.array2vector
-        bandwidth_dict[Hop(Coord(0), Coord(2))] = config.buffer2vector_input
-        bandwidth_dict[Hop(Coord(0), Coord(2), 1)] = config.buffer2vector_input
-        bandwidth_dict[Hop(Coord(2), Coord(0))] = config.vector2buffer
-        bandwidth_dict[Hop(Coord(0), Coord(3))] = config.buffer2router
-        bandwidth_dict[Hop(Coord(3), Coord(0))] = config.router2buffer
-        return bandwidth_dict, config.latency
+    # def config_handler(self, config: CoreCommunicationConfig):
+    #     bandwidth_dict = NetworkParameterDict()
+    #     bandwidth_dict[Hop(Coord(0), Coord(1))] = config.buffer2array_input
+    #     bandwidth_dict[Hop(Coord(0), Coord(1), 1)] = config.buffer2array_weight
+    #     bandwidth_dict[Hop(Coord(1), Coord(0))] = config.array2buffer
+    #     bandwidth_dict[Hop(Coord(1), Coord(2))] = config.array2vector
+    #     bandwidth_dict[Hop(Coord(0), Coord(2))] = config.buffer2vector_input
+    #     bandwidth_dict[Hop(Coord(0), Coord(2), 1)] = config.buffer2vector_input
+    #     bandwidth_dict[Hop(Coord(2), Coord(0))] = config.vector2buffer
+    #     bandwidth_dict[Hop(Coord(0), Coord(3))] = config.buffer2router
+    #     bandwidth_dict[Hop(Coord(3), Coord(0))] = config.router2buffer
+    #     return bandwidth_dict, config.latency
     
 
 class SharedMemoryCommunicationPoint(CommunicationPoint):
@@ -126,20 +129,4 @@ class SharedMemoryCommunicationPoint(CommunicationPoint):
                                                        config.size,
                                                        latency=self.latency)
         self.set_evaluator(evaluator)
-
-
-class BoardCommunicationPoint(CommunicationPoint):
-    def __init__(self, config: CommunicationConfig):
-        super().__init__(config)
-        evaluator = BoardCommunicationEvaluator(self.bandwidth,
-                                                latency=self.latency)
-        self.set_evaluator(evaluator)
-
-
-class ServerCommunicationPoint(CommunicationPoint):
-    def __init__(self, config: CommunicationConfig):
-        super().__init__(config)
-        evaluator = ServerCommunicationEvaluator(self.bandwidth,
-                                                 latency=self.latency)
-        self.set_evaluator(evaluator)
-        
+     

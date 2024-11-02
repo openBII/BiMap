@@ -18,6 +18,7 @@ class Precision(Enum):
     TERNARY = 8
     INT_28 = 9
     UINT_4 = 10
+    FLOAT_64 = 11
 
     INT_9 = 100
 

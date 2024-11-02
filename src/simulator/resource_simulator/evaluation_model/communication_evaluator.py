@@ -8,6 +8,8 @@ import math
 from src.simulator.resource_simulator.evaluation_model.recorder import CommunicationRecorder, CommunicationRecord
 from src.simulator.resource_simulator.evaluation_model.evaluator import Evaluator, EvaluationMode
 from queue import PriorityQueue
+from src.simulator.resource_simulator.evaluation_model.utils import create_overlap_groups
+from src.simulator.resource_simulator.evaluation_model.area.process_node import ProcessNode
 
 
 class NetworkParameterDict:
@@ -30,10 +32,11 @@ class NetworkParameterDict:
 
 class CommunicationEvaluator(Evaluator):
     def __init__(self, bandwidth: float,
+                 process_node: ProcessNode,
                  mode: EvaluationMode = EvaluationMode.STATIC,
                  size: Tuple[int] = None,
                  latency: float = 0) -> None:
-        super().__init__(mode)
+        super().__init__(process_node, mode)
         self.bandwidth = bandwidth
         self.latency = latency
         self.size = size
@@ -216,7 +219,8 @@ class CommunicationEvaluator(Evaluator):
     def backup_recorder(self):
         pass
 
-    def eval_by_model(self, edge_heap: List[Tuple[int, Tuple[Edge, int]]], extern_deadline: float = None) -> Tuple[List[Edge], int]:
+    def eval_by_model(self, edge_heap: PriorityQueue, 
+                      extern_deadline: float = None) -> Tuple[List[Edge], int]:
         '''
         Pseudo-code:
         while not SOME_EDGE_FINISHED:
@@ -273,80 +277,59 @@ class CommunicationEvaluator(Evaluator):
                 edge_heap.put((second_min_start_time, second_min_edge))
             else:
                 second_min_start_time = float('inf')
-            # 对找到的最先开始的边根据第一个Hop是否重合进行分组
-            hop_dict = HopDict()
-            for edge in min_edges:
-                first_hop = self.edge_map[edge].pop(0)
-                if not first_hop in hop_dict:
-                    hop_dict[first_hop] = [edge]
-                else:
-                    hop_dict[first_hop].append(edge)
+            # 判断边之间是否会发生重合
+            overlap_groups = create_overlap_groups(min_edges, self.edge_map)
             # 分组进行评估
-            min_end_time = float('inf')  # 当前轮次评估中最先结束的Hop
-            for hop in hop_dict:
-                edges = hop_dict[hop]
-                num_edges = len(edges)
-                real_bandwidth = self.get_bandwidth(hop) / num_edges
-                latency = self.get_hop_latency(hop)
-                for edge in edges:
-                    if (*edge, hop) in self.recorder:
-                        start_time = self.recorder[(*edge, hop)].start_time
-                        last_percent = self.recorder[(*edge, hop)].percent
-                    else:
-                        start_time = min_start_time
-                        last_percent = 0
-                    duration = edge[0].flux * (1 - last_percent) / real_bandwidth
-                    end_time = min_start_time + duration
-                    if last_percent == 0:
-                        end_time += latency
-                    if end_time < min_end_time:
-                        min_end_time = end_time
-                    # print(end_time)
-                    # print((end_time, last_percent))
-                    self.recorder.update((*edge, hop), CommunicationRecord(start_time, end_time, last_percent))
-                    # if end_time == 73928:
-                    #     print((end_time, last_percent, duration, min_start_time, extern_deadline))
-                    # if end_time == 73828:
-                    #     print((end_time, last_percent, duration, min_start_time, ))
-            # deadline = min_end_time if min_end_time < second_min_start_time else second_min_start_time
+            min_end_time = float('inf')  # 当前轮次评估中最先结束的edge
+            for key_edge, neighbor_edges in overlap_groups.items():
+                num_edges = len(neighbor_edges)
+                real_bandwidth = self.bandwidth / num_edges
+                latency = self.latency * len(self.edge_map[key_edge])
+
+                if key_edge in self.recorder:
+                    start_time = self.recorder[key_edge].start_time
+                    last_percent = self.recorder[key_edge].percent
+                else:
+                    start_time = min_start_time
+                    last_percent = 0
+                duration = key_edge[0].flux * (1 - last_percent) / real_bandwidth
+                end_time = min_start_time + duration
+                if last_percent == 0:
+                    end_time += latency
+                if end_time < min_end_time:
+                    min_end_time = end_time
+                self.recorder.update(key_edge, CommunicationRecord(start_time, end_time, last_percent))
             if extern_deadline is not None:
                 deadline = min(min_end_time, second_min_start_time, extern_deadline)
             else:
                 deadline = min(min_end_time, second_min_start_time)
             edges_cannot_proceed = set()
-            for hop in hop_dict:
-                edges = hop_dict[hop]
-                num_edges = len(edges)
-                real_bandwidth = self.get_bandwidth(hop) / num_edges
-                latency = self.get_hop_latency(hop)
-                for edge in edges:
-                    record = self.recorder[(*edge, hop)]
-                    if record.end_time > deadline:
-                        if (deadline - latency <= min_start_time and
-                            record.percent == 0):
-                            record.end_time = min_start_time
-                            record.percent = 0
-                            edges_cannot_proceed.add(edge)
-                        else:
-                            record.end_time = deadline
-                            if record.percent == 0:
-                                record.percent += (deadline - min_start_time - latency) * real_bandwidth / edge[0].flux
-                            else:
-                                record.percent += (deadline - min_start_time) * real_bandwidth / edge[0].flux
-                        # 未处理完的hop需要放回到edge_map
-                        self.edge_map[edge].insert(0, hop)
-                    else:  # 当前hop处理完成
-                        record.percent = 1
-                    # 真正的评估结果
-                    self.recorder.update((*edge, hop), record)
-                    if record.percent == 1 and len(self.edge_map[edge]) == 0:  # 某edge评估结束
-                        finished_edges.append(edge)
-                        # 评估的结束时间
-                        finish_time = record.end_time
+            for key_edge, neighbor_edges in overlap_groups.items():
+                num_edges = len(neighbor_edges)
+                real_bandwidth = self.bandwidth / num_edges
+                latency = self.latency * len(self.edge_map[key_edge])
+
+                record = self.recorder[key_edge]
+                if record.end_time > deadline:
+                    if (deadline - latency <= min_start_time and
+                        record.percent == 0):
+                        record.end_time = min_start_time
+                        record.percent = 0
+                        edges_cannot_proceed.add(key_edge)
                     else:
-                        # 将未完成的边重新加入堆中
-                        # heapq.heappush(edge_heap, (record.end_time, edge))
-                        edge_heap.put((record.end_time, edge))
+                        record.end_time = deadline
+                        if record.percent == 0:
+                            record.percent += (deadline - min_start_time - latency) * real_bandwidth / key_edge[0].flux
+                        else:
+                            record.percent += (deadline - min_start_time) * real_bandwidth / key_edge[0].flux
+                    edge_heap.put((record.end_time, key_edge))
+                else:  # 当前edge处理完成
+                    record.percent = 1
+                    finished_edges.append(key_edge)
+                    # 评估的结束时间
+                    finish_time = record.end_time
+                # 真正的评估结果
+                self.recorder.update(key_edge, record)
             if self.all_edges_reach_deadline(edge_heap, extern_deadline,
                                              edges_cannot_proceed):
                 break
@@ -359,9 +342,153 @@ class CommunicationEvaluator(Evaluator):
                 finish_time = extern_deadline
         return finished_edges, finish_time
 
+    # def eval_by_model(self, edge_heap: List[Tuple[int, Tuple[Edge, int]]], extern_deadline: float = None) -> Tuple[List[Edge], int]:
+    #     '''
+    #     Pseudo-code:
+    #     while not SOME_EDGE_FINISHED:
+    #         找到所有最先开始的边, 记录到min_edges中  O(nlogn)
+    #         找到第二先开始的边, 记录second_min_start_time O(logn)
+    #         for edge in min_edges:  O(n)
+    #             获取edge的第一个hop
+    #             将edge加入hop_dict[hop]对应的列表中, 相当于对所有edge按第一个hop分组
+    #         for hop in hop_dict:
+    #             for edge in hop_dict[hop]:
+                    
+
+    #     Args:
+    #     - edge_heap: Heap[(start time, (Edge, iteration))]
+
+    #     Returns:
+    #     - finished_edges: [Edge]
+    #     - finish_time: float
+    #     '''
+    #     finished_edges: List[Tuple[Edge, int]] = []
+    #     if extern_deadline is None:
+    #         recorder = self.copy_recorder()
+    #     # print(self.recorder)
+    #     # import time
+    #     # time.sleep(0.1)
+    #     while len(finished_edges) == 0:  # 每次评估一个hop
+    #         # if self.all_edges_reach_deadline(edge_heap, extern_deadline):
+    #         #     break
+    #         # min_start_time, min_edge = heapq.heappop(edge_heap)  # 最先可以开始的边
+    #         min_start_time, min_edge = edge_heap.get()
+    #         if extern_deadline is not None:
+    #             if min_start_time > extern_deadline:
+    #                 # heapq.heappush(edge_heap, (min_start_time, min_edge))
+    #                 edge_heap.put((min_start_time, min_edge))
+    #                 return [], extern_deadline
+    #         # if len(edge_heap) != 0:
+    #         #     second_min_start_time, second_min_edge = heapq.heappop(edge_heap)  # 第二先可以开始的边
+    #         if not edge_heap.empty():
+    #             second_min_start_time, second_min_edge = edge_heap.get()  # 第二先可以开始的边
+    #         else:
+    #             second_min_start_time = float('inf')
+    #             second_min_edge = None
+    #         min_edges = [min_edge]  # 所有同一时间且最先开始的边
+    #         while second_min_start_time == min_start_time:
+    #             min_edges.append(second_min_edge)
+    #             # if len(edge_heap) != 0:
+    #             #    second_min_start_time, second_min_edge = heapq.heappop(edge_heap)
+    #             if not edge_heap.empty():
+    #                 second_min_start_time, second_min_edge = edge_heap.get()
+    #             else:
+    #                 break
+    #         if second_min_start_time != min_start_time and second_min_edge is not None:
+    #             # heapq.heappush(edge_heap, (second_min_start_time, second_min_edge))
+    #             edge_heap.put((second_min_start_time, second_min_edge))
+    #         else:
+    #             second_min_start_time = float('inf')
+    #         # 判断边之间是否会发生重合
+    #         # 对找到的最先开始的边根据第一个Hop是否重合进行分组
+    #         hop_dict = HopDict()
+    #         for edge in min_edges:
+    #             first_hop = self.edge_map[edge].pop(0)
+    #             if not first_hop in hop_dict:
+    #                 hop_dict[first_hop] = [edge]
+    #             else:
+    #                 hop_dict[first_hop].append(edge)
+    #         # 分组进行评估
+    #         min_end_time = float('inf')  # 当前轮次评估中最先结束的Hop
+    #         for hop in hop_dict:
+    #             edges = hop_dict[hop]
+    #             num_edges = len(edges)
+    #             real_bandwidth = self.get_bandwidth(hop) / num_edges
+    #             latency = self.get_hop_latency(hop)
+    #             for edge in edges:
+    #                 if (*edge, hop) in self.recorder:
+    #                     start_time = self.recorder[(*edge, hop)].start_time
+    #                     last_percent = self.recorder[(*edge, hop)].percent
+    #                 else:
+    #                     start_time = min_start_time
+    #                     last_percent = 0
+    #                 duration = edge[0].flux * (1 - last_percent) / real_bandwidth
+    #                 end_time = min_start_time + duration
+    #                 if last_percent == 0:
+    #                     end_time += latency
+    #                 if end_time < min_end_time:
+    #                     min_end_time = end_time
+    #                 # print(end_time)
+    #                 # print((end_time, last_percent))
+    #                 self.recorder.update((*edge, hop), CommunicationRecord(start_time, end_time, last_percent))
+    #                 # if end_time == 73928:
+    #                 #     print((end_time, last_percent, duration, min_start_time, extern_deadline))
+    #                 # if end_time == 73828:
+    #                 #     print((end_time, last_percent, duration, min_start_time, ))
+    #         # deadline = min_end_time if min_end_time < second_min_start_time else second_min_start_time
+    #         if extern_deadline is not None:
+    #             deadline = min(min_end_time, second_min_start_time, extern_deadline)
+    #         else:
+    #             deadline = min(min_end_time, second_min_start_time)
+    #         edges_cannot_proceed = set()
+    #         for hop in hop_dict:
+    #             edges = hop_dict[hop]
+    #             num_edges = len(edges)
+    #             real_bandwidth = self.get_bandwidth(hop) / num_edges
+    #             latency = self.get_hop_latency(hop)
+    #             for edge in edges:
+    #                 record = self.recorder[(*edge, hop)]
+    #                 if record.end_time > deadline:
+    #                     if (deadline - latency <= min_start_time and
+    #                         record.percent == 0):
+    #                         record.end_time = min_start_time
+    #                         record.percent = 0
+    #                         edges_cannot_proceed.add(edge)
+    #                     else:
+    #                         record.end_time = deadline
+    #                         if record.percent == 0:
+    #                             record.percent += (deadline - min_start_time - latency) * real_bandwidth / edge[0].flux
+    #                         else:
+    #                             record.percent += (deadline - min_start_time) * real_bandwidth / edge[0].flux
+    #                     # 未处理完的hop需要放回到edge_map
+    #                     self.edge_map[edge].insert(0, hop)
+    #                 else:  # 当前hop处理完成
+    #                     record.percent = 1
+    #                 # 真正的评估结果
+    #                 self.recorder.update((*edge, hop), record)
+    #                 if record.percent == 1 and len(self.edge_map[edge]) == 0:  # 某edge评估结束
+    #                     finished_edges.append(edge)
+    #                     # 评估的结束时间
+    #                     finish_time = record.end_time
+    #                 else:
+    #                     # 将未完成的边重新加入堆中
+    #                     # heapq.heappush(edge_heap, (record.end_time, edge))
+    #                     edge_heap.put((record.end_time, edge))
+    #         if self.all_edges_reach_deadline(edge_heap, extern_deadline,
+    #                                          edges_cannot_proceed):
+    #             break
+    #     if extern_deadline is None:
+    #         self.recorder.recorder_time = recorder
+    #     else:
+    #         if len(finished_edges) != 0:
+    #             assert finish_time == extern_deadline
+    #         else:
+    #             finish_time = extern_deadline
+    #     return finished_edges, finish_time
+
 
 class CoreCommunicationEvaluator(CommunicationEvaluator):
-    def __init__(self, bandwidth: NetworkParameterDict,
+    def __init__(self, bandwidth: float,
                  mode: EvaluationMode = EvaluationMode.STATIC,
                  latency: float = 0) -> None:
         super().__init__(bandwidth, mode, latency=latency)
@@ -399,20 +526,6 @@ class SharedMemoryCommunicationEvaluator(CommunicationEvaluator):
                 self.append_hop(edge, iteration, Hop(self.arbitrator_coord, self.shared_memory_coord, link_id))
                 self.append_hop(edge, iteration, Hop(self.shared_memory_coord, self.arbitrator_coord, link_id))
                 self.append_hop(edge, iteration, Hop(self.arbitrator_coord, dst, link_id))
-
-
-class BoardCommunicationEvaluator(CommunicationEvaluator):
-    def __init__(self, bandwidth: float, 
-                 mode: EvaluationMode = EvaluationMode.STATIC,
-                 latency: float = 0) -> None:
-        super().__init__(bandwidth, mode, latency=latency)
-
-
-class ServerCommunicationEvaluator(CommunicationEvaluator):
-    def __init__(self, bandwidth: float, 
-                 mode: EvaluationMode = EvaluationMode.STATIC,
-                 latency: float = 0) -> None:
-        super().__init__(bandwidth, mode, latency=latency)
 
 
 if __name__ == "__main__":

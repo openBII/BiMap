@@ -4,12 +4,14 @@ from src.simulator.resource_simulator.evaluation_model.communication_evaluator i
 
 
 class CommunicationConfig:
-    def __init__(self, bandwidth: float | NetworkParameterDict = None,
+    def __init__(self, bandwidth: float = None,
+                 process_node = None,
                  size: Tuple[int] = None,
-                 latency: float | NetworkParameterDict = 0) -> None:
+                 latency: float = 0) -> None:
         self.bandwidth = bandwidth
         self.latency = latency
         self.size = size
+        self.process_node = process_node
 
 
 class CoreCommunicationConfig(CommunicationConfig):

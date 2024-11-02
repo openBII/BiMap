@@ -11,11 +11,11 @@ from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 
 
 class MemoryPoint(STPoint):
-    def __init__(self, capacity):
+    def __init__(self, capacity, process_node):
         super().__init__()
         self.capacity = capacity
         self.recorder = MemoryRecorder()
-        self.evaluator = MemoryEvaluator(capacity)
+        self.evaluator = MemoryEvaluator(capacity, process_node)
 
     def __repr__(self):
         return 'capacity: ' + repr(self.capacity) + '\n'
@@ -80,5 +80,5 @@ class MemoryPoint(STPoint):
         
 
 class DRAMPoint(MemoryPoint):
-    def __init__(self, capacity):
-        super().__init__(capacity)
+    def __init__(self, capacity, process_node):
+        super().__init__(capacity, process_node)

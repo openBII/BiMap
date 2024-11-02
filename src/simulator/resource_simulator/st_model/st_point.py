@@ -21,7 +21,7 @@ class STPoint():
         # TODO: Slots
         self._tasks: List[TaskBlock] = []
         self._pc = 0
-        self.evaluator = Evaluator()
+        # self.evaluator = Evaluator(process_node)
         self.recorder = Recorder()
         # Whether pipeline the memory access and computation
         self._is_pipeline: bool = False

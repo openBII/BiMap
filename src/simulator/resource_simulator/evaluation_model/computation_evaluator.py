@@ -1,20 +1,23 @@
 import math
+from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
 from src.simulator.resource_simulator.evaluation_model.evaluator import Evaluator, EvaluationMode
 from src.simulator.resource_simulator.config.computation_config import ComputationConfig
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
+from src.simulator.resource_simulator.evaluation_model.area.cost_model import calc_systolic_array_area_mm2, find_logic_sram_transistor_density
+from src.simulator.resource_simulator.evaluation_model.area.cost_model import calc_vector_area_mm2
+from src.simulator.resource_simulator.evaluation_model.area.cost_model import calc_reg_file_area
 
 
 class ComputationEvaluator(Evaluator):
-    def __init__(self, config: ComputationConfig, 
+    def __init__(self, config: ComputationConfig,
                  mode: EvaluationMode = EvaluationMode.STATIC) -> None:
-        super().__init__(mode)
+        super().__init__(config.process_node, mode)
         self.config = config
-        self._latency = config.latency
     
 
 class MACArrayEvaluator(ComputationEvaluator):
-    def __init__(self, config: ComputationConfig, 
+    def __init__(self, config: ComputationConfig,
                  mode: EvaluationMode = EvaluationMode.STATIC) -> None:
         super().__init__(config, mode)
 
@@ -22,18 +25,51 @@ class MACArrayEvaluator(ComputationEvaluator):
         in_precision = task.in_precision
         precision = min(in_precision)
         assert precision in self.config, "Cannot process task in {:s}".format(precision.name)
-        array = self.config[precision]
+        computation_info = self.config[precision]
         if task.task_type == TaskBlockType.CVM:
-            num_pe = math.prod(array)
-            return task.shape.volume / num_pe
+            if computation_info.parallelism[0] == computation_info.parallelism[1]:
+                length = computation_info.parallelism[0]
+                num_tiles = math.ceil(task.shape.volume / length**3)
+                one_time_latency = 2 * self.config.local_memory_latency + computation_info.latency * max(1, 2 * math.ceil(length / self.config.local_memory_bandwidth))
+                return num_tiles * one_time_latency
+            else:
+                raise NotImplementedError
         else:
             raise NotImplementedError
         
     def eval_area(self):
+        # area = 0
+        # for _, size in self.config:
+        #     area += math.prod(size) * 0.0007
+        # return area
         area = 0
-        for _, size in self.config:
-            area += math.prod(size) * 0.0007
+        transistor_density_mil_mm2, _ = find_logic_sram_transistor_density(
+            self.process_node.value)
+        num_registers = 0
+        for precision, computation_info in self.config:
+            parallelism = computation_info.parallelism
+            if precision == Precision.FLOAT_16:
+                area += calc_systolic_array_area_mm2(
+                    parallelism[0], parallelism[1], 'fp16', 
+                    transistor_density_mil_mm2)
+                num_registers += parallelism[0] * 3
+            elif precision == Precision.FLOAT_32:
+                area += calc_systolic_array_area_mm2(
+                    parallelism[0], parallelism[1], 'fp32', 
+                    transistor_density_mil_mm2)
+                num_registers += parallelism[0] * 6
+            elif precision == Precision.FLOAT_64:
+                area += calc_systolic_array_area_mm2(
+                    parallelism[0], parallelism[1], 'fp64', 
+                    transistor_density_mil_mm2)
+                num_registers += parallelism[0] * 12
+
+        area += calc_reg_file_area(
+            1, num_registers, 16, 4,  # 2读2写
+            transistor_density_mil_mm2)
+        
         return area
+
 
 class VectorUnitEvaluator(ComputationEvaluator):
     def __init__(self, config: ComputationConfig, 
@@ -43,26 +79,64 @@ class VectorUnitEvaluator(ComputationEvaluator):
     def eval_by_model(self, task: CTaskBlock):
         in_precision = task.in_precision
         precision = min(in_precision)
-        num_pe = self.config[precision][0]
-        if task.task_type == TaskBlockType.CRELU:
-            return task.shape.volume / num_pe
-        elif task.task_type == TaskBlockType.CSSoftMax:
-            return task.shape.volume / num_pe * 4
-        elif task.task_type == TaskBlockType.CSoftMax:
-            return task.shape.volume / num_pe * 3
-        elif task.task_type == TaskBlockType.CADD:
-            volume = 0
-            for in_task in task.in_tasks:
-                volume += in_task.shape.volume
-            branch = volume / task.shape.volume
-            return task.shape.volume / num_pe * (branch - 1)
-        elif task.task_type == TaskBlockType.CLayerNorm:
-            return task.shape.volume / num_pe * 5
+        computation_info = self.config[precision]
+        parallelism = computation_info.parallelism
+        num_tiles = math.ceil(task.shape.volume / parallelism)
+        if task.task_type == TaskBlockType.CADD:
+            one_time_latency = 2 * self.config.local_memory_latency + computation_info.latency[task.task_type] + math.ceil(parallelism * 2 / self.config.local_memory_bandwidth)
         else:
-            raise NotImplementedError
+            one_time_latency = 2 * self.config.local_memory_latency + computation_info.latency[task.task_type] + math.ceil(parallelism / self.config.local_memory_bandwidth)
+        return num_tiles * one_time_latency
+        # if task.task_type == TaskBlockType.CRELU:
+        #     return task.shape.volume / num_pe
+        # elif task.task_type == TaskBlockType.CSSoftMax:
+        #     return task.shape.volume / num_pe * 4
+        # elif task.task_type == TaskBlockType.CSoftMax:
+        #     return task.shape.volume / num_pe * 3
+        # elif task.task_type == TaskBlockType.CADD:
+        #     volume = 0
+        #     for in_task in task.in_tasks:
+        #         volume += in_task.shape.volume
+        #     branch = volume / task.shape.volume
+        #     return task.shape.volume / num_pe * (branch - 1)
+        # elif task.task_type == TaskBlockType.CLayerNorm:
+        #     return task.shape.volume / num_pe * 5
+        # else:
+        #     raise NotImplementedError
         
     def eval_area(self):
+        # area = 0
+        # for _, size in self.config:
+        #     area += math.prod(size) * 0.0007
+        # return area
         area = 0
-        for _, size in self.config:
-            area += math.prod(size) * 0.0007
+        transistor_density_mil_mm2, _ = find_logic_sram_transistor_density(
+            self.process_node.value)
+        num_registers = 0
+        for precision, computation_info in self.config:
+            if precision == Precision.FLOAT_16:
+                area += calc_vector_area_mm2(
+                    0, computation_info.parallelism, 0,
+                    0, transistor_density_mil_mm2)
+                num_registers += computation_info.parallelism * 3
+            elif precision == Precision.FLOAT_32:
+                area += calc_vector_area_mm2(
+                    0, 0, computation_info.parallelism,
+                    0, transistor_density_mil_mm2)
+                num_registers += computation_info.parallelism * 6
+            elif precision == Precision.FLOAT_64:
+                area += calc_vector_area_mm2(
+                    0, 0, 0,
+                    computation_info.parallelism, transistor_density_mil_mm2)
+                num_registers += computation_info.parallelism * 9
+            elif precision == Precision.INT_32:
+                area += calc_vector_area_mm2(
+                    computation_info.parallelism, 0, 0,
+                    0, transistor_density_mil_mm2)
+                num_registers += computation_info.parallelism * 6
+                
+        area += calc_reg_file_area(
+            1, num_registers, 16, 4, 
+            transistor_density_mil_mm2)
+
         return area
