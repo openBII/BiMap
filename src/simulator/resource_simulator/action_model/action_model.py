@@ -322,13 +322,15 @@ class ActionModel():
                     if transpose:
                         new_split_weights = self.split_task(
                             weight.id, 
-                            SplitVector(token=split_vector.nr, 
+                            SplitVector(batch=split_vector.batch,
+                                        token=split_vector.nr, 
                                         nf=split_vector.nf),
                             record=False)
                     else:
                         new_split_weights = self.split_task(
                             weight.id, 
-                            SplitVector(token=split_vector.nf, 
+                            SplitVector(batch=split_vector.batch,
+                                        token=split_vector.nf, 
                                         nf=split_vector.nr),
                             record=False)
                     if new_split_weights[0].shape == split_weights[0].shape:
@@ -345,11 +347,15 @@ class ActionModel():
                         if transpose:
                             new_split_weights = self.split_task(
                                 weight.id, 
-                                SplitVector(token=split_vector.nr, nf=split_vector.nf))
+                                SplitVector(batch=split_vector.batch,
+                                            token=split_vector.nr, 
+                                            nf=split_vector.nf))
                         else:
                             new_split_weights = self.split_task(
                                 weight.id, 
-                                SplitVector(token=split_vector.nf, nf=split_vector.nr))
+                                SplitVector(batch=split_vector.batch,
+                                            token=split_vector.nf, 
+                                            nf=split_vector.nr))
                         self.connect_tasks([concat], new_split_weights)
                         self.connect_tasks_permuted(new_split_weights, split_mlp)
                         task_dict["weight_concat"] = concat
@@ -359,11 +365,15 @@ class ActionModel():
                     if transpose:
                         new_split_weights = self.split_task(
                             split_weights[0].id, 
-                            SplitVector(token=split_vector.nr, nf=split_vector.nf))
+                            SplitVector(batch=split_vector.batch,
+                                        token=split_vector.nr, 
+                                        nf=split_vector.nf))
                     else:
                         new_split_weights = self.split_task(
                             split_weights[0].id, 
-                            SplitVector(token=split_vector.nf, nf=split_vector.nr))
+                            SplitVector(batch=split_vector.batch,
+                                        token=split_vector.nf, 
+                                        nf=split_vector.nr))
                     self.connect_tasks(list(split_weights[0].in_tasks), 
                                        new_split_weights)
                     self.connect_tasks_permuted(new_split_weights, split_mlp)
@@ -512,31 +522,35 @@ class ActionModel():
             self.disable_task(split_inputs[0].id)
             task_dict["input"] = new_split_inputs
         else:
-            self.enable_task(input.id)
-            new_split_inputs = self.split_task(
-                input.id, 
-                SplitVector(batch=split_vector.batch,
-                            token=split_vector.token, 
-                            nf=split_vector.nr),
-                record=False)
-            if split_inputs[0].shape != new_split_inputs[0].shape:
-                concat_shape = copy(input.shape)
-                concat = create_compute(
-                    task_graph=self._task_graph,
-                    shape=concat_shape, 
-                    type=TaskBlockType.MCONCAT,
-                    precision=input.precision
-                )
-                self.connect_tasks(split_inputs, [concat])
+            if input is not None:
+                self.enable_task(input.id)
                 new_split_inputs = self.split_task(
                     input.id, 
                     SplitVector(batch=split_vector.batch,
                                 token=split_vector.token, 
-                                nf=split_vector.nr))
-                self.connect_tasks([concat], new_split_inputs)
-                self.connect_tasks(new_split_inputs, split_mlp)
-                task_dict["input_concat"] = concat
-                task_dict["input"] = new_split_inputs
+                                nf=split_vector.nr),
+                    record=False)
+                if split_inputs[0].shape != new_split_inputs[0].shape:
+                    concat_shape = copy(input.shape)
+                    concat = create_compute(
+                        task_graph=self._task_graph,
+                        shape=concat_shape, 
+                        type=TaskBlockType.MCONCAT,
+                        precision=input.precision
+                    )
+                    self.connect_tasks(split_inputs, [concat])
+                    new_split_inputs = self.split_task(
+                        input.id, 
+                        SplitVector(batch=split_vector.batch,
+                                    token=split_vector.token, 
+                                    nf=split_vector.nr))
+                    self.connect_tasks([concat], new_split_inputs)
+                    self.connect_tasks(new_split_inputs, split_mlp)
+                    task_dict["input_concat"] = concat
+                    task_dict["input"] = new_split_inputs
+                else:
+                    self.connect_tasks(split_inputs, split_mlp)
+                    task_dict["input"] = split_inputs
             else:
                 self.connect_tasks(split_inputs, split_mlp)
                 task_dict["input"] = split_inputs
