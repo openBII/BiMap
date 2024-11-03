@@ -506,10 +506,10 @@ class CoreCommunicationEvaluator(CommunicationEvaluator):
 
 class SharedMemoryCommunicationEvaluator(CommunicationEvaluator):
     def __init__(self, bandwidth: float, shared_memory_coord: Coord, 
-                 arbitrator_coord: Coord, size: Tuple[int] = None,
+                 arbitrator_coord: Coord, process_node, size: Tuple[int] = None,
                  mode: EvaluationMode = EvaluationMode.STATIC,
                  latency: float = 0) -> None:
-        super().__init__(bandwidth, mode, size, latency)
+        super().__init__(bandwidth, process_node, mode, size, latency)
         self.shared_memory_coord = shared_memory_coord
         self.arbitrator_coord = arbitrator_coord
 

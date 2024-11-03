@@ -126,6 +126,7 @@ class SharedMemoryCommunicationPoint(CommunicationPoint):
         evaluator = SharedMemoryCommunicationEvaluator(self.bandwidth, 
                                                        shared_memory_coord, 
                                                        arbitrator_coord,
+                                                       config.process_node,
                                                        config.size,
                                                        latency=self.latency)
         self.set_evaluator(evaluator)

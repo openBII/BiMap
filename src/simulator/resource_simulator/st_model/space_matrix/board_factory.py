@@ -37,7 +37,8 @@ class BoardFactory(Factory):
         board.add_element(coord=dram_coord, element=dram)
 
         communication_config = CommunicationConfig(
-            config.network["bandwidth"], latency=config.network["latency"])
+            config.network["bandwidth"], process_node=config.process_node,
+            latency=config.network["latency"])
         communication_network = SharedMemoryCommunicationPoint(
             communication_config, dram_coord, arbitrator_coord=Coord(1))
         board.add_communication_network(communication_network)
