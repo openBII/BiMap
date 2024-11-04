@@ -26,7 +26,7 @@ latency = 64
 
 [PCB.chiplet.core.vector_unit]
 [PCB.chiplet.core.vector_unit.fp16]
-parallelism = 1
+parallelism = 128
 [PCB.chiplet.core.vector_unit.fp16.latency]
 relu = 1  # latency for different operations
 softmax = 9

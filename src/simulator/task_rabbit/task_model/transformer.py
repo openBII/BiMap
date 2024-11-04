@@ -99,7 +99,8 @@ def create_tiled_mlp_cyclic_weight(split_vector: SplitVector,
                                    task_dict: Dict = None,
                                    static_weight: bool = True,
                                    output_offchip: bool = False,
-                                   is_input_on_chip: bool = True):
+                                   is_input_on_chip: bool = True,
+                                   weight_offchip: bool = True):
     """
     映射策略为: 拆分batch和token维度, 循环权重完成计算
     """
@@ -116,7 +117,8 @@ def create_tiled_mlp_cyclic_weight(split_vector: SplitVector,
     if not is_input_on_chip:
         input_on_chip = create_data(task_graph, input.shape, precision)
     weight = create_static(task_graph, weight_shape, precision)
-    weight_on_chip = create_data(task_graph, weight_shape, precision)
+    if weight_offchip:
+        weight_on_chip = create_data(task_graph, weight_shape, precision)
     compute_shape = Shape(batch=batch, token=token, nr=nr, nf=nf)
     mlp = create_compute(task_graph, compute_shape, TaskBlockType.CVM, 
                          precision)
@@ -125,7 +127,10 @@ def create_tiled_mlp_cyclic_weight(split_vector: SplitVector,
         output = create_data(task_graph, output_shape, precision)
     else:
         output = create_data(task_graph, output_shape, precision, is_output)
-    task_graph.connect_tasks_in_sequence([weight, weight_on_chip, mlp])
+    if weight_offchip:
+        task_graph.connect_tasks_in_sequence([weight, weight_on_chip, mlp])
+    else:
+        task_graph.connect_tasks_in_sequence([weight, mlp])
     if not is_input_on_chip:
         task_graph.connect_tasks_in_sequence(
             [input, input_on_chip, mlp, output])
@@ -133,8 +138,11 @@ def create_tiled_mlp_cyclic_weight(split_vector: SplitVector,
         task_graph.connect_tasks_in_sequence(
             [input, mlp, output])
     task_dict["compute"] = mlp
-    task_dict["weight_offchip"] = weight
-    task_dict["weight_on_chip"] = weight_on_chip
+    if weight_offchip:
+        task_dict["weight_offchip"] = weight
+        task_dict["weight_on_chip"] = weight_on_chip
+    else:
+        task_dict["weight_on_chip"] = weight
     task_dict["output_on_chip"] = output
     if not is_input_on_chip:
         task_dict["input_on_chip"] = input_on_chip

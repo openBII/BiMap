@@ -104,7 +104,7 @@ class TaskBlock(ABC):
     @shape.setter
     def shape(self, shape: Shape) -> None:
         self._shape = shape
-        self._check_shape()  # FIXME
+        # self._check_shape()  # FIXME
         self._construct_storage()
         self._construct_computation()
 

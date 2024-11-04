@@ -33,7 +33,7 @@ ROUTER = 3
 SRAM_BUFFER = 0
 
 
-def simulate(hardware_paramter_dict: Dict[str, int]):
+def simulate(hardware_paramter_dict: Dict[str, int] = []):
     # Construct Task Graph
     IDGenerator.set_base_task_id(0)
     task_graph = TaskGraph()
@@ -96,10 +96,10 @@ def simulate(hardware_paramter_dict: Dict[str, int]):
     many_core_board = BoardFactory.create_matrix(config, 
                                                  BoardType.DISTRIBUTED_MANY_CORE)
     
-    print(many_core_board.container[Coord(CHIP)].area)
-    print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area())
-    print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area())
-    print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area())
+    # print(many_core_board.container[Coord(CHIP)].area)
+    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area())
+    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area())
+    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area())
 
     # Create DSE snvironment
     env = STEnv(task_graph, many_core_board)
@@ -233,6 +233,8 @@ def simulate(hardware_paramter_dict: Dict[str, int]):
                                              LoopInfo(25, 26, 15)])
     return overall_latency
 
+latency = simulate()
+
 
 # noc_bandwidth_paramters = []
 # noc_bandwidth_latencies = []
@@ -323,6 +325,6 @@ mappable.set_array(local_memory_bandwidth_paramters)
 cbar = fig.colorbar(mappable, ax=ax)
 cbar.set_ticks([4, 8, 16, 32, 64, 128])
 
-plt.savefig('temp/test.png', dpi=300)
+plt.savefig('temp/test1.png', dpi=300)
 
 

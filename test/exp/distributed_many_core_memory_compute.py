@@ -2,17 +2,19 @@ from src.simulator.resource_simulator.st_env import STEnv, LoopInfo
 from src.simulator.task_rabbit.task_model.shape import Shape, SplitVector
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
+from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.resource_simulator.config.matrix_config import BoardConfig
 from src.simulator.resource_simulator.st_model.space_matrix.board_factory import BoardFactory, BoardType
 from src.simulator.resource_simulator.st_model.st_coord import create_mlcoord
 from src.simulator.resource_simulator.st_draw import STDraw
 from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
-from src.simulator.task_rabbit.task_model.transformer import create_prefill_attention, create_input, AttentionType, create_tiled_mlp_cyclic_weight, create_tiled_elementwise, create_pointwise
+from src.simulator.task_rabbit.task_model.transformer import create_prefill_attention, create_input, AttentionType, create_tiled_mlp_cyclic_weight, create_tiled_elementwise, create_pointwise, create_data
 import matplotlib.pyplot as plt
 import toml
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from typing import Dict
 import numpy as np
+from copy import deepcopy
 
 
 # Algorithm Parameters
@@ -33,7 +35,534 @@ ROUTER = 3
 SRAM_BUFFER = 0
 
 
-def simulate(hardware_paramter_dict: Dict[str, int]):
+def simulate_tiled_mlp_weight_on_chip_2mb(hardware_paramter_dict: Dict[str, int] = []):
+    # Construct Task Graph
+    IDGenerator.set_base_task_id(0)
+    task_graph = TaskGraph()
+    _, input_offchip = create_input(
+        task_graph,
+        Shape(batch=BATCH // 8, token=SEQ_LEN // 32, nf=D_MODEL),
+        Precision.FLOAT_16)
+    # Query, Key, Value
+    output, mlp_task_dict = create_tiled_mlp_cyclic_weight(
+        split_vector=SplitVector(batch=8, token=32, nf=64),
+        task_graph=task_graph,
+        input=input_offchip,
+        shape=Shape(nf=4096, nr=4096),
+        precision=Precision.FLOAT_16,
+        is_input_on_chip=False,
+        weight_offchip=False,
+        is_output=True
+    )
+
+    STDraw.draw_graph(task_graph, out_path='temp/tiled_attention_2mb_weight_on_chip.task.html',
+                      width='1920px', height='1080px')
+
+    # Update Hardware Configuration
+    config = toml.load("top/distributed_many_core_board.toml")
+    config = BoardConfig(config["PCB"])
+    for type in hardware_paramter_dict:
+        if type == "noc_bandwidth":
+            config.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "local_memory_latency":
+            config.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
+        elif type == "local_memory_bandwidth":
+            config.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+
+    # Create Hardware
+    many_core_board = BoardFactory.create_matrix(config, 
+                                                 BoardType.DISTRIBUTED_MANY_CORE)
+
+    # Create DSE snvironment
+    env = STEnv(task_graph, many_core_board)
+
+    # Equivalent Hardware Parameter
+    many_core_board.communication_networks[0].update_bandwidth(
+        config.network["bandwidth"] // (SIZE_X * SIZE_Y))
+
+    # Mapping
+    # Query, Key, Value
+    # DRAM
+    dram = create_mlcoord(DRAM)
+    env.put_in(dram, input_offchip.id)
+
+    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
+    cyclic_local_memory = create_mlcoord(CHIP, (1, 0), SRAM_BUFFER)
+    mlp_input_on_chip = mlp_task_dict["input_on_chip"]
+    mlp_weight_on_chip = mlp_task_dict["weight_on_chip"]
+    mlp_cyclic_weight_on_chip = mlp_task_dict["cyclic_weight_on_chip"]
+    mlp_output_on_chip = mlp_task_dict["output_on_chip"]
+    mlp = mlp_task_dict["compute"]
+    cyclic_mlp = mlp_task_dict["cyclic_compute"]
+    env.put_in(local_memory, mlp_input_on_chip.id)
+    env.put_in(cyclic_local_memory, mlp_weight_on_chip.id)
+    env.put_in(local_memory, mlp_output_on_chip.id)
+    sync_id1 = env.get_sync_id()
+    env.sync(cyclic_local_memory, sync_id1)
+    env.put_in(cyclic_local_memory, mlp_cyclic_weight_on_chip.id)
+    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
+    env.put_in(tensor_unit, mlp.id)
+    env.sync(tensor_unit, sync_id1)
+    env.put_in(tensor_unit, cyclic_mlp.id)
+
+    # Edge Mapping
+    env.auto_edge_map()
+
+    env.simulate()
+    # env.show_overall_time()
+    overall_latency = env.get_latency(loops=[LoopInfo(6, 7, 63)])
+    return overall_latency
+
+
+def simulate_tiled_mlp_weight_on_chip_1mb(hardware_paramter_dict: Dict[str, int] = []):
+    # Construct Task Graph
+    IDGenerator.set_base_task_id(0)
+    task_graph = TaskGraph()
+    _, input_offchip = create_input(
+        task_graph,
+        Shape(batch=BATCH // 8, token=SEQ_LEN // 64, nf=D_MODEL),
+        Precision.FLOAT_16)
+    # Query, Key, Value
+    output, mlp_task_dict = create_tiled_mlp_cyclic_weight(
+        split_vector=SplitVector(batch=8, token=32, nf=64),
+        task_graph=task_graph,
+        input=input_offchip,
+        shape=Shape(nf=4096, nr=4096),
+        precision=Precision.FLOAT_16,
+        is_input_on_chip=False,
+        weight_offchip=False,
+        output_offchip=True,
+        is_output=True
+    )
+
+    STDraw.draw_graph(task_graph, out_path='temp/tiled_attention_1mb_weight_on_chip.task.html',
+                      width='1920px', height='1080px')
+
+    # Update Hardware Configuration
+    config = toml.load("top/distributed_many_core_board.toml")
+    config = BoardConfig(config["PCB"])
+    for type in hardware_paramter_dict:
+        if type == "noc_bandwidth":
+            config.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "local_memory_latency":
+            config.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
+        elif type == "local_memory_bandwidth":
+            config.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+
+    # Create Hardware
+    many_core_board = BoardFactory.create_matrix(config, 
+                                                 BoardType.DISTRIBUTED_MANY_CORE)
+
+    # Create DSE snvironment
+    env = STEnv(task_graph, many_core_board)
+
+    # Equivalent Hardware Parameter
+    many_core_board.communication_networks[0].update_bandwidth(
+        config.network["bandwidth"] // (SIZE_X * SIZE_Y))
+
+    # Mapping
+    # Query, Key, Value
+    # DRAM
+    dram = create_mlcoord(DRAM)
+    env.put_in(dram, input_offchip.id)
+    env.put_in(dram, output.id)
+
+    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
+    cyclic_local_memory = create_mlcoord(CHIP, (1, 0), SRAM_BUFFER)
+    mlp_input_on_chip = mlp_task_dict["input_on_chip"]
+    mlp_weight_on_chip = mlp_task_dict["weight_on_chip"]
+    mlp_cyclic_weight_on_chip = mlp_task_dict["cyclic_weight_on_chip"]
+    mlp_output_on_chip = mlp_task_dict["output_on_chip"]
+    mlp = mlp_task_dict["compute"]
+    cyclic_mlp = mlp_task_dict["cyclic_compute"]
+    env.put_in(local_memory, mlp_input_on_chip.id)
+    env.put_in(cyclic_local_memory, mlp_weight_on_chip.id)
+    env.put_in(local_memory, mlp_output_on_chip.id)
+    sync_id1 = env.get_sync_id()
+    env.sync(cyclic_local_memory, sync_id1)
+    env.put_in(cyclic_local_memory, mlp_cyclic_weight_on_chip.id)
+    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
+    env.put_in(tensor_unit, mlp.id)
+    env.sync(tensor_unit, sync_id1)
+    env.put_in(tensor_unit, cyclic_mlp.id)
+
+    # Edge Mapping
+    env.auto_edge_map()
+
+    env.simulate()
+    # env.show_overall_time()
+    overall_latency = env.get_latency(loops=[LoopInfo(6, 7, 63)])
+    return overall_latency
+
+
+def simulate_tiled_mlp_weight_offchip_1mb(hardware_paramter_dict: Dict[str, int] = []):
+    # Construct Task Graph
+    IDGenerator.set_base_task_id(0)
+    task_graph = TaskGraph()
+    _, input_offchip = create_input(
+        task_graph,
+        Shape(batch=BATCH // 8, token=SEQ_LEN // 64, nf=D_MODEL),
+        Precision.FLOAT_16)
+    # Query, Key, Value
+    output, mlp_task_dict = create_tiled_mlp_cyclic_weight(
+        split_vector=SplitVector(batch=8, token=64, nf=64),
+        task_graph=task_graph,
+        input=input_offchip,
+        shape=Shape(nf=4096, nr=4096),
+        precision=Precision.FLOAT_16,
+        is_input_on_chip=False,
+        output_offchip=True,
+        is_output=True
+    )
+    # weight_offchip.shape.nf = weight_offchip.shape.nf // 2
+    weight_offchip: TaskBlock = mlp_task_dict["weight_offchip"]
+    weight_offchip_shape = deepcopy(weight_offchip.shape)
+    weight_offchip_shape.nf = weight_offchip_shape.nf // 2
+    weight_offchip.shape = weight_offchip_shape
+
+    STDraw.draw_graph(task_graph, out_path='temp/tiled_attention_1mb_weight_offchip.task.html',
+                      width='1920px', height='1080px')
+
+    # Update Hardware Configuration
+    config = toml.load("top/distributed_many_core_board.toml")
+    config = BoardConfig(config["PCB"])
+    for type in hardware_paramter_dict:
+        if type == "noc_bandwidth":
+            config.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "local_memory_latency":
+            config.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
+        elif type == "local_memory_bandwidth":
+            config.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+
+    # Create Hardware
+    many_core_board = BoardFactory.create_matrix(config, 
+                                                 BoardType.DISTRIBUTED_MANY_CORE)
+
+    # Create DSE snvironment
+    env = STEnv(task_graph, many_core_board)
+
+    # Equivalent Hardware Parameter
+    many_core_board.communication_networks[0].update_bandwidth(
+        config.network["bandwidth"] // (SIZE_X * SIZE_Y))
+
+    # Mapping
+    # Query, Key, Value
+    # DRAM
+    dram = create_mlcoord(DRAM)
+    env.put_in(dram, input_offchip.id)
+    env.put_in(dram, weight_offchip.id)
+    env.put_in(dram, output.id)
+
+    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
+    cyclic_local_memory = create_mlcoord(CHIP, (1, 0), SRAM_BUFFER)
+    mlp_input_on_chip = mlp_task_dict["input_on_chip"]
+    mlp_weight_on_chip = mlp_task_dict["weight_on_chip"]
+    mlp_cyclic_weight_on_chip = mlp_task_dict["cyclic_weight_on_chip"]
+    mlp_output_on_chip = mlp_task_dict["output_on_chip"]
+    mlp = mlp_task_dict["compute"]
+    cyclic_mlp = mlp_task_dict["cyclic_compute"]
+    env.put_in(local_memory, mlp_input_on_chip.id)
+    env.put_in(cyclic_local_memory, mlp_weight_on_chip.id)
+    env.put_in(local_memory, mlp_output_on_chip.id)
+    sync_id1 = env.get_sync_id()
+    env.sync(cyclic_local_memory, sync_id1)
+    env.put_in(cyclic_local_memory, mlp_cyclic_weight_on_chip.id)
+    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
+    env.put_in(tensor_unit, mlp.id)
+    env.sync(tensor_unit, sync_id1)
+    env.put_in(tensor_unit, cyclic_mlp.id)
+
+    # Edge Mapping
+    env.auto_edge_map()
+
+    env.simulate()
+    # env.show_overall_time()
+    overall_latency = env.get_latency(loops=[LoopInfo(7, 8, 63)])
+    return overall_latency
+
+
+def simulate_tiled_dot_product_1mb(hardware_paramter_dict: Dict[str, int] = []):
+    # Construct Task Graph
+    IDGenerator.set_base_task_id(0)
+    task_graph = TaskGraph()
+    _, input_offchip = create_input(
+        task_graph,
+        Shape(batch=BATCH // 8, token=SEQ_LEN // 32, nf=D_MODEL),
+        Precision.FLOAT_16)
+    # Dot Product
+    output, dot_product_task_dict = create_tiled_mlp_cyclic_weight(
+        split_vector=SplitVector(batch=8, token=32, nf=32),
+        task_graph=task_graph,
+        input=input_offchip,
+        shape=Shape(nf=2048, nr=4096),
+        precision=Precision.FLOAT_16,
+        static_weight=False,
+        is_input_on_chip=False
+    )
+    output, add_task_dict = create_tiled_elementwise(
+        task_graph=task_graph,
+        input=output,
+        precision=Precision.FLOAT_16,
+        type=TaskBlockType.CADD
+    )
+    output, softmax_task_dict = create_pointwise(
+        task_graph=task_graph,
+        input=output,
+        precision=Precision.FLOAT_16,
+        type=TaskBlockType.CSoftMax,
+    )
+    output_offchip = create_data(task_graph, output.shape, Precision.FLOAT_16, 
+                                 True)
+    task_graph.connect_tasks_in_sequence([output, output_offchip])
+
+    STDraw.draw_graph(task_graph, out_path='temp/tiled_attention_1mb_dot_product.task.html',
+                      width='1920px', height='1080px')
+
+    # Update Hardware Configuration
+    config = toml.load("top/distributed_many_core_board.toml")
+    config = BoardConfig(config["PCB"])
+    for type in hardware_paramter_dict:
+        if type == "noc_bandwidth":
+            config.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "local_memory_latency":
+            config.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
+        elif type == "local_memory_bandwidth":
+            config.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+
+    # Create Hardware
+    many_core_board = BoardFactory.create_matrix(config, 
+                                                 BoardType.DISTRIBUTED_MANY_CORE)
+
+    # Create DSE snvironment
+    env = STEnv(task_graph, many_core_board)
+
+    # Equivalent Hardware Parameter
+    many_core_board.communication_networks[0].update_bandwidth(
+        config.network["bandwidth"] // (SIZE_X * SIZE_Y))
+
+    # Mapping
+    # Dot Product
+    dram = create_mlcoord(DRAM)
+    weight_offchip = dot_product_task_dict["weight_offchip"]
+    env.put_in(dram, input_offchip.id)
+    env.put_in(dram, weight_offchip.id)
+
+    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
+    cyclic_local_memory = create_mlcoord(CHIP, (15, 0), SRAM_BUFFER)
+    dot_product_input_on_chip = dot_product_task_dict["input_on_chip"]
+    dot_product_weight_on_chip = dot_product_task_dict["weight_on_chip"]
+    dot_product_cyclic_weight_on_chip = dot_product_task_dict["cyclic_weight_on_chip"]
+    dot_product_output_on_chip = dot_product_task_dict["output_on_chip"]
+    dot_product = dot_product_task_dict["compute"]
+    cyclic_dot_product = dot_product_task_dict["cyclic_compute"]
+    env.put_in(local_memory, dot_product_input_on_chip.id)
+    env.put_in(local_memory, dot_product_weight_on_chip.id)
+    env.put_in(local_memory, dot_product_output_on_chip.id)
+    sync_id1 = env.get_sync_id()
+    sync_id2 = env.get_sync_id()
+    env.sync(cyclic_local_memory, sync_id1)
+    env.put_in(cyclic_local_memory, dot_product_cyclic_weight_on_chip.id)
+    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
+    env.put_in(tensor_unit, dot_product.id)
+    env.sync(tensor_unit, sync_id1)
+    env.put_in(tensor_unit, cyclic_dot_product.id)
+    env.sync(tensor_unit, sync_id2)
+
+    # Add
+    mask_offchip = add_task_dict["mask_offchip"]
+    env.sync(dram, sync_id2)
+    env.put_in(dram, mask_offchip.id)
+    mask_on_chip = add_task_dict["mask_on_chip"]
+    add = add_task_dict["compute"]
+    add_output = add_task_dict["output"]
+    softmax = softmax_task_dict["compute"]
+    softmax_output = softmax_task_dict["output"]
+    vector_unit = create_mlcoord(CHIP, (0, 0), VECTOR_UNIT)
+    env.put_in(local_memory, mask_on_chip.id)
+    env.put_in(local_memory, add_output.id)
+    env.put_in(local_memory, softmax_output.id)
+    env.put_in(vector_unit, add.id)
+    env.put_in(vector_unit, softmax.id)
+
+    # output
+    env.put_in(local_memory, output.id)
+    env.put_in(dram, output_offchip.id)
+
+    # Edge Mapping
+    env.auto_edge_map()
+
+    env.simulate()
+    # env.show_overall_time()
+    overall_latency = env.get_latency(loops=[LoopInfo(7, 8, 15)])
+    return overall_latency
+
+
+def simulate_tiled_dot_product_input_on_chip_1mb(hardware_paramter_dict: Dict[str, int] = []):
+    # Construct Task Graph
+    IDGenerator.set_base_task_id(0)
+    task_graph = TaskGraph()
+    _, input = create_input(
+        task_graph,
+        Shape(batch=BATCH // 8, token=SEQ_LEN // 32, nf=D_MODEL),
+        Precision.FLOAT_16)
+    # Dot Product
+    output, dot_product_task_dict = create_tiled_mlp_cyclic_weight(
+        split_vector=SplitVector(batch=8, token=32, nf=32),
+        task_graph=task_graph,
+        input=input,
+        shape=Shape(nf=2048, nr=4096),
+        precision=Precision.FLOAT_16,
+        static_weight=False,
+        is_input_on_chip=True,
+        is_output=True
+    )
+
+    STDraw.draw_graph(task_graph, out_path='temp/tiled_attention_1mb_dot_product_input_on_chip.task.html',
+                      width='1920px', height='1080px')
+
+    # Update Hardware Configuration
+    config = toml.load("top/distributed_many_core_board.toml")
+    config = BoardConfig(config["PCB"])
+    for type in hardware_paramter_dict:
+        if type == "noc_bandwidth":
+            config.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "local_memory_latency":
+            config.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
+        elif type == "local_memory_bandwidth":
+            config.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+
+    # Create Hardware
+    many_core_board = BoardFactory.create_matrix(config, 
+                                                 BoardType.DISTRIBUTED_MANY_CORE)
+
+    # Create DSE snvironment
+    env = STEnv(task_graph, many_core_board)
+
+    # Equivalent Hardware Parameter
+    many_core_board.communication_networks[0].update_bandwidth(
+        config.network["bandwidth"] // (SIZE_X * SIZE_Y))
+
+    # Mapping
+    # Dot Product
+    dram = create_mlcoord(DRAM)
+    weight_offchip = dot_product_task_dict["weight_offchip"]
+    env.put_in(dram, weight_offchip.id)
+
+    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
+    cyclic_local_memory = create_mlcoord(CHIP, (15, 0), SRAM_BUFFER)
+    dot_product_weight_on_chip = dot_product_task_dict["weight_on_chip"]
+    dot_product_cyclic_weight_on_chip = dot_product_task_dict["cyclic_weight_on_chip"]
+    dot_product_output_on_chip = dot_product_task_dict["output_on_chip"]
+    dot_product = dot_product_task_dict["compute"]
+    cyclic_dot_product = dot_product_task_dict["cyclic_compute"]
+    env.put_in(local_memory, input.id)
+    env.put_in(local_memory, dot_product_weight_on_chip.id)
+    env.put_in(local_memory, dot_product_output_on_chip.id)
+    sync_id1 = env.get_sync_id()
+    env.sync(cyclic_local_memory, sync_id1)
+    env.put_in(cyclic_local_memory, dot_product_cyclic_weight_on_chip.id)
+    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
+    env.put_in(tensor_unit, dot_product.id)
+    env.sync(tensor_unit, sync_id1)
+    env.put_in(tensor_unit, cyclic_dot_product.id)
+
+    # output
+    env.put_in(local_memory, output.id)
+
+    # Edge Mapping
+    env.auto_edge_map()
+
+    env.simulate()
+    # env.show_overall_time()
+    overall_latency = env.get_latency(loops=[LoopInfo(6, 7, 15)])
+    return overall_latency
+
+
+def simulate_tiled_attention_1mb(hardware_paramter_dict: Dict[str, int] = []):
+    # Construct Task Graph
+    IDGenerator.set_base_task_id(0)
+    task_graph = TaskGraph()
+    _, input = create_input(
+        task_graph,
+        Shape(batch=BATCH // 8, token=SEQ_LEN // 16, nf=SEQ_LEN),
+        Precision.FLOAT_16)
+    # Attention
+    output, attention_task_dict = create_tiled_mlp_cyclic_weight(
+        split_vector=SplitVector(batch=8, token=16, nf=64),
+        task_graph=task_graph,
+        input=input,
+        shape=Shape(nf=4096, nr=2048),
+        precision=Precision.FLOAT_16,
+        is_output=True,
+        output_offchip=True,
+        is_input_on_chip=True
+    )
+    output.shape.nf = output.shape.nf // 64
+    STDraw.draw_graph(task_graph, out_path='temp/tiled_attention_1mb.task.html',
+                        width='1920px', height='1080px')
+
+    # Update Hardware Configuration
+    config = toml.load("top/distributed_many_core_board.toml")
+    config = BoardConfig(config["PCB"])
+    for type in hardware_paramter_dict:
+        if type == "noc_bandwidth":
+            config.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "local_memory_latency":
+            config.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
+        elif type == "local_memory_bandwidth":
+            config.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+
+    config.chiplet.core.local_memory["capacity"] = 2048
+    config.chiplet.core.mac_array["fp16"]["parallelism"] = [64, 64]
+    config.chiplet.core.vector_unit["fp16"]["parallelism"] = 512
+
+    # Create Hardware
+    many_core_board = BoardFactory.create_matrix(config, 
+                                                 BoardType.DISTRIBUTED_MANY_CORE)
+
+    # Create DSE snvironment
+    env = STEnv(task_graph, many_core_board)
+
+    # Equivalent Hardware Parameter
+    many_core_board.communication_networks[0].update_bandwidth(
+        config.network["bandwidth"] // (SIZE_X * SIZE_Y))
+
+    # Mapping
+    # Attention
+    dram = create_mlcoord(DRAM)
+    weight_offchip = attention_task_dict["weight_offchip"]
+    env.put_in(dram, weight_offchip.id)
+    env.put_in(dram, output.id)
+
+    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
+    cyclic_local_memory = create_mlcoord(CHIP, (15, 0), SRAM_BUFFER)
+    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
+    attention_weight_on_chip = attention_task_dict["weight_on_chip"]
+    attention_cyclic_weight_on_chip = attention_task_dict["cyclic_weight_on_chip"]
+    attention_output_on_chip = attention_task_dict["output_on_chip"]
+    attention = attention_task_dict["compute"]
+    cyclic_attention = attention_task_dict["cyclic_compute"]
+    env.put_in(local_memory, input.id)
+    env.put_in(local_memory, attention_weight_on_chip.id)
+    env.put_in(local_memory, attention_output_on_chip.id)
+    sync_id1 = env.get_sync_id()
+    env.sync(cyclic_local_memory, sync_id1)
+    env.put_in(cyclic_local_memory, attention_cyclic_weight_on_chip.id)
+
+    env.put_in(tensor_unit, attention.id)
+    env.sync(tensor_unit, sync_id1)
+    env.put_in(tensor_unit, cyclic_attention.id)
+
+    # Edge Mapping
+    env.auto_edge_map()
+
+    env.simulate()
+    # env.show_overall_time()
+    overall_latency = env.get_latency(loops=[LoopInfo(6, 7, 15)])
+    return overall_latency
+    
+
+def simulate(hardware_paramter_dict: Dict[str, int] = []):
     # Construct Task Graph
     IDGenerator.set_base_task_id(0)
     task_graph = TaskGraph()
@@ -83,7 +612,7 @@ def simulate(hardware_paramter_dict: Dict[str, int]):
 
     # Update Hardware Configuration
     config = toml.load("top/distributed_many_core_board.toml")
-    config = BoardConfig(config["PCB"])
+    config = BoardConfig(config["PCB"], config["process_node"])
     for type in hardware_paramter_dict:
         if type == "noc_bandwidth":
             config.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
@@ -94,7 +623,12 @@ def simulate(hardware_paramter_dict: Dict[str, int]):
 
     # Create Hardware
     many_core_board = BoardFactory.create_matrix(config, 
-                                                    BoardType.DISTRIBUTED_MANY_CORE)
+                                                 BoardType.DISTRIBUTED_MANY_CORE)
+    
+    # print(many_core_board.container[Coord(CHIP)].area)
+    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area())
+    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area())
+    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area())
 
     # Create DSE snvironment
     env = STEnv(task_graph, many_core_board)
@@ -224,8 +758,468 @@ def simulate(hardware_paramter_dict: Dict[str, int]):
     env.simulate()
     # env.show_overall_time()
     overall_latency = env.get_latency(loops=[LoopInfo(7, 8, 127), 
-                                                LoopInfo(13, 14, 15), 
-                                                LoopInfo(25, 26, 15)])
+                                             LoopInfo(13, 14, 15), 
+                                             LoopInfo(25, 26, 15)])
+    return overall_latency
+
+
+def simulate_3mb(hardware_paramter_dict: Dict[str, int] = []):
+    # Construct Task Graph
+    IDGenerator.set_base_task_id(0)
+    task_graph = TaskGraph()
+    _, input_offchip = create_input(
+        task_graph,
+        Shape(batch=BATCH // 8, token=SEQ_LEN // 16, nf=D_MODEL),
+        Precision.FLOAT_16)
+    output, mlp_task_dict = create_tiled_mlp_cyclic_weight(
+        split_vector=SplitVector(batch=8, token=16, nf=32),
+        task_graph=task_graph,
+        input=input_offchip,
+        shape=Shape(nf=4096, nr=4096),
+        precision=Precision.FLOAT_16,
+        is_input_on_chip=False
+    )
+    # weight_offchip.shape.nf = weight_offchip.shape.nf // 2
+    weight_offchip: TaskBlock = mlp_task_dict["weight_offchip"]
+    weight_offchip_shape = deepcopy(weight_offchip.shape)
+    weight_offchip_shape.nf = weight_offchip_shape.nf // 4
+    weight_offchip.shape = weight_offchip_shape
+    output, dot_product_task_dict = create_tiled_mlp_cyclic_weight(
+        split_vector=SplitVector(batch=8, token=16, nf=16),
+        task_graph=task_graph,
+        input=output,
+        shape=Shape(nf=2048, nr=4096),
+        precision=Precision.FLOAT_16,
+        static_weight=False
+    )
+    output, add_task_dict = create_tiled_elementwise(
+        task_graph=task_graph,
+        input=output,
+        precision=Precision.FLOAT_16,
+        type=TaskBlockType.CADD
+    )
+    output, softmax_task_dict = create_pointwise(
+        task_graph=task_graph,
+        input=output,
+        precision=Precision.FLOAT_16,
+        type=TaskBlockType.CSoftMax,
+    )
+    output, attention_task_dict = create_tiled_mlp_cyclic_weight(
+        split_vector=SplitVector(batch=8, token=16, nf=16),
+        task_graph=task_graph,
+        input=output,
+        shape=Shape(nf=4096, nr=2048),
+        precision=Precision.FLOAT_16,
+        is_output=True,
+        output_offchip=True
+    )
+    # STDraw.draw_graph(task_graph, out_path='temp/tiled_attention.task.html',
+    #                     width='1920px', height='1080px')
+
+    # Update Hardware Configuration
+    config = toml.load("top/distributed_many_core_board.toml")
+    config = BoardConfig(config["PCB"], config["process_node"])
+    for type in hardware_paramter_dict:
+        if type == "noc_bandwidth":
+            config.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "local_memory_latency":
+            config.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
+        elif type == "local_memory_bandwidth":
+            config.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+    config.chiplet.core.local_memory["capacity"] = 3072
+    config.chiplet.core.mac_array["fp16"]["parallelism"] = [16, 16]
+    config.chiplet.core.vector_unit["fp16"]["parallelism"] = 128
+
+    # Create Hardware
+    many_core_board = BoardFactory.create_matrix(config, 
+                                                 BoardType.DISTRIBUTED_MANY_CORE)
+    
+    # print(many_core_board.container[Coord(CHIP)].area)
+    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area())
+    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area())
+    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area())
+
+    # Create DSE snvironment
+    env = STEnv(task_graph, many_core_board)
+
+    # Equivalent Hardware Parameter
+    many_core_board.communication_networks[0].update_bandwidth(
+        config.network["bandwidth"] // (SIZE_X * SIZE_Y))
+
+    # Mapping
+    # Query, Key, Value
+    # DRAM
+    dram = create_mlcoord(DRAM)
+    env.put_in(dram, input_offchip.id)
+    mlp_weight_offchip = mlp_task_dict["weight_offchip"]
+    env.put_in(dram, mlp_weight_offchip.id)
+
+    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
+    cyclic_local_memory = create_mlcoord(CHIP, (15, 0), SRAM_BUFFER)
+    mlp_input_on_chip = mlp_task_dict["input_on_chip"]
+    mlp_weight_on_chip = mlp_task_dict["weight_on_chip"]
+    mlp_cyclic_weight_on_chip = mlp_task_dict["cyclic_weight_on_chip"]
+    mlp_output_on_chip = mlp_task_dict["output_on_chip"]
+    mlp = mlp_task_dict["compute"]
+    cyclic_mlp = mlp_task_dict["cyclic_compute"]
+    env.put_in(local_memory, mlp_input_on_chip.id)
+    env.put_in(local_memory, mlp_weight_on_chip.id)
+    env.put_in(local_memory, mlp_output_on_chip.id)
+    sync_id1 = env.get_sync_id()
+    sync_id2 = env.get_sync_id()
+    env.sync(cyclic_local_memory, sync_id1)
+    env.put_in(cyclic_local_memory, mlp_cyclic_weight_on_chip.id)
+    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
+    env.put_in(tensor_unit, mlp.id)
+    env.sync(tensor_unit, sync_id1)
+    env.put_in(tensor_unit, cyclic_mlp.id)
+    env.sync(tensor_unit, sync_id2)
+
+    # Dot Product
+    weight_offchip = dot_product_task_dict["weight_offchip"]
+    env.sync(dram, sync_id2)
+    env.put_in(dram, weight_offchip.id)
+
+    cyclic_local_memory = create_mlcoord(CHIP, (15, 0), SRAM_BUFFER)
+    dot_product_weight_on_chip = dot_product_task_dict["weight_on_chip"]
+    dot_product_cyclic_weight_on_chip = dot_product_task_dict["cyclic_weight_on_chip"]
+    dot_product_output_on_chip = dot_product_task_dict["output_on_chip"]
+    dot_product = dot_product_task_dict["compute"]
+    cyclic_dot_product = dot_product_task_dict["cyclic_compute"]
+    env.put_in(local_memory, dot_product_weight_on_chip.id)
+    env.put_in(local_memory, dot_product_output_on_chip.id)
+    sync_id3 = env.get_sync_id()
+    sync_id4 = env.get_sync_id()
+    env.sync(cyclic_local_memory, sync_id3)
+    env.put_in(cyclic_local_memory, dot_product_cyclic_weight_on_chip.id)
+    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
+    env.put_in(tensor_unit, dot_product.id)
+    env.sync(tensor_unit, sync_id3)
+    env.put_in(tensor_unit, cyclic_dot_product.id)
+    env.sync(tensor_unit, sync_id4)
+
+    # Add
+    mask_offchip = add_task_dict["mask_offchip"]
+    env.sync(dram, sync_id4)
+    env.put_in(dram, mask_offchip.id)
+    mask_on_chip = add_task_dict["mask_on_chip"]
+    add = add_task_dict["compute"]
+    add_output = add_task_dict["output"]
+    softmax = softmax_task_dict["compute"]
+    softmax_output = softmax_task_dict["output"]
+    vector_unit = create_mlcoord(CHIP, (0, 0), VECTOR_UNIT)
+    env.put_in(local_memory, mask_on_chip.id)
+    env.put_in(local_memory, add_output.id)
+    env.put_in(local_memory, softmax_output.id)
+    env.put_in(vector_unit, add.id)
+    env.put_in(vector_unit, softmax.id)
+
+    # Attention
+    weight_offchip = attention_task_dict["weight_offchip"]
+    env.put_in(dram, weight_offchip.id)
+    env.put_in(dram, output.id)
+
+    attention_weight_on_chip = attention_task_dict["weight_on_chip"]
+    attention_cyclic_weight_on_chip = attention_task_dict["cyclic_weight_on_chip"]
+    attention_output_on_chip = attention_task_dict["output_on_chip"]
+    attention = attention_task_dict["compute"]
+    cyclic_attention = attention_task_dict["cyclic_compute"]
+    env.put_in(local_memory, attention_weight_on_chip.id)
+    env.put_in(local_memory, attention_output_on_chip.id)
+    sync_id5 = env.get_sync_id()
+    env.sync(cyclic_local_memory, sync_id5)
+    env.put_in(cyclic_local_memory, attention_cyclic_weight_on_chip.id)
+
+    env.put_in(tensor_unit, attention.id)
+    env.sync(tensor_unit, sync_id5)
+    env.put_in(tensor_unit, cyclic_attention.id)
+
+    # Edge Mapping
+    env.auto_edge_map()
+
+    env.simulate()
+    # env.show_overall_time()
+    overall_latency = env.get_latency(loops=[LoopInfo(7, 8, 31), 
+                                             LoopInfo(13, 14, 15), 
+                                             LoopInfo(25, 26, 15)])
+    return overall_latency
+
+
+def simulate_2mb(hardware_paramter_dict: Dict[str, int] = []):
+    # Construct Task Graph
+    IDGenerator.set_base_task_id(0)
+    task_graph = TaskGraph()
+    _, input_offchip = create_input(
+        task_graph,
+        Shape(batch=BATCH // 8, token=SEQ_LEN // 32, nf=D_MODEL),
+        Precision.FLOAT_16)
+    # Query, Key, Value
+    output, mlp_task_dict = create_tiled_mlp_cyclic_weight(
+        split_vector=SplitVector(batch=8, token=32, nf=64),
+        task_graph=task_graph,
+        input=input_offchip,
+        shape=Shape(nf=4096, nr=4096),
+        precision=Precision.FLOAT_16,
+        is_input_on_chip=False
+    )
+    # weight_offchip.shape.nf = weight_offchip.shape.nf // 2
+    weight_offchip: TaskBlock = mlp_task_dict["weight_offchip"]
+    weight_offchip_shape = deepcopy(weight_offchip.shape)
+    weight_offchip_shape.nf = weight_offchip_shape.nf // 2
+    weight_offchip.shape = weight_offchip_shape
+    output.shape.token = output.shape.token * 2
+    # Dot Product
+    output, dot_product_task_dict = create_tiled_mlp_cyclic_weight(
+        split_vector=SplitVector(batch=8, token=16, nf=32),
+        task_graph=task_graph,
+        input=output,
+        shape=Shape(nf=2048, nr=4096),
+        precision=Precision.FLOAT_16,
+        static_weight=False
+    )
+    output, add_task_dict = create_tiled_elementwise(
+        task_graph=task_graph,
+        input=output,
+        precision=Precision.FLOAT_16,
+        type=TaskBlockType.CADD
+    )
+    output, softmax_task_dict = create_pointwise(
+        task_graph=task_graph,
+        input=output,
+        precision=Precision.FLOAT_16,
+        type=TaskBlockType.CSoftMax,
+    )
+    output, attention_task_dict = create_tiled_mlp_cyclic_weight(
+        split_vector=SplitVector(batch=8, token=16, nf=32),
+        task_graph=task_graph,
+        input=output,
+        shape=Shape(nf=4096, nr=2048),
+        precision=Precision.FLOAT_16,
+        is_output=True,
+        output_offchip=True
+    )
+    STDraw.draw_graph(task_graph, out_path='temp/tiled_attention_2mb.task.html',
+                        width='1920px', height='1080px')
+
+    # Update Hardware Configuration
+    config = toml.load("top/distributed_many_core_board.toml")
+    config = BoardConfig(config["PCB"])
+    for type in hardware_paramter_dict:
+        if type == "noc_bandwidth":
+            config.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "local_memory_latency":
+            config.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
+        elif type == "local_memory_bandwidth":
+            config.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+
+    config.chiplet.core.local_memory["capacity"] = 2048
+    config.chiplet.core.mac_array["fp16"]["parallelism"] = [64, 64]
+    config.chiplet.core.vector_unit["fp16"]["parallelism"] = 512
+
+    # Create Hardware
+    many_core_board = BoardFactory.create_matrix(config, 
+                                                 BoardType.DISTRIBUTED_MANY_CORE)
+
+    # Create DSE snvironment
+    env = STEnv(task_graph, many_core_board)
+
+    # Equivalent Hardware Parameter
+    many_core_board.communication_networks[0].update_bandwidth(
+        config.network["bandwidth"] // (SIZE_X * SIZE_Y))
+
+    # Mapping
+    # Query, Key, Value
+    # DRAM
+    dram = create_mlcoord(DRAM)
+    env.put_in(dram, input_offchip.id)
+    mlp_weight_offchip = mlp_task_dict["weight_offchip"]
+    env.put_in(dram, mlp_weight_offchip.id)
+
+    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
+    cyclic_local_memory = create_mlcoord(CHIP, (1, 0), SRAM_BUFFER)
+    mlp_input_on_chip = mlp_task_dict["input_on_chip"]
+    mlp_weight_on_chip = mlp_task_dict["weight_on_chip"]
+    mlp_cyclic_weight_on_chip = mlp_task_dict["cyclic_weight_on_chip"]
+    mlp_output_on_chip = mlp_task_dict["output_on_chip"]
+    mlp = mlp_task_dict["compute"]
+    cyclic_mlp = mlp_task_dict["cyclic_compute"]
+    env.put_in(local_memory, mlp_input_on_chip.id)
+    env.put_in(local_memory, mlp_weight_on_chip.id)
+    env.put_in(local_memory, mlp_output_on_chip.id)
+    sync_id1 = env.get_sync_id()
+    sync_id2 = env.get_sync_id()
+    env.sync(cyclic_local_memory, sync_id1)
+    env.put_in(cyclic_local_memory, mlp_cyclic_weight_on_chip.id)
+    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
+    env.put_in(tensor_unit, mlp.id)
+    env.sync(tensor_unit, sync_id1)
+    env.put_in(tensor_unit, cyclic_mlp.id)
+    env.sync(tensor_unit, sync_id2)
+
+    # Dot Product
+    weight_offchip = dot_product_task_dict["weight_offchip"]
+    env.sync(dram, sync_id2)
+    env.put_in(dram, weight_offchip.id)
+
+    cyclic_local_memory = create_mlcoord(CHIP, (15, 0), SRAM_BUFFER)
+    dot_product_weight_on_chip = dot_product_task_dict["weight_on_chip"]
+    dot_product_cyclic_weight_on_chip = dot_product_task_dict["cyclic_weight_on_chip"]
+    dot_product_output_on_chip = dot_product_task_dict["output_on_chip"]
+    dot_product = dot_product_task_dict["compute"]
+    cyclic_dot_product = dot_product_task_dict["cyclic_compute"]
+    env.put_in(local_memory, dot_product_weight_on_chip.id)
+    env.put_in(local_memory, dot_product_output_on_chip.id)
+    sync_id3 = env.get_sync_id()
+    sync_id4 = env.get_sync_id()
+    env.sync(cyclic_local_memory, sync_id3)
+    env.put_in(cyclic_local_memory, dot_product_cyclic_weight_on_chip.id)
+    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
+    env.put_in(tensor_unit, dot_product.id)
+    env.sync(tensor_unit, sync_id3)
+    env.put_in(tensor_unit, cyclic_dot_product.id)
+    env.sync(tensor_unit, sync_id4)
+
+    # Add
+    mask_offchip = add_task_dict["mask_offchip"]
+    env.sync(dram, sync_id4)
+    env.put_in(dram, mask_offchip.id)
+    mask_on_chip = add_task_dict["mask_on_chip"]
+    add = add_task_dict["compute"]
+    add_output = add_task_dict["output"]
+    softmax = softmax_task_dict["compute"]
+    softmax_output = softmax_task_dict["output"]
+    vector_unit = create_mlcoord(CHIP, (0, 0), VECTOR_UNIT)
+    env.put_in(local_memory, mask_on_chip.id)
+    env.put_in(local_memory, add_output.id)
+    env.put_in(local_memory, softmax_output.id)
+    env.put_in(vector_unit, add.id)
+    env.put_in(vector_unit, softmax.id)
+
+    # Attention
+    weight_offchip = attention_task_dict["weight_offchip"]
+    env.put_in(dram, weight_offchip.id)
+    env.put_in(dram, output.id)
+
+    attention_weight_on_chip = attention_task_dict["weight_on_chip"]
+    attention_cyclic_weight_on_chip = attention_task_dict["cyclic_weight_on_chip"]
+    attention_output_on_chip = attention_task_dict["output_on_chip"]
+    attention = attention_task_dict["compute"]
+    cyclic_attention = attention_task_dict["cyclic_compute"]
+    env.put_in(local_memory, attention_weight_on_chip.id)
+    env.put_in(local_memory, attention_output_on_chip.id)
+    sync_id5 = env.get_sync_id()
+    env.sync(cyclic_local_memory, sync_id5)
+    env.put_in(cyclic_local_memory, attention_cyclic_weight_on_chip.id)
+
+    env.put_in(tensor_unit, attention.id)
+    env.sync(tensor_unit, sync_id5)
+    env.put_in(tensor_unit, cyclic_attention.id)
+
+    # Edge Mapping
+    env.auto_edge_map()
+
+    env.simulate()
+    # env.show_overall_time()
+    overall_latency = env.get_latency(loops=[LoopInfo(7, 8, 63), 
+                                             LoopInfo(9, 14, 1),
+                                             LoopInfo(13, 14, 30),
+                                             LoopInfo(21, 26, 1),
+                                             LoopInfo(25, 26, 30)],
+                                      extra_latencies=[simulate_tiled_mlp_weight_on_chip_2mb()]
+                                      )
+    return overall_latency
+
+
+def simulate_1mb(hardware_paramter_dict: Dict[str, int] = []):
+    # Construct Task Graph
+    IDGenerator.set_base_task_id(0)
+    task_graph = TaskGraph()
+    _, input_offchip = create_input(
+        task_graph,
+        Shape(batch=BATCH // 8, token=SEQ_LEN // 16, nf=SEQ_LEN),
+        Precision.FLOAT_16)
+    # Attention
+    output, attention_task_dict = create_tiled_mlp_cyclic_weight(
+        split_vector=SplitVector(batch=8, token=16, nf=64),
+        task_graph=task_graph,
+        input=input_offchip,
+        shape=Shape(nf=4096, nr=2048),
+        precision=Precision.FLOAT_16,
+        is_output=True,
+        output_offchip=True,
+        is_input_on_chip=False
+    )
+    output.shape.nf = output.shape.nf // 64
+    STDraw.draw_graph(task_graph, out_path='temp/tiled_attention_1mb.task.html',
+                        width='1920px', height='1080px')
+
+    # Update Hardware Configuration
+    config = toml.load("top/distributed_many_core_board.toml")
+    config = BoardConfig(config["PCB"])
+    for type in hardware_paramter_dict:
+        if type == "noc_bandwidth":
+            config.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "local_memory_latency":
+            config.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
+        elif type == "local_memory_bandwidth":
+            config.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+
+    config.chiplet.core.local_memory["capacity"] = 1024
+    config.chiplet.core.mac_array["fp16"]["parallelism"] = [128, 128]
+    config.chiplet.core.vector_unit["fp16"]["parallelism"] = 128
+
+    # Create Hardware
+    many_core_board = BoardFactory.create_matrix(config, 
+                                                 BoardType.DISTRIBUTED_MANY_CORE)
+
+    # Create DSE snvironment
+    env = STEnv(task_graph, many_core_board)
+
+    # Equivalent Hardware Parameter
+    many_core_board.communication_networks[0].update_bandwidth(
+        config.network["bandwidth"] // (SIZE_X * SIZE_Y))
+
+    # Mapping
+    # Attention
+    dram = create_mlcoord(DRAM)
+    env.put_in(dram, input_offchip.id)
+    weight_offchip = attention_task_dict["weight_offchip"]
+    env.put_in(dram, weight_offchip.id)
+    env.put_in(dram, output.id)
+
+    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
+    cyclic_local_memory = create_mlcoord(CHIP, (15, 0), SRAM_BUFFER)
+    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
+    attention_input_on_chip = attention_task_dict["input_on_chip"]
+    attention_weight_on_chip = attention_task_dict["weight_on_chip"]
+    attention_cyclic_weight_on_chip = attention_task_dict["cyclic_weight_on_chip"]
+    attention_output_on_chip = attention_task_dict["output_on_chip"]
+    attention = attention_task_dict["compute"]
+    cyclic_attention = attention_task_dict["cyclic_compute"]
+    env.put_in(local_memory, attention_input_on_chip.id)
+    env.put_in(local_memory, attention_weight_on_chip.id)
+    env.put_in(local_memory, attention_output_on_chip.id)
+    sync_id5 = env.get_sync_id()
+    env.sync(cyclic_local_memory, sync_id5)
+    env.put_in(cyclic_local_memory, attention_cyclic_weight_on_chip.id)
+
+    env.put_in(tensor_unit, attention.id)
+    env.sync(tensor_unit, sync_id5)
+    env.put_in(tensor_unit, cyclic_attention.id)
+
+    # Edge Mapping
+    env.auto_edge_map()
+
+    env.simulate()
+    # env.show_overall_time()
+    overall_latency = env.get_latency(
+        loops=[LoopInfo(7, 8, 16)],
+        extra_latencies=[simulate_tiled_attention_1mb(hardware_paramter_dict) * 3,
+                         simulate_tiled_dot_product_1mb(hardware_paramter_dict) * 2,
+                         simulate_tiled_dot_product_input_on_chip_1mb(hardware_paramter_dict) * 6,
+                         simulate_tiled_mlp_weight_offchip_1mb(hardware_paramter_dict) * 3,
+                         simulate_tiled_mlp_weight_on_chip_1mb(hardware_paramter_dict) * 9]
+         )
     return overall_latency
 
 
@@ -246,6 +1240,25 @@ def simulate(hardware_paramter_dict: Dict[str, int]):
 # for local_memory_bandwidth in (4, 8, 16, 32, 64, 128):
 #     local_memory_bandwidth_paramters.append(local_memory_bandwidth)
 #     local_memory_bandwidth_latencies.append(simulate(local_memory_bandwidth, "local_memory_bandwidth"))
+
+latency1 = simulate_1mb()
+latency2 = simulate_2mb()
+latency2_5 = simulate()
+latency3 = simulate_3mb()
+
+parameter_labels = ["(1024, 128, 512)", "(2048, 64, 512)", "(2560, 32, 128)", "(3072, 16, 128)"]
+latencies = [latency1, latency2, latency2_5, latency3]
+
+plt.plot(parameter_labels, latencies, marker='o')
+plt.title("Distributed Many Core")
+plt.xlabel("Hardware Parameter")
+plt.ylabel("Latency")
+
+plt.xticks(rotation=45)  # 旋转x轴标签，使其更易读
+# plt.legend()
+plt.tight_layout()       # 自动调整布局
+plt.savefig('temp/distributed_many_core_compute_memory.png', dpi=300)
+
 
 noc_bandwidth_paramters = []
 local_memory_latency_paramters = []
