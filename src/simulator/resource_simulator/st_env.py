@@ -200,7 +200,8 @@ class STEnv():
                                 break
 
     def get_latency(self, iteration: int = 0, 
-                    loops: Union[LoopInfo, List[LoopInfo]] = None):
+                    loops: Union[LoopInfo, List[LoopInfo]] = None,
+                    extra_latencies: List[int] = None):
         latency = 0
         for output_id in self._task_graph._outputs:
             output = self._task_graph[output_id]
@@ -215,6 +216,9 @@ class STEnv():
                 start, _ = self.get_task_time(start_task, iteration)
                 _, end = self.get_task_time(end_task, iteration)
                 latency += (end - start) * loop.num
+        if extra_latencies is not None:
+            for extra_latency in extra_latencies:
+                latency += extra_latency
         return latency 
     
     def eval_area(self, ml_coord: MLCoord):
