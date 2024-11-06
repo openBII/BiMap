@@ -94,7 +94,7 @@ def simulate_tiled_mlp(hardware_parameter_dict={},
         output, task_dict = create_mlp(
             task_graph=task_graph,
             input=input_l1,
-            shape=Shape(nf=D_MODEL, nr=D_MODEL),
+            shape=Shape(nf=D_MODEL // 128, nr=D_MODEL),
             precision=Precision.FLOAT_16,
             weight=weight_l1
         )
