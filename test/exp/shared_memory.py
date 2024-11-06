@@ -173,237 +173,6 @@ def simulate_tiled_mlp(hardware_parameter_dict={},
     return env.get_latency()
 
 
-def simulate_tiled_mlp_on_chip(hardware_parameter_dict={}):
-    # Construct Task Graph
-    IDGenerator.set_base_task_id(0)
-    task_graph = TaskGraph()
-    _, input_l2 = create_input(
-        task_graph,
-        Shape(batch=BATCH // 8, token=SEQ_LEN // 64, nf=D_MODEL),
-        Precision.FLOAT_16)
-    input_l1 = create_data(task_graph, input_l2.shape, Precision.FLOAT_16)
-    task_graph.connect_tasks_in_sequence([input_l2, input_l1])
-    output, task_dict = create_mlp(
-        task_graph=task_graph,
-        input=input_l1,
-        shape=Shape(nf=D_MODEL // 128, nr=D_MODEL),
-        precision=Precision.FLOAT_16
-    )
-    output_l2 = create_data(task_graph, output.shape, Precision.FLOAT_16, 
-                            is_output=True)
-    task_graph.connect_tasks_in_sequence([output, output_l2])
-    STDraw.draw_graph(task_graph, out_path='temp/shared_tiled_mlp_on_chip.task.html',
-                      width='1920px', height='1080px')
-
-    # Update Hardware Configuration
-    config = toml.load("top/shared_memory_board.toml")
-    config = BoardConfig(config["PCB"], config["process_node"])
-    for type in hardware_parameter_dict:
-        if type == "shared_memory_bandwidth":
-            config.chiplet.network["bandwidth"] = hardware_parameter_dict[type]
-        elif type == "local_memory_latency":
-            config.chiplet.core.local_memory["latency"] = hardware_parameter_dict[type]
-        elif type == "local_memory_bandwidth":
-            config.chiplet.core.local_memory["bandwidth"] = hardware_parameter_dict[type]
-
-    # Create Hardware
-    shared_memory_board = BoardFactory.create_matrix(config, 
-                                                     BoardType.SHARED_MEMORY)
-    
-    # area = shared_memory_board.container[Coord(CHIP)].area
-    # shared_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord(SHARED_MEMORY)].evaluator.eval_area()
-    # register_file_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(REGISTER_FILE)].evaluator.eval_area()
-    # local_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area()
-    # tensor_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area()
-    # vector_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area()
-
-    # Create DSE snvironment
-    env = STEnv(task_graph, shared_memory_board)
-
-    # Equivalent Hardware Parameter
-    shared_memory_board.communication_networks[0].update_bandwidth(
-        config.chiplet.network["bandwidth"] // (SIZE_X * SIZE_Y))
-
-    # Mapping
-    # L2
-    shared_memory = create_mlcoord(CHIP, SHARED_MEMORY)
-    env.put_in(shared_memory, input_l2.id)
-    env.put_in(shared_memory, output_l2.id)
-
-    # L1
-    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
-    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
-    weight_l1 = task_dict["weight"]
-    mlp = task_dict["compute"]
-    env.put_in(local_memory, input_l1.id)
-    env.put_in(local_memory, weight_l1.id)
-    env.put_in(local_memory, output.id)
-    env.put_in(tensor_unit, mlp.id)
-
-    # Edge Mapping
-    env.auto_edge_map()
-
-    env.simulate()
-    # env.show_overall_time()
-    return env.get_latency()
-
-
-def simulate_tiled_mlp_weight_on_chip(hardware_parameter_dict={}):
-    # Construct Task Graph
-    IDGenerator.set_base_task_id(0)
-    task_graph = TaskGraph()
-    _, input_offchip = create_input(
-        task_graph,
-        Shape(batch=BATCH // 2, token=SEQ_LEN, nf=D_MODEL),
-        Precision.FLOAT_16)
-    input_l2 = create_data(task_graph, input_offchip.shape, Precision.FLOAT_16)
-    input_l1 = create_data(
-        task_graph, Shape(batch=BATCH // 8, token=SEQ_LEN // 64, nf=D_MODEL),
-        Precision.FLOAT_16)
-    task_graph.connect_tasks_in_sequence([input_offchip, input_l2, input_l1])
-    weight_l1 = create_static(
-        task_graph, Shape(nf=D_MODEL // 128, nr=D_MODEL), Precision.FLOAT_16)
-    output, task_dict = create_mlp(
-        task_graph=task_graph,
-        input=input_l1,
-        shape=Shape(nf=4096, nr=4096),
-        precision=Precision.FLOAT_16,
-        weight=weight_l1
-    )
-    output_l2 = create_data(task_graph, input_offchip.shape, Precision.FLOAT_16)
-    output_offchip = create_data(task_graph, input_offchip.shape, 
-                                 Precision.FLOAT_16, is_output=True)
-    task_graph.connect_tasks_in_sequence([output, output_l2, output_offchip])
-    STDraw.draw_graph(task_graph, out_path='temp/shared_tiled_mlp_weight_on_chip.task.html',
-                        width='1920px', height='1080px')
-
-    # Update Hardware Configuration
-    config = toml.load("top/shared_memory_board.toml")
-    config = BoardConfig(config["PCB"], config["process_node"])
-    for type in hardware_parameter_dict:
-        if type == "shared_memory_bandwidth":
-            config.chiplet.network["bandwidth"] = hardware_parameter_dict[type]
-        elif type == "local_memory_latency":
-            config.chiplet.core.local_memory["latency"] = hardware_parameter_dict[type]
-        elif type == "local_memory_bandwidth":
-            config.chiplet.core.local_memory["bandwidth"] = hardware_parameter_dict[type]
-
-    # Create Hardware
-    shared_memory_board = BoardFactory.create_matrix(config, 
-                                                     BoardType.SHARED_MEMORY)
-    
-    # area = shared_memory_board.container[Coord(CHIP)].area
-    # shared_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord(SHARED_MEMORY)].evaluator.eval_area()
-    # register_file_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(REGISTER_FILE)].evaluator.eval_area()
-    # local_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area()
-    # tensor_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area()
-    # vector_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area()
-
-    # Create DSE snvironment
-    env = STEnv(task_graph, shared_memory_board)
-
-    # Equivalent Hardware Parameter
-    shared_memory_board.communication_networks[0].update_bandwidth(
-        config.chiplet.network["bandwidth"] // (SIZE_X * SIZE_Y))
-
-    # Mapping
-    # DRAM
-    dram = create_mlcoord(DRAM)
-    env.put_in(dram, input_offchip.id)
-    env.put_in(dram, output_offchip.id)
-
-    # L2
-    shared_memory = create_mlcoord(CHIP, SHARED_MEMORY)
-    env.put_in(shared_memory, input_l2.id)
-    env.put_in(shared_memory, output_l2.id)
-
-    # L1
-    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
-    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
-    env.put_in(local_memory, input_l1.id)
-    env.put_in(local_memory, weight_l1.id)
-    env.put_in(local_memory, output.id)
-    mlp = task_dict["compute"]
-    env.put_in(tensor_unit, mlp.id)
-
-    # Edge Mapping
-    env.auto_edge_map()
-
-    env.simulate()
-    # env.show_overall_time()
-    return env.get_latency()
-
-
-def simulate_tiled_dot_product_weight_on_chip(hardware_parameter_dict={},
-                                              transpose: bool = True):
-    # Construct Task Graph
-    IDGenerator.set_base_task_id(0)
-    task_graph = TaskGraph()
-    _, input_l2 = create_input(task_graph, input_shape, Precision.FLOAT_16)
-    input_l1 = create_data(task_graph, input_shape, Precision.FLOAT_16)
-    task_graph.connect_tasks_in_sequence([input_l2, input_l1])
-    weight_l1 = create_static(
-        task_graph, Shape(batch=BATCH // 8, token=SEQ_LEN // 128, nf=D_MODEL), 
-        Precision.FLOAT_16)
-    output_l1, task_dict = create_mlp(
-        task_graph=task_graph,
-        input=input_l1,
-        shape=Shape(nf=SEQ_LEN // 128, nr=D_MODEL),
-        precision=Precision.FLOAT_16,
-        weight=weight_l1
-    )
-    output_l2 = create_data(task_graph, output_l1.shape, Precision.FLOAT_16,
-                            is_output=True)
-    task_graph.connect_tasks_in_sequence([output_l1, output_l2])
-
-    STDraw.draw_graph(task_graph, out_path='temp/shared_tiled_dot_product_weight_on_chip.task.html',
-                      width='1920px', height='1080px')
-
-    # Update Hardware Configuration
-    config = toml.load("top/shared_memory_board.toml")
-    config = BoardConfig(config["PCB"], config["process_node"])
-    for type in hardware_parameter_dict:
-        if type == "shared_memory_bandwidth":
-            config.chiplet.network["bandwidth"] = hardware_parameter_dict[type]
-        elif type == "local_memory_latency":
-            config.chiplet.core.local_memory["latency"] = hardware_parameter_dict[type]
-        elif type == "local_memory_bandwidth":
-            config.chiplet.core.local_memory["bandwidth"] = hardware_parameter_dict[type]
-
-    # Create Hardware
-    shared_memory_board = BoardFactory.create_matrix(config, 
-                                                     BoardType.SHARED_MEMORY)
-
-    # Create DSE snvironment
-    env = STEnv(task_graph, shared_memory_board)
-
-    # Equivalent Hardware Parameter
-    shared_memory_board.communication_networks[0].update_bandwidth(
-        config.chiplet.network["bandwidth"] // (SIZE_X * SIZE_Y))
-
-    # Mapping
-    # L2
-    shared_memory = create_mlcoord(CHIP, SHARED_MEMORY)
-    env.put_in(shared_memory, input_l2.id)
-    env.put_in(shared_memory, output_l2.id)
-
-    # L1
-    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
-    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
-    env.put_in(local_memory, input_l1.id)
-    env.put_in(local_memory, weight_l1.id)
-    env.put_in(local_memory, output_l1.id)
-    mlp = task_dict["compute"]
-    env.put_in(tensor_unit, mlp.id)
-
-    # Edge Mapping
-    env.auto_edge_map()
-
-    env.simulate()
-    # env.show_overall_time()
-    return env.get_latency()
-
-
 def simulate_tiled_dot_product(hardware_parameter_dict={},
                                transpose: bool = True,
                                is_weight_l1: bool = True):
@@ -615,9 +384,9 @@ def simulate_tiled_attention(hardware_parameter_dict={}):
     # env.show_overall_time()
     return env.get_latency(
         loops=[LoopInfo(start=1, end=22, num=1)],
-        extra_latencies=[simulate_tiled_mlp(hardware_parameter_dict, is_input_on_chip=True, is_output_offchip=False) * (8 * 64 - 2),
-                         simulate_tiled_mlp(hardware_parameter_dict, is_weight_on_chip=False),
-                         simulate_tiled_mlp(hardware_parameter_dict),
+        extra_latencies=[simulate_tiled_mlp(hardware_parameter_dict, is_input_on_chip=True, is_output_offchip=False) * (8 * 64 - 2) * 3,
+                         simulate_tiled_mlp(hardware_parameter_dict, is_weight_on_chip=False) * 3,
+                         simulate_tiled_mlp(hardware_parameter_dict) * 3,
                          simulate_tiled_dot_product(hardware_parameter_dict) * (64 * 8 - 8),
                          simulate_tiled_dot_product(hardware_parameter_dict, is_weight_l1=False) * (8 - 2),
                          simulate_tiled_dot_product(hardware_parameter_dict, transpose=False) * (32 * 8 - 8),
@@ -703,7 +472,7 @@ dx = dy = 1  # 柱的宽度
 dz = latencies  # 柱的高度
 
 # 将bandwidth取对数
-shared_memory_bandwidth_paramters = np.log2(shared_memory_bandwidth_parameters)
+shared_memory_bandwidth_parameters = np.log2(shared_memory_bandwidth_parameters)
 local_memory_bandwidth_parameters = np.log2(local_memory_bandwidth_parameters)
 
 # x1: local bandwidth x2: latency x3: noc bandwidth
@@ -712,7 +481,7 @@ offset = 1 / 40
 x1_combined = [shared_memory_bandwidth_parameters[i] * 10 + (400 - shared_memory_latency_parameters[i]) * offset for i in range(len(latencies))]  # 将x1和x2组合
 
 # 根据x1的值设置颜色，颜色随着数值变大而变化
-colors = plt.cm.viridis((np.array(shared_memory_bandwidth_paramters) - min(shared_memory_bandwidth_paramters)) / (max(shared_memory_bandwidth_paramters) - min(shared_memory_bandwidth_paramters)))
+colors = plt.cm.viridis((np.array(shared_memory_bandwidth_parameters) - min(shared_memory_bandwidth_parameters)) / (max(shared_memory_bandwidth_parameters) - min(shared_memory_bandwidth_parameters)))
 
 # 绘制三维柱状图
 ax.bar3d(x1_combined, local_memory_bandwidth_parameters, np.zeros_like(latencies), dx, dy, dz, color=colors)
@@ -730,7 +499,7 @@ plt.title("GPU-Like Shared Memory")
 
 # 添加颜色映射条
 mappable = plt.cm.ScalarMappable(cmap=plt.cm.viridis)
-mappable.set_array(shared_memory_bandwidth_paramters)
+mappable.set_array(shared_memory_bandwidth_parameters)
 cbar = fig.colorbar(mappable, ax=ax)
 cbar.set_ticks([256, 512, 1024, 2048, 4096, 8192])
 
