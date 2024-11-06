@@ -1,5 +1,5 @@
 from src.simulator.resource_simulator.st_model.st_point import STPoint
-from src.simulator.resource_simulator.evaluation_model.memory_evaluator import MemoryEvaluator
+from src.simulator.resource_simulator.evaluation_model.memory_evaluator import MemoryEvaluator, RegisterFileEvaluator
 from src.simulator.resource_simulator.evaluation_model.recorder import MemoryRecorder
 from src.simulator.task_rabbit.task_model.stask_block import STaskBlock
 from src.simulator.task_rabbit.task_model.output_task_block import OutputTaskBlock
@@ -82,3 +82,13 @@ class MemoryPoint(STPoint):
 class DRAMPoint(MemoryPoint):
     def __init__(self, capacity, process_node):
         super().__init__(capacity, process_node)
+
+
+class RegisterFilePoint(MemoryPoint):
+    def __init__(self, num_files, num_registers, bitwidth, num_ports, 
+                 process_node):
+        capacity = num_files * num_registers * bitwidth // 4096
+        super().__init__(capacity, process_node)
+        self.set_evaluator(RegisterFileEvaluator(num_files, num_registers,
+                                                 bitwidth, num_ports, 
+                                                 process_node))

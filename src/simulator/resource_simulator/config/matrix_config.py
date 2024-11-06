@@ -42,6 +42,8 @@ class CoreConfig(Config):
         self.mac_array = self.config["mac_array"]
         self.vector_unit = self.config["vector_unit"]
         self.local_memory = self.config["local_memory"]
+        if "register_file" in self.config:
+            self.register_file = self.config["register_file"]
 
 
 class ComputeChipletConfig(Config):
