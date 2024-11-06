@@ -3,7 +3,7 @@ from src.simulator.resource_simulator.st_model.space_matrix.factory import Facto
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
 from src.simulator.resource_simulator.st_model.space_point.communication_point import CoreCommunicationPoint
 from src.simulator.resource_simulator.st_model.space_point.computation_point import MACArrayPoint, VectorPoint
-from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint
+from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint, RegisterFilePoint
 from src.simulator.resource_simulator.config.computation_config import ComputationConfig, ComputationInfo
 from src.simulator.resource_simulator.config.communication_config import CommunicationConfig
 from src.simulator.task_rabbit.task_model.precision import Precision
@@ -76,6 +76,15 @@ class CoreFactory(Factory):
         sram_point = MemoryPoint(config.local_memory['capacity'],
                                  config.process_node)
         core.add_element(coord=Coord(0), element=sram_point)
+
+        if hasattr(config, 'register_file'):
+            register_file = RegisterFilePoint(
+                config.register_file["num_files"],
+                config.register_file["num_registers"],
+                config.register_file["bitwidth"],
+                config.register_file["num_ports"], 
+                config.process_node)
+            core.add_element(coord=Coord(4), element=register_file)
 
         return core
 

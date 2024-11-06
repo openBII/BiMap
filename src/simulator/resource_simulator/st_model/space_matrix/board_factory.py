@@ -24,7 +24,7 @@ class BoardFactory(Factory):
     def create_matrix(config: BoardConfig, type: BoardType) -> STMatrix:
         if type == BoardType.DISTRIBUTED_MANY_CORE:
             board = ManyCoreBoardMatrix(dim=1, space_level=3)
-        elif type == BoardType.DISTRIBUTED_MANY_CORE:
+        elif type == BoardType.SHARED_MEMORY:
             board = SharedMemoryBoardMatrix(dim=1, space_level=3)
         else:
             board = STMatrix(dim=1, space_level=3)

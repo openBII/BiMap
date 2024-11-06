@@ -21,14 +21,17 @@ class ComputeChipletFactory(Factory):
         if hasattr(config, "shared_memory"):
             shared_memory_coord = Coord((size_x + 1, size_y // 2))
             arbitrator_coord = Coord((size_x, size_y // 2))
-            shared_memory = MemoryPoint(config.shared_memory["capacity"])
+            shared_memory = MemoryPoint(config.shared_memory["capacity"],
+                                        config.process_node)
             chiplet.add_element(coord=shared_memory_coord, 
                                 element=shared_memory)
 
         if config.network["topology"] == "star":
             communication_config = CommunicationConfig(
-                config.network["bandwidth"], (size_x, size_y),
-                config.network["latency"]
+                bandwidth=config.network["bandwidth"],
+                process_node=config.process_node,
+                size=(size_x, size_y),
+                latency=config.network["latency"]
             )
             communication_network = SharedMemoryCommunicationPoint(
                 communication_config, shared_memory_coord, arbitrator_coord)
