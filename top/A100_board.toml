@@ -1,0 +1,47 @@
+process_node = 7
+
+[PCB.DRAM]
+capacity = 83886080  # KB, 80G
+
+[PCB.network]
+bandwidth = 1024  # B/cycle 1555GB/s, A100
+latency = 466
+
+[PCB.chiplet]
+size = [16, 8]
+
+[PCB.chiplet.network]
+topology = "star"
+bandwidth = 2048  # 5661 GB/s, A100 L2 2007.2 B/cycle
+latency = 262
+
+[PCB.chiplet.shared_memory]
+capacity = 40960  # KB, 128MB
+
+[PCB.chiplet.core.network]
+bandwidth = "inf"  # B/cycle
+latency = 1
+
+[PCB.chiplet.core.mac_array]  # for mixed-precision, [[mac_array]] for multiple units
+[PCB.chiplet.core.mac_array.fp16]
+parallelism = [32, 32]
+latency = 64
+
+[PCB.chiplet.core.vector_unit]
+[PCB.chiplet.core.vector_unit.fp16]
+parallelism = 128
+[PCB.chiplet.core.vector_unit.fp16.latency]
+relu = 1  # latency for different operations
+softmax = 9
+add = 1
+
+[PCB.chiplet.core.local_memory]
+capacity = 192  # KB
+latency = 38
+bandwidth = 32
+
+[PCB.chiplet.core.register_file]
+num_files = 4
+num_registers = 16384
+bitwidth = 32
+num_ports = 4
