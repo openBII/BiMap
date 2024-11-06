@@ -124,13 +124,6 @@ def simulate_tiled_mlp(hardware_parameter_dict={},
     # Create Hardware
     shared_memory_board = BoardFactory.create_matrix(config, 
                                                      BoardType.SHARED_MEMORY)
-    
-    # area = shared_memory_board.container[Coord(CHIP)].area
-    # shared_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord(SHARED_MEMORY)].evaluator.eval_area()
-    # register_file_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(REGISTER_FILE)].evaluator.eval_area()
-    # local_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area()
-    # tensor_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area()
-    # vector_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area()
 
     # Create DSE snvironment
     env = STEnv(task_graph, shared_memory_board)
@@ -162,237 +155,6 @@ def simulate_tiled_mlp(hardware_parameter_dict={},
     env.put_in(local_memory, input_l1.id)
     env.put_in(local_memory, weight_l1.id)
     env.put_in(local_memory, output.id)
-    mlp = task_dict["compute"]
-    env.put_in(tensor_unit, mlp.id)
-
-    # Edge Mapping
-    env.auto_edge_map()
-
-    env.simulate()
-    # env.show_overall_time()
-    return env.get_latency()
-
-
-def simulate_tiled_mlp_on_chip(hardware_parameter_dict={}):
-    # Construct Task Graph
-    IDGenerator.set_base_task_id(0)
-    task_graph = TaskGraph()
-    _, input_l2 = create_input(
-        task_graph,
-        Shape(batch=BATCH // 8, token=SEQ_LEN // 64, nf=D_MODEL),
-        Precision.FLOAT_16)
-    input_l1 = create_data(task_graph, input_l2.shape, Precision.FLOAT_16)
-    task_graph.connect_tasks_in_sequence([input_l2, input_l1])
-    output, task_dict = create_mlp(
-        task_graph=task_graph,
-        input=input_l1,
-        shape=Shape(nf=D_MODEL // 128, nr=D_MODEL),
-        precision=Precision.FLOAT_16
-    )
-    output_l2 = create_data(task_graph, output.shape, Precision.FLOAT_16, 
-                            is_output=True)
-    task_graph.connect_tasks_in_sequence([output, output_l2])
-    STDraw.draw_graph(task_graph, out_path='temp/shared_tiled_mlp_on_chip.task.html',
-                      width='1920px', height='1080px')
-
-    # Update Hardware Configuration
-    config = toml.load("top/shared_memory_board.toml")
-    config = BoardConfig(config["PCB"], config["process_node"])
-    for type in hardware_parameter_dict:
-        if type == "shared_memory_bandwidth":
-            config.chiplet.network["bandwidth"] = hardware_parameter_dict[type]
-        elif type == "local_memory_latency":
-            config.chiplet.core.local_memory["latency"] = hardware_parameter_dict[type]
-        elif type == "local_memory_bandwidth":
-            config.chiplet.core.local_memory["bandwidth"] = hardware_parameter_dict[type]
-
-    # Create Hardware
-    shared_memory_board = BoardFactory.create_matrix(config, 
-                                                     BoardType.SHARED_MEMORY)
-    
-    # area = shared_memory_board.container[Coord(CHIP)].area
-    # shared_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord(SHARED_MEMORY)].evaluator.eval_area()
-    # register_file_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(REGISTER_FILE)].evaluator.eval_area()
-    # local_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area()
-    # tensor_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area()
-    # vector_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area()
-
-    # Create DSE snvironment
-    env = STEnv(task_graph, shared_memory_board)
-
-    # Equivalent Hardware Parameter
-    shared_memory_board.communication_networks[0].update_bandwidth(
-        config.chiplet.network["bandwidth"] // (SIZE_X * SIZE_Y))
-
-    # Mapping
-    # L2
-    shared_memory = create_mlcoord(CHIP, SHARED_MEMORY)
-    env.put_in(shared_memory, input_l2.id)
-    env.put_in(shared_memory, output_l2.id)
-
-    # L1
-    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
-    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
-    weight_l1 = task_dict["weight"]
-    mlp = task_dict["compute"]
-    env.put_in(local_memory, input_l1.id)
-    env.put_in(local_memory, weight_l1.id)
-    env.put_in(local_memory, output.id)
-    env.put_in(tensor_unit, mlp.id)
-
-    # Edge Mapping
-    env.auto_edge_map()
-
-    env.simulate()
-    # env.show_overall_time()
-    return env.get_latency()
-
-
-def simulate_tiled_mlp_weight_on_chip(hardware_parameter_dict={}):
-    # Construct Task Graph
-    IDGenerator.set_base_task_id(0)
-    task_graph = TaskGraph()
-    _, input_offchip = create_input(
-        task_graph,
-        Shape(batch=BATCH // 2, token=SEQ_LEN, nf=D_MODEL),
-        Precision.FLOAT_16)
-    input_l2 = create_data(task_graph, input_offchip.shape, Precision.FLOAT_16)
-    input_l1 = create_data(
-        task_graph, Shape(batch=BATCH // 8, token=SEQ_LEN // 64, nf=D_MODEL),
-        Precision.FLOAT_16)
-    task_graph.connect_tasks_in_sequence([input_offchip, input_l2, input_l1])
-    weight_l1 = create_static(
-        task_graph, Shape(nf=D_MODEL // 128, nr=D_MODEL), Precision.FLOAT_16)
-    output, task_dict = create_mlp(
-        task_graph=task_graph,
-        input=input_l1,
-        shape=Shape(nf=4096, nr=4096),
-        precision=Precision.FLOAT_16,
-        weight=weight_l1
-    )
-    output_l2 = create_data(task_graph, input_offchip.shape, Precision.FLOAT_16)
-    output_offchip = create_data(task_graph, input_offchip.shape, 
-                                 Precision.FLOAT_16, is_output=True)
-    task_graph.connect_tasks_in_sequence([output, output_l2, output_offchip])
-    STDraw.draw_graph(task_graph, out_path='temp/shared_tiled_mlp_weight_on_chip.task.html',
-                        width='1920px', height='1080px')
-
-    # Update Hardware Configuration
-    config = toml.load("top/shared_memory_board.toml")
-    config = BoardConfig(config["PCB"], config["process_node"])
-    for type in hardware_parameter_dict:
-        if type == "shared_memory_bandwidth":
-            config.chiplet.network["bandwidth"] = hardware_parameter_dict[type]
-        elif type == "local_memory_latency":
-            config.chiplet.core.local_memory["latency"] = hardware_parameter_dict[type]
-        elif type == "local_memory_bandwidth":
-            config.chiplet.core.local_memory["bandwidth"] = hardware_parameter_dict[type]
-
-    # Create Hardware
-    shared_memory_board = BoardFactory.create_matrix(config, 
-                                                     BoardType.SHARED_MEMORY)
-    
-    # area = shared_memory_board.container[Coord(CHIP)].area
-    # shared_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord(SHARED_MEMORY)].evaluator.eval_area()
-    # register_file_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(REGISTER_FILE)].evaluator.eval_area()
-    # local_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area()
-    # tensor_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area()
-    # vector_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area()
-
-    # Create DSE snvironment
-    env = STEnv(task_graph, shared_memory_board)
-
-    # Equivalent Hardware Parameter
-    shared_memory_board.communication_networks[0].update_bandwidth(
-        config.chiplet.network["bandwidth"] // (SIZE_X * SIZE_Y))
-
-    # Mapping
-    # DRAM
-    dram = create_mlcoord(DRAM)
-    env.put_in(dram, input_offchip.id)
-    env.put_in(dram, output_offchip.id)
-
-    # L2
-    shared_memory = create_mlcoord(CHIP, SHARED_MEMORY)
-    env.put_in(shared_memory, input_l2.id)
-    env.put_in(shared_memory, output_l2.id)
-
-    # L1
-    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
-    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
-    env.put_in(local_memory, input_l1.id)
-    env.put_in(local_memory, weight_l1.id)
-    env.put_in(local_memory, output.id)
-    mlp = task_dict["compute"]
-    env.put_in(tensor_unit, mlp.id)
-
-    # Edge Mapping
-    env.auto_edge_map()
-
-    env.simulate()
-    # env.show_overall_time()
-    return env.get_latency()
-
-
-def simulate_tiled_dot_product_weight_on_chip(hardware_parameter_dict={},
-                                              transpose: bool = True):
-    # Construct Task Graph
-    IDGenerator.set_base_task_id(0)
-    task_graph = TaskGraph()
-    _, input_l2 = create_input(task_graph, input_shape, Precision.FLOAT_16)
-    input_l1 = create_data(task_graph, input_shape, Precision.FLOAT_16)
-    task_graph.connect_tasks_in_sequence([input_l2, input_l1])
-    weight_l1 = create_static(
-        task_graph, Shape(batch=BATCH // 8, token=SEQ_LEN // 128, nf=D_MODEL), 
-        Precision.FLOAT_16)
-    output_l1, task_dict = create_mlp(
-        task_graph=task_graph,
-        input=input_l1,
-        shape=Shape(nf=SEQ_LEN // 128, nr=D_MODEL),
-        precision=Precision.FLOAT_16,
-        weight=weight_l1
-    )
-    output_l2 = create_data(task_graph, output_l1.shape, Precision.FLOAT_16,
-                            is_output=True)
-    task_graph.connect_tasks_in_sequence([output_l1, output_l2])
-
-    STDraw.draw_graph(task_graph, out_path='temp/shared_tiled_dot_product_weight_on_chip.task.html',
-                      width='1920px', height='1080px')
-
-    # Update Hardware Configuration
-    config = toml.load("top/shared_memory_board.toml")
-    config = BoardConfig(config["PCB"], config["process_node"])
-    for type in hardware_parameter_dict:
-        if type == "shared_memory_bandwidth":
-            config.chiplet.network["bandwidth"] = hardware_parameter_dict[type]
-        elif type == "local_memory_latency":
-            config.chiplet.core.local_memory["latency"] = hardware_parameter_dict[type]
-        elif type == "local_memory_bandwidth":
-            config.chiplet.core.local_memory["bandwidth"] = hardware_parameter_dict[type]
-
-    # Create Hardware
-    shared_memory_board = BoardFactory.create_matrix(config, 
-                                                     BoardType.SHARED_MEMORY)
-
-    # Create DSE snvironment
-    env = STEnv(task_graph, shared_memory_board)
-
-    # Equivalent Hardware Parameter
-    shared_memory_board.communication_networks[0].update_bandwidth(
-        config.chiplet.network["bandwidth"] // (SIZE_X * SIZE_Y))
-
-    # Mapping
-    # L2
-    shared_memory = create_mlcoord(CHIP, SHARED_MEMORY)
-    env.put_in(shared_memory, input_l2.id)
-    env.put_in(shared_memory, output_l2.id)
-
-    # L1
-    local_memory = create_mlcoord(CHIP, (0, 0), SRAM_BUFFER)
-    tensor_unit = create_mlcoord(CHIP, (0, 0), TENSOR_UNIT)
-    env.put_in(local_memory, input_l1.id)
-    env.put_in(local_memory, weight_l1.id)
-    env.put_in(local_memory, output_l1.id)
     mlp = task_dict["compute"]
     env.put_in(tensor_unit, mlp.id)
 
@@ -561,6 +323,13 @@ def simulate_tiled_attention(hardware_parameter_dict={}):
     # Create Hardware
     shared_memory_board = BoardFactory.create_matrix(config, 
                                                      BoardType.SHARED_MEMORY)
+    
+    area = shared_memory_board.container[Coord(CHIP)].area
+    shared_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord(SHARED_MEMORY)].evaluator.eval_area()
+    register_file_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(REGISTER_FILE)].evaluator.eval_area()
+    local_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area()
+    tensor_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area()
+    vector_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area()
 
     # Create DSE snvironment
     env = STEnv(task_graph, shared_memory_board)
