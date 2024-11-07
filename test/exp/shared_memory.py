@@ -49,52 +49,74 @@ def update_hardware(config: BoardConfig, hardware_parameter_dict={}):
 
 
 def simulate_tiled_mlp(hardware_parameter_dict={},
-                       is_weight_on_chip: bool = True,
-                       is_input_on_chip: bool = False,
-                       is_output_offchip: bool = True):
+                       is_weight_offchip: bool = False,
+                       is_weight_l1: bool = False,
+                       is_weight_l2: bool = False,
+                       is_input_offchip: bool = False,
+                       is_input_l1: bool = False,
+                       is_input_l2: bool = False,
+                       is_output_offchip: bool = False,
+                       input_offchip_split_vector: SplitVector = None,
+                       weight_offchip_split_vector: SplitVector = None,
+                       input_l1_split_vector: SplitVector = None,
+                       weight_l1_split_vector: SplitVector = None):
     # Construct Task Graph
     IDGenerator.set_base_task_id(0)
     task_graph = TaskGraph()
-    if not is_input_on_chip:
+    if is_input_offchip:
         _, input_offchip = create_input(
             task_graph,
-            Shape(batch=BATCH // 2, token=SEQ_LEN, nf=D_MODEL),
+            Shape(batch=BATCH // input_offchip_split_vector.batch, token=SEQ_LEN // input_offchip_split_vector.token, nf=D_MODEL),
             Precision.FLOAT_16)
         input_l2 = create_data(task_graph, input_offchip.shape, 
-                               Precision.FLOAT_16)
+                            Precision.FLOAT_16)
         input_l1 = create_data(
             task_graph, 
-            Shape(batch=BATCH // 8, token=SEQ_LEN // 64, nf=D_MODEL),
+            Shape(batch=BATCH // input_l1_split_vector.batch, token=SEQ_LEN // input_l1_split_vector.token, nf=D_MODEL),
             Precision.FLOAT_16)
         task_graph.connect_tasks_in_sequence([input_offchip, input_l2, input_l1])
-    else:
+    if is_input_l2:
         _, input_l2 = create_input(
             task_graph,
-            Shape(batch=BATCH // 2, token=SEQ_LEN, nf=D_MODEL),
+            Shape(batch=BATCH // input_l1_split_vector.batch, token=SEQ_LEN // input_l1_split_vector.token, nf=D_MODEL),
             Precision.FLOAT_16)
-        input_l1 = create_data(
-            task_graph, 
-            Shape(batch=BATCH // 8, token=SEQ_LEN // 64, nf=D_MODEL),
-            Precision.FLOAT_16)
+        input_l1 = create_data(task_graph, input_l2.shape, Precision.FLOAT_16)
         task_graph.connect_tasks_in_sequence([input_l2, input_l1])
-    if not is_weight_on_chip:
-        weight_offchip = create_static(task_graph, 
-                                       Shape(nf=D_MODEL, nr=D_MODEL), 
-                                       Precision.FLOAT_16)
+    if is_input_l1:
+        _, input_l1 = create_input(
+            task_graph,
+            Shape(batch=BATCH // input_l1_split_vector.batch, token=SEQ_LEN // input_l1_split_vector.token, nf=D_MODEL),
+            Precision.FLOAT_16)
+    if is_weight_l2:
+        weight_l2 = create_static(
+            task_graph, 
+            Shape(nf=D_MODEL // weight_l1_split_vector.nf, nr=D_MODEL), 
+            Precision.FLOAT_16)
+        weight_l1 = create_data(task_graph, weight_l2.shape, 
+                                Precision.FLOAT_16)
+        task_graph.connect_tasks_in_sequence([weight_l2, weight_l1])
+    if is_weight_offchip:
+        weight_offchip = create_static(
+            task_graph, 
+            Shape(nf=D_MODEL // weight_offchip_split_vector.nf, nr=D_MODEL), 
+            Precision.FLOAT_16)
         weight_l2 = create_data(task_graph, weight_offchip.shape, 
                                 Precision.FLOAT_16)
         weight_l1 = create_data(
-            task_graph, Shape(nf=D_MODEL // 128, nr=D_MODEL), Precision.FLOAT_16)
+            task_graph, 
+            Shape(nf=D_MODEL // weight_l1_split_vector.nf, nr=D_MODEL), 
+            Precision.FLOAT_16)
         task_graph.connect_tasks_in_sequence([weight_offchip, weight_l2, weight_l1])
-    else:
+    if is_weight_l1:
         weight_l1 = create_static(
-            task_graph, Shape(nf=D_MODEL // 128, nr=D_MODEL), 
+            task_graph, 
+            Shape(nf=D_MODEL // weight_l1_split_vector.nf, nr=D_MODEL), 
             Precision.FLOAT_16)
     if is_output_offchip:
         output, task_dict = create_mlp(
             task_graph=task_graph,
             input=input_l1,
-            shape=Shape(nf=D_MODEL // 128, nr=D_MODEL),
+            shape=Shape(nf=D_MODEL // weight_l1_split_vector.nf, nr=D_MODEL),
             precision=Precision.FLOAT_16,
             weight=weight_l1
         )
@@ -106,7 +128,7 @@ def simulate_tiled_mlp(hardware_parameter_dict={},
         output, task_dict = create_mlp(
             task_graph=task_graph,
             input=input_l1,
-            shape=Shape(nf=D_MODEL // 128, nr=D_MODEL),
+            shape=Shape(nf=D_MODEL // weight_l1_split_vector.nf, nr=D_MODEL),
             precision=Precision.FLOAT_16,
             weight=weight_l1
         )
@@ -124,13 +146,6 @@ def simulate_tiled_mlp(hardware_parameter_dict={},
     # Create Hardware
     shared_memory_board = BoardFactory.create_matrix(config, 
                                                      BoardType.SHARED_MEMORY)
-    
-    # area = shared_memory_board.container[Coord(CHIP)].area
-    # shared_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord(SHARED_MEMORY)].evaluator.eval_area()
-    # register_file_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(REGISTER_FILE)].evaluator.eval_area()
-    # local_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area()
-    # tensor_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area()
-    # vector_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area()
 
     # Create DSE snvironment
     env = STEnv(task_graph, shared_memory_board)
@@ -142,17 +157,18 @@ def simulate_tiled_mlp(hardware_parameter_dict={},
     # Mapping
     # DRAM
     dram = create_mlcoord(DRAM)
-    if not is_input_on_chip:
+    if is_input_offchip:
         env.put_in(dram, input_offchip.id)
-    if not is_weight_on_chip:
+    if is_weight_offchip:
         env.put_in(dram, weight_offchip.id)
     if is_output_offchip:
         env.put_in(dram, output_offchip.id)
 
     # L2
     shared_memory = create_mlcoord(CHIP, SHARED_MEMORY)
-    env.put_in(shared_memory, input_l2.id)
-    if not is_weight_on_chip:
+    if not is_input_l1:
+        env.put_in(shared_memory, input_l2.id)
+    if not is_weight_l1:
         env.put_in(shared_memory, weight_l2.id)
     env.put_in(shared_memory, output_l2.id)
 
@@ -175,14 +191,16 @@ def simulate_tiled_mlp(hardware_parameter_dict={},
 
 def simulate_tiled_dot_product(hardware_parameter_dict={},
                                transpose: bool = True,
-                               is_weight_l1: bool = True):
+                               is_weight_l1: bool = True,
+                               input_l1_split_vector: SplitVector = None,
+                               weight_l1_split_vector: SplitVector = None):
     # Construct Task Graph
     if transpose:
-        input_shape = Shape(batch=BATCH // 8, token=SEQ_LEN // 64, nf=D_MODEL)
-        weight_shape = Shape(batch=BATCH // 8, token=SEQ_LEN // 128, nf=D_MODEL)
+        input_shape = Shape(batch=BATCH // input_l1_split_vector.batch, token=SEQ_LEN // input_l1_split_vector.token, nf=D_MODEL)
+        weight_shape = Shape(batch=BATCH // weight_l1_split_vector.batch, token=SEQ_LEN // weight_l1_split_vector.token, nf=D_MODEL)
     else:
-        input_shape = Shape(batch=BATCH // 8, token=SEQ_LEN // 32, nf=SEQ_LEN)
-        weight_shape = Shape(batch=BATCH // 8, token=SEQ_LEN, nf=D_MODEL // 128)
+        input_shape = Shape(batch=BATCH // input_l1_split_vector.batch, token=SEQ_LEN // input_l1_split_vector.token, nf=SEQ_LEN)
+        weight_shape = Shape(batch=BATCH // weight_l1_split_vector.batch, token=SEQ_LEN, nf=D_MODEL // weight_l1_split_vector.nf)
     IDGenerator.set_base_task_id(0)
     task_graph = TaskGraph()
     _, input_l2 = create_input(task_graph, input_shape, Precision.FLOAT_16)
@@ -251,67 +269,99 @@ def simulate_tiled_dot_product(hardware_parameter_dict={},
     return env.get_latency()
 
 
-def simulate_tiled_attention(hardware_parameter_dict={}):
+def simulate_tiled_attention(hardware_parameter_dict={},
+                             mlp_input_offchip_split_vector: SplitVector = None,
+                             mlp_weight_offchip_split_vector: SplitVector = None,
+                             mlp_input_l1_split_vector: SplitVector = None,
+                             mlp_weight_l1_split_vector: SplitVector = None,
+                             qk_input_l1_split_vector: SplitVector = None,
+                             qk_weight_l1_split_vector: SplitVector = None,
+                             v_input_l1_split_vector: SplitVector = None,
+                             v_weight_l1_split_vector: SplitVector = None,
+                             input_offchip_split_vector: SplitVector = None,
+                             weight_offchip_split_vector: SplitVector = None,
+                             input_l1_split_vector: SplitVector = None,
+                             weight_l1_split_vector: SplitVector = None,
+                             add_split_vector: SplitVector = None,
+                             value_offchip_split_vector: SplitVector = None,
+                             value_l1_split_vector: SplitVector = None,
+                             output_offchip_split_vector: SplitVector = None):
     # Construct Task Graph
     IDGenerator.set_base_task_id(0)
     task_graph = TaskGraph()
     _, input_offchip = create_input(
         task_graph,
-        Shape(batch=BATCH // 2, token=SEQ_LEN, nf=D_MODEL),
+        Shape(batch=BATCH // input_offchip_split_vector.batch, 
+              token=SEQ_LEN // input_offchip_split_vector.token, nf=D_MODEL),
         Precision.FLOAT_16)
     input_l2 = create_data(task_graph, input_offchip.shape, Precision.FLOAT_16)
     input_l1 = create_data(
-        task_graph, Shape(batch=BATCH // 8, token=SEQ_LEN // 64, nf=D_MODEL),
+        task_graph, 
+        Shape(batch=BATCH // input_l1_split_vector.batch, 
+              token=SEQ_LEN // input_l1_split_vector.token, nf=D_MODEL),
         Precision.FLOAT_16)
     task_graph.connect_tasks_in_sequence([input_offchip, input_l2, input_l1])
     weight_offchip = create_static(
-        task_graph, Shape(batch=BATCH // 2, token=SEQ_LEN, nf=D_MODEL), 
+        task_graph, 
+        Shape(batch=BATCH // weight_offchip_split_vector.batch, 
+              token=SEQ_LEN // weight_offchip_split_vector.token, nf=D_MODEL), 
         Precision.FLOAT_16)
-    weight_l2 = create_data(task_graph, weight_offchip.shape, 
+    weight_l2 = create_data(task_graph, weight_offchip.shape,
                             Precision.FLOAT_16)
     weight_l1 = create_data(
-        task_graph, Shape(batch=BATCH // 8, token=SEQ_LEN // 128, nf=D_MODEL), 
+        task_graph, 
+        Shape(batch=BATCH // weight_l1_split_vector.batch, 
+              token=SEQ_LEN // weight_l1_split_vector.token, nf=D_MODEL), 
         Precision.FLOAT_16)
     task_graph.connect_tasks_in_sequence([weight_offchip, weight_l2, weight_l1])
     mlp_output_l1, task_dict = create_mlp(
         task_graph=task_graph,
         input=input_l1,
-        shape=Shape(nf=SEQ_LEN // 128, nr=D_MODEL),
+        shape=Shape(nf=SEQ_LEN // weight_l1_split_vector.token, nr=D_MODEL),
         precision=Precision.FLOAT_16,
         weight=weight_l1
     )
     add_input_l2 = create_data(
-        task_graph, Shape(batch=BATCH // 8, token=SEQ_LEN // 32, nf=SEQ_LEN), 
+        task_graph, 
+        Shape(batch=BATCH // add_split_vector.batch, 
+              token=SEQ_LEN // add_split_vector.token, nf=SEQ_LEN), 
         Precision.FLOAT_16)
-    add_input_l1 = create_data(
-        task_graph, Shape(batch=BATCH // 8, token=SEQ_LEN // 32, nf=SEQ_LEN), 
-        Precision.FLOAT_16)
-    task_graph.connect_tasks_in_sequence([mlp_output_l1, add_input_l2, add_input_l1])
+    add_input_l1 = create_data(task_graph, add_input_l2.shape, 
+                               Precision.FLOAT_16)
+    task_graph.connect_tasks_in_sequence(
+        [mlp_output_l1, add_input_l2, add_input_l1])
     mask = create_static(task_graph, add_input_l1.shape, Precision.FLOAT_16)
     add_output, add_task_dict = create_add(task_graph, [add_input_l1, mask], 
-                                       add_input_l1.shape, 
-                                       Precision.FLOAT_16)
+                                           add_input_l1.shape, 
+                                           Precision.FLOAT_16)
     softmax_output, softmax_task_dict = create_pointwise(
         task_graph, add_output, Precision.FLOAT_16, TaskBlockType.CSoftMax)
     # output_l2 = create_data(task_graph, output.shape, Precision.FLOAT_16)
     # task_graph.connect_tasks_in_sequence([output, output_l2])
     value_offchip = create_static(
-        task_graph, Shape(batch=BATCH // 2, token=SEQ_LEN, nf=D_MODEL),
+        task_graph, 
+        Shape(batch=BATCH // value_offchip_split_vector.batch, 
+              token=SEQ_LEN // value_offchip_split_vector.token, nf=D_MODEL),
         Precision.FLOAT_16)
     value_l2 = create_data(task_graph, value_offchip.shape, Precision.FLOAT_16)
     value_l1 = create_data(
-        task_graph, Shape(batch=BATCH // 8, token=SEQ_LEN, nf=D_MODEL // 128),
+        task_graph, 
+        Shape(batch=BATCH // value_l1_split_vector.batch, 
+              token=SEQ_LEN, nf=D_MODEL // value_l1_split_vector.nf),
         Precision.FLOAT_16)
     task_graph.connect_tasks_in_sequence([value_offchip, value_l2, value_l1])
     attention_output_l1, attention_task_dict = create_mlp(
         task_graph=task_graph,
         input=softmax_output,
-        shape=Shape(nf=D_MODEL // 128, nr=SEQ_LEN),
+        shape=Shape(nf=D_MODEL // value_l1_split_vector.nf, nr=SEQ_LEN),
         precision=Precision.FLOAT_16,
         weight=value_l1
     )
     attention_output_l2 = create_data(
-        task_graph, Shape(batch=BATCH // 2, token=SEQ_LEN, nf=D_MODEL), 
+        task_graph, 
+        Shape(batch=BATCH // output_offchip_split_vector.batch, 
+              token=SEQ_LEN // output_offchip_split_vector.token, 
+              nf=D_MODEL // output_offchip_split_vector.nf), 
         Precision.FLOAT_16)
     attention_output_offchip = create_data(
         task_graph, attention_output_l2.shape, Precision.FLOAT_16,
@@ -330,6 +380,13 @@ def simulate_tiled_attention(hardware_parameter_dict={}):
     # Create Hardware
     shared_memory_board = BoardFactory.create_matrix(config, 
                                                      BoardType.SHARED_MEMORY)
+    
+    area = shared_memory_board.container[Coord(CHIP)].area
+    shared_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord(SHARED_MEMORY)].evaluator.eval_area()
+    register_file_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(REGISTER_FILE)].evaluator.eval_area()
+    local_memory_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area()
+    tensor_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area()
+    vector_unit_area = shared_memory_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area()
 
     # Create DSE snvironment
     env = STEnv(task_graph, shared_memory_board)
@@ -384,13 +441,43 @@ def simulate_tiled_attention(hardware_parameter_dict={}):
     # env.show_overall_time()
     return env.get_latency(
         loops=[LoopInfo(start=1, end=22, num=1)],
-        extra_latencies=[simulate_tiled_mlp(hardware_parameter_dict, is_input_on_chip=True, is_output_offchip=False) * (8 * 64 - 2) * 3,
-                         simulate_tiled_mlp(hardware_parameter_dict, is_weight_on_chip=False) * 3,
-                         simulate_tiled_mlp(hardware_parameter_dict) * 3,
-                         simulate_tiled_dot_product(hardware_parameter_dict) * (64 * 8 - 8),
-                         simulate_tiled_dot_product(hardware_parameter_dict, is_weight_l1=False) * (8 - 2),
-                         simulate_tiled_dot_product(hardware_parameter_dict, transpose=False) * (32 * 8 - 8),
-                         simulate_tiled_dot_product(hardware_parameter_dict, transpose=False, is_weight_l1=False) * (8 - 2)])
+        extra_latencies=[simulate_tiled_mlp(hardware_parameter_dict, 
+                                            is_input_l2=True,
+                                            is_weight_l1=True, 
+                                            is_output_offchip=False, 
+                                            input_l1_split_vector=mlp_input_l1_split_vector,
+                                            weight_l1_split_vector=mlp_weight_l1_split_vector) * (8 * 64 - 2) * 3,
+                         simulate_tiled_mlp(hardware_parameter_dict, 
+                                            is_weight_offchip=True, 
+                                            is_input_offchip=True, 
+                                            is_output_offchip=True,
+                                            input_offchip_split_vector=mlp_input_offchip_split_vector,
+                                            input_l1_split_vector=mlp_input_l1_split_vector,
+                                            weight_l1_split_vector=mlp_weight_l1_split_vector,
+                                            weight_offchip_split_vector=mlp_weight_offchip_split_vector) * 3,
+                         simulate_tiled_mlp(hardware_parameter_dict, 
+                                            is_input_offchip=True, 
+                                            is_weight_l1=True, 
+                                            is_output_offchip=True,
+                                            input_offchip_split_vector=mlp_input_offchip_split_vector,
+                                            input_l1_split_vector=mlp_input_l1_split_vector,
+                                            weight_l1_split_vector=mlp_weight_l1_split_vector) * 3,
+                         simulate_tiled_dot_product(hardware_parameter_dict,
+                                                    input_l1_split_vector=qk_input_l1_split_vector,
+                                                    weight_l1_split_vector=qk_weight_l1_split_vector) * (64 * 8 - 8),
+                         simulate_tiled_dot_product(hardware_parameter_dict, 
+                                                    is_weight_l1=False,
+                                                    input_l1_split_vector=qk_input_l1_split_vector,
+                                                    weight_l1_split_vector=qk_weight_l1_split_vector) * (8 - 2),
+                         simulate_tiled_dot_product(hardware_parameter_dict, 
+                                                    transpose=False,
+                                                    input_l1_split_vector=v_input_l1_split_vector,
+                                                    weight_l1_split_vector=v_weight_l1_split_vector) * (32 * 8 - 8),
+                         simulate_tiled_dot_product(hardware_parameter_dict, 
+                                                    transpose=False, 
+                                                    is_weight_l1=False,
+                                                    input_l1_split_vector=v_input_l1_split_vector,
+                                                    weight_l1_split_vector=v_weight_l1_split_vector) * (8 - 2)])
 
 
 # latency1 = simulate_tiled_mlp(is_weight_on_chip=False)
@@ -401,7 +488,22 @@ def simulate_tiled_attention(hardware_parameter_dict={}):
 # latency6 = simulate_tiled_dot_product()
 # latency7 = simulate_tiled_dot_product(transpose=False)
 
-latency = simulate_tiled_attention()
+latency = simulate_tiled_attention(mlp_input_offchip_split_vector=SplitVector(batch=2),
+                                   mlp_weight_offchip_split_vector=SplitVector(),
+                                   mlp_input_l1_split_vector=SplitVector(batch=8, token=64),
+                                   mlp_weight_l1_split_vector=SplitVector(nf=128),
+                                   qk_input_l1_split_vector=SplitVector(batch=8, token=64),
+                                   qk_weight_l1_split_vector=SplitVector(batch=8, token=128),
+                                   v_input_l1_split_vector=SplitVector(batch=8, token=32),
+                                   v_weight_l1_split_vector=SplitVector(batch=8, nf=128),
+                                   input_offchip_split_vector=SplitVector(batch=2),
+                                   weight_offchip_split_vector=SplitVector(batch=2),
+                                   input_l1_split_vector=SplitVector(batch=8, token=64),
+                                   weight_l1_split_vector=SplitVector(batch=8, token=128),
+                                   add_split_vector=SplitVector(batch=8, token=32),
+                                   value_offchip_split_vector=SplitVector(batch=2),
+                                   value_l1_split_vector=SplitVector(batch=8, nf=128),
+                                   output_offchip_split_vector=SplitVector(batch=2))
 
 # noc_bandwidth_paramters = []
 # noc_bandwidth_latencies = []
@@ -472,7 +574,7 @@ dx = dy = 1  # 柱的宽度
 dz = latencies  # 柱的高度
 
 # 将bandwidth取对数
-shared_memory_bandwidth_parameters = np.log2(shared_memory_bandwidth_parameters)
+shared_memory_bandwidth_paramters = np.log2(shared_memory_bandwidth_parameters)
 local_memory_bandwidth_parameters = np.log2(local_memory_bandwidth_parameters)
 
 # x1: local bandwidth x2: latency x3: noc bandwidth
@@ -481,7 +583,7 @@ offset = 1 / 40
 x1_combined = [shared_memory_bandwidth_parameters[i] * 10 + (400 - shared_memory_latency_parameters[i]) * offset for i in range(len(latencies))]  # 将x1和x2组合
 
 # 根据x1的值设置颜色，颜色随着数值变大而变化
-colors = plt.cm.viridis((np.array(shared_memory_bandwidth_parameters) - min(shared_memory_bandwidth_parameters)) / (max(shared_memory_bandwidth_parameters) - min(shared_memory_bandwidth_parameters)))
+colors = plt.cm.viridis((np.array(shared_memory_bandwidth_paramters) - min(shared_memory_bandwidth_paramters)) / (max(shared_memory_bandwidth_paramters) - min(shared_memory_bandwidth_paramters)))
 
 # 绘制三维柱状图
 ax.bar3d(x1_combined, local_memory_bandwidth_parameters, np.zeros_like(latencies), dx, dy, dz, color=colors)
@@ -499,7 +601,7 @@ plt.title("GPU-Like Shared Memory")
 
 # 添加颜色映射条
 mappable = plt.cm.ScalarMappable(cmap=plt.cm.viridis)
-mappable.set_array(shared_memory_bandwidth_parameters)
+mappable.set_array(shared_memory_bandwidth_paramters)
 cbar = fig.colorbar(mappable, ax=ax)
 cbar.set_ticks([256, 512, 1024, 2048, 4096, 8192])
 
