@@ -191,26 +191,38 @@ def simulate_tiled_mlp(hardware_parameter_dict={},
 
 def simulate_tiled_dot_product(hardware_parameter_dict={},
                                transpose: bool = True,
-                               is_weight_l1: bool = True,
+                               is_weight_l1: bool = False,
+                               is_weight_l2: bool = False,
+                               is_weight_offchip: bool = False,
                                input_l1_split_vector: SplitVector = None,
-                               weight_l1_split_vector: SplitVector = None):
+                               weight_l1_split_vector: SplitVector = None,
+                               weight_offchip_split_vector: SplitVector = None):
     # Construct Task Graph
     if transpose:
         input_shape = Shape(batch=BATCH // input_l1_split_vector.batch, token=SEQ_LEN // input_l1_split_vector.token, nf=D_MODEL)
         weight_shape = Shape(batch=BATCH // weight_l1_split_vector.batch, token=SEQ_LEN // weight_l1_split_vector.token, nf=D_MODEL)
+        if is_weight_offchip:
+            weight_offchip_shape = Shape(batch=BATCH // weight_offchip_split_vector.batch, token=SEQ_LEN // weight_offchip_split_vector.token, nf=D_MODEL)
     else:
         input_shape = Shape(batch=BATCH // input_l1_split_vector.batch, token=SEQ_LEN // input_l1_split_vector.token, nf=SEQ_LEN)
         weight_shape = Shape(batch=BATCH // weight_l1_split_vector.batch, token=SEQ_LEN, nf=D_MODEL // weight_l1_split_vector.nf)
+        if is_weight_offchip:
+            weight_offchip_shape = Shape(batch=BATCH // weight_offchip_split_vector.batch, token=SEQ_LEN, nf=D_MODEL // weight_offchip_split_vector.nf)
     IDGenerator.set_base_task_id(0)
     task_graph = TaskGraph()
     _, input_l2 = create_input(task_graph, input_shape, Precision.FLOAT_16)
     input_l1 = create_data(task_graph, input_shape, Precision.FLOAT_16)
     task_graph.connect_tasks_in_sequence([input_l2, input_l1])
-    if not is_weight_l1:
+    if is_weight_offchip:
+        weight_offchip = create_static(task_graph, weight_offchip_shape, Precision.FLOAT_16)
+        weight_l2 = create_data(task_graph, weight_shape, Precision.FLOAT_16)
+        weight_l1 = create_data(task_graph, weight_shape, Precision.FLOAT_16)
+        task_graph.connect_tasks_in_sequence([weight_offchip, weight_l2, weight_l1])
+    if is_weight_l2:
         weight_l2 = create_static(task_graph, weight_shape, Precision.FLOAT_16)
         weight_l1 = create_data(task_graph, weight_shape, Precision.FLOAT_16)
         task_graph.connect_tasks_in_sequence([weight_l2, weight_l1])
-    else:
+    if is_weight_l1:
         weight_l1 = create_static(task_graph, weight_shape, Precision.FLOAT_16)
     nf = weight_shape.token if transpose else weight_shape.nf
     nr = D_MODEL if transpose else SEQ_LEN
@@ -245,6 +257,10 @@ def simulate_tiled_dot_product(hardware_parameter_dict={},
         config.chiplet.network["bandwidth"] // (SIZE_X * SIZE_Y))
 
     # Mapping
+    if is_weight_offchip:
+        dram = create_mlcoord(DRAM)
+        env.put_in(dram, weight_offchip.id)
+
     # L2
     shared_memory = create_mlcoord(CHIP, SHARED_MEMORY)
     env.put_in(shared_memory, input_l2.id)
@@ -269,6 +285,57 @@ def simulate_tiled_dot_product(hardware_parameter_dict={},
     return env.get_latency()
 
 
+def calculate_extra_latency(hardware_parameter_dict={},
+                            mlp_input_offchip_split_vector: SplitVector = None,
+                            mlp_weight_offchip_split_vector: SplitVector = None,
+                            mlp_input_l1_split_vector: SplitVector = None,
+                            mlp_weight_l1_split_vector: SplitVector = None,
+                            qk_input_l1_split_vector: SplitVector = None,
+                            qk_weight_l1_split_vector: SplitVector = None,
+                            v_input_l1_split_vector: SplitVector = None,
+                            v_weight_l1_split_vector: SplitVector = None,
+                            v_weight_offchip_split_vector: SplitVector = None):
+    return [simulate_tiled_mlp(hardware_parameter_dict, 
+                               is_input_l2=True,
+                               is_weight_l1=True, 
+                               is_output_offchip=False, 
+                               input_l1_split_vector=mlp_input_l1_split_vector,
+                               weight_l1_split_vector=mlp_weight_l1_split_vector) * (8 * 64 - 2) * 3,
+            simulate_tiled_mlp(hardware_parameter_dict, 
+                               is_weight_offchip=True, 
+                               is_input_offchip=True, 
+                               is_output_offchip=True,
+                               input_offchip_split_vector=mlp_input_offchip_split_vector,
+                               input_l1_split_vector=mlp_input_l1_split_vector,
+                               weight_l1_split_vector=mlp_weight_l1_split_vector,
+                               weight_offchip_split_vector=mlp_weight_offchip_split_vector) * 3,
+            simulate_tiled_mlp(hardware_parameter_dict, 
+                               is_input_offchip=True, 
+                               is_weight_l1=True, 
+                               is_output_offchip=True,
+                               input_offchip_split_vector=mlp_input_offchip_split_vector,
+                               input_l1_split_vector=mlp_input_l1_split_vector,
+                               weight_l1_split_vector=mlp_weight_l1_split_vector) * 3,
+            simulate_tiled_dot_product(hardware_parameter_dict,
+                                       is_weight_l1=True,
+                                       input_l1_split_vector=qk_input_l1_split_vector,
+                                       weight_l1_split_vector=qk_weight_l1_split_vector) * (64 * 8 - 8),
+            simulate_tiled_dot_product(hardware_parameter_dict, 
+                                       is_weight_l2=True,
+                                       input_l1_split_vector=qk_input_l1_split_vector,
+                                       weight_l1_split_vector=qk_weight_l1_split_vector) * (8 - 2),
+            simulate_tiled_dot_product(hardware_parameter_dict, 
+                                       transpose=False,
+                                       is_weight_l1=True,
+                                       input_l1_split_vector=v_input_l1_split_vector,
+                                       weight_l1_split_vector=v_weight_l1_split_vector) * (32 * 8 - 8),
+            simulate_tiled_dot_product(hardware_parameter_dict,
+                                       transpose=False, 
+                                       is_weight_l2=True,
+                                       input_l1_split_vector=v_input_l1_split_vector,
+                                       weight_l1_split_vector=v_weight_l1_split_vector) * (8 - 2)]
+
+
 def simulate_tiled_attention(hardware_parameter_dict={},
                              mlp_input_offchip_split_vector: SplitVector = None,
                              mlp_weight_offchip_split_vector: SplitVector = None,
@@ -278,6 +345,7 @@ def simulate_tiled_attention(hardware_parameter_dict={},
                              qk_weight_l1_split_vector: SplitVector = None,
                              v_input_l1_split_vector: SplitVector = None,
                              v_weight_l1_split_vector: SplitVector = None,
+                             v_weight_offchip_split_vector: SplitVector = None,
                              input_offchip_split_vector: SplitVector = None,
                              weight_offchip_split_vector: SplitVector = None,
                              input_l1_split_vector: SplitVector = None,
@@ -285,7 +353,8 @@ def simulate_tiled_attention(hardware_parameter_dict={},
                              add_split_vector: SplitVector = None,
                              value_offchip_split_vector: SplitVector = None,
                              value_l1_split_vector: SplitVector = None,
-                             output_offchip_split_vector: SplitVector = None):
+                             output_offchip_split_vector: SplitVector = None,
+                             calculate_extra_latency=None):
     # Construct Task Graph
     IDGenerator.set_base_task_id(0)
     task_graph = TaskGraph()
@@ -338,6 +407,12 @@ def simulate_tiled_attention(hardware_parameter_dict={},
         task_graph, add_output, Precision.FLOAT_16, TaskBlockType.CSoftMax)
     # output_l2 = create_data(task_graph, output.shape, Precision.FLOAT_16)
     # task_graph.connect_tasks_in_sequence([output, output_l2])
+    softmax_output_l2 = create_data(task_graph, softmax_output.shape, 
+                                    Precision.FLOAT_16)
+    softmax_output_l1 = create_data(task_graph, softmax_output.shape, 
+                                    Precision.FLOAT_16)
+    task_graph.connect_tasks_in_sequence([softmax_output, softmax_output_l2, 
+                                          softmax_output_l1])
     value_offchip = create_static(
         task_graph, 
         Shape(batch=BATCH // value_offchip_split_vector.batch, 
@@ -352,11 +427,10 @@ def simulate_tiled_attention(hardware_parameter_dict={},
     task_graph.connect_tasks_in_sequence([value_offchip, value_l2, value_l1])
     attention_output_l1, attention_task_dict = create_mlp(
         task_graph=task_graph,
-        input=softmax_output,
+        input=softmax_output_l1,
         shape=Shape(nf=D_MODEL // value_l1_split_vector.nf, nr=SEQ_LEN),
         precision=Precision.FLOAT_16,
-        weight=value_l1
-    )
+        weight=value_l1)
     attention_output_l2 = create_data(
         task_graph, 
         Shape(batch=BATCH // output_offchip_split_vector.batch, 
@@ -409,6 +483,7 @@ def simulate_tiled_attention(hardware_parameter_dict={},
     env.put_in(shared_memory, weight_l2.id)
     env.put_in(shared_memory, value_l2.id)
     env.put_in(shared_memory, add_input_l2.id)
+    env.put_in(shared_memory, softmax_output_l2.id)
     env.put_in(shared_memory, attention_output_l2.id)
 
     # L1
@@ -422,6 +497,7 @@ def simulate_tiled_attention(hardware_parameter_dict={},
     env.put_in(local_memory, add_input_l1.id)
     env.put_in(local_memory, add_output.id)
     env.put_in(local_memory, softmax_output.id)
+    env.put_in(local_memory, softmax_output_l1.id)
     env.put_in(local_memory, value_l1.id)
     env.put_in(local_memory, attention_output_l1.id)
     mlp1 = task_dict["compute"]
@@ -441,44 +517,17 @@ def simulate_tiled_attention(hardware_parameter_dict={},
     # env.show_overall_time()
     return env.get_latency(
         loops=[LoopInfo(start=1, end=22, num=1)],
-        extra_latencies=[simulate_tiled_mlp(hardware_parameter_dict, 
-                                            is_input_l2=True,
-                                            is_weight_l1=True, 
-                                            is_output_offchip=False, 
-                                            input_l1_split_vector=mlp_input_l1_split_vector,
-                                            weight_l1_split_vector=mlp_weight_l1_split_vector) * (8 * 64 - 2) * 3,
-                         simulate_tiled_mlp(hardware_parameter_dict, 
-                                            is_weight_offchip=True, 
-                                            is_input_offchip=True, 
-                                            is_output_offchip=True,
-                                            input_offchip_split_vector=mlp_input_offchip_split_vector,
-                                            input_l1_split_vector=mlp_input_l1_split_vector,
-                                            weight_l1_split_vector=mlp_weight_l1_split_vector,
-                                            weight_offchip_split_vector=mlp_weight_offchip_split_vector) * 3,
-                         simulate_tiled_mlp(hardware_parameter_dict, 
-                                            is_input_offchip=True, 
-                                            is_weight_l1=True, 
-                                            is_output_offchip=True,
-                                            input_offchip_split_vector=mlp_input_offchip_split_vector,
-                                            input_l1_split_vector=mlp_input_l1_split_vector,
-                                            weight_l1_split_vector=mlp_weight_l1_split_vector) * 3,
-                         simulate_tiled_dot_product(hardware_parameter_dict,
-                                                    input_l1_split_vector=qk_input_l1_split_vector,
-                                                    weight_l1_split_vector=qk_weight_l1_split_vector) * (64 * 8 - 8),
-                         simulate_tiled_dot_product(hardware_parameter_dict, 
-                                                    is_weight_l1=False,
-                                                    input_l1_split_vector=qk_input_l1_split_vector,
-                                                    weight_l1_split_vector=qk_weight_l1_split_vector) * (8 - 2),
-                         simulate_tiled_dot_product(hardware_parameter_dict, 
-                                                    transpose=False,
-                                                    input_l1_split_vector=v_input_l1_split_vector,
-                                                    weight_l1_split_vector=v_weight_l1_split_vector) * (32 * 8 - 8),
-                         simulate_tiled_dot_product(hardware_parameter_dict, 
-                                                    transpose=False, 
-                                                    is_weight_l1=False,
-                                                    input_l1_split_vector=v_input_l1_split_vector,
-                                                    weight_l1_split_vector=v_weight_l1_split_vector) * (8 - 2)])
-
+        extra_latencies=calculate_extra_latency(hardware_parameter_dict,
+                                                mlp_input_offchip_split_vector,
+                                                mlp_weight_offchip_split_vector,
+                                                mlp_input_l1_split_vector,
+                                                mlp_weight_l1_split_vector,
+                                                qk_input_l1_split_vector,
+                                                qk_weight_l1_split_vector,
+                                                v_input_l1_split_vector,
+                                                v_weight_l1_split_vector,
+                                                v_weight_offchip_split_vector))
+                    
 
 # latency1 = simulate_tiled_mlp(is_weight_on_chip=False)
 # latency2 = simulate_tiled_mlp(is_input_on_chip=True, is_output_offchip=False)
@@ -488,22 +537,99 @@ def simulate_tiled_attention(hardware_parameter_dict={},
 # latency6 = simulate_tiled_dot_product()
 # latency7 = simulate_tiled_dot_product(transpose=False)
 
-latency = simulate_tiled_attention(mlp_input_offchip_split_vector=SplitVector(batch=2),
-                                   mlp_weight_offchip_split_vector=SplitVector(),
-                                   mlp_input_l1_split_vector=SplitVector(batch=8, token=64),
-                                   mlp_weight_l1_split_vector=SplitVector(nf=128),
-                                   qk_input_l1_split_vector=SplitVector(batch=8, token=64),
-                                   qk_weight_l1_split_vector=SplitVector(batch=8, token=128),
-                                   v_input_l1_split_vector=SplitVector(batch=8, token=32),
-                                   v_weight_l1_split_vector=SplitVector(batch=8, nf=128),
-                                   input_offchip_split_vector=SplitVector(batch=2),
-                                   weight_offchip_split_vector=SplitVector(batch=2),
-                                   input_l1_split_vector=SplitVector(batch=8, token=64),
-                                   weight_l1_split_vector=SplitVector(batch=8, token=128),
-                                   add_split_vector=SplitVector(batch=8, token=32),
-                                   value_offchip_split_vector=SplitVector(batch=2),
-                                   value_l1_split_vector=SplitVector(batch=8, nf=128),
-                                   output_offchip_split_vector=SplitVector(batch=2))
+# 128MB, 512KB, 64 * 64, 256
+latency1 = simulate_tiled_attention(mlp_input_offchip_split_vector=SplitVector(batch=2),
+                                    mlp_weight_offchip_split_vector=SplitVector(),
+                                    mlp_input_l1_split_vector=SplitVector(batch=8, token=64),
+                                    mlp_weight_l1_split_vector=SplitVector(nf=128),
+                                    qk_input_l1_split_vector=SplitVector(batch=8, token=64),
+                                    qk_weight_l1_split_vector=SplitVector(batch=8, token=128),
+                                    v_input_l1_split_vector=SplitVector(batch=8, token=32),
+                                    v_weight_l1_split_vector=SplitVector(batch=8, nf=128),
+                                    input_offchip_split_vector=SplitVector(batch=2),
+                                    weight_offchip_split_vector=SplitVector(batch=2),
+                                    input_l1_split_vector=SplitVector(batch=8, token=64),
+                                    weight_l1_split_vector=SplitVector(batch=8, token=128),
+                                    add_split_vector=SplitVector(batch=8, token=32),
+                                    value_offchip_split_vector=SplitVector(batch=2),
+                                    value_l1_split_vector=SplitVector(batch=8, nf=128),
+                                    output_offchip_split_vector=SplitVector(batch=2),
+                                    calculate_extra_latency=calculate_extra_latency)
+
+def calculate_extra_latency2(hardware_parameter_dict={},
+                             mlp_input_offchip_split_vector: SplitVector = None,
+                             mlp_weight_offchip_split_vector: SplitVector = None,
+                             mlp_input_l1_split_vector: SplitVector = None,
+                             mlp_weight_l1_split_vector: SplitVector = None,
+                             qk_input_l1_split_vector: SplitVector = None,
+                             qk_weight_l1_split_vector: SplitVector = None,
+                             v_input_l1_split_vector: SplitVector = None,
+                             v_weight_l1_split_vector: SplitVector = None,
+                             v_weight_offchip_split_vector: SplitVector = None):
+    return [simulate_tiled_mlp(hardware_parameter_dict,  # 输入l2权重l1
+                               is_input_l2=True,
+                               is_weight_l1=True, 
+                               is_output_offchip=False, 
+                               input_l1_split_vector=mlp_input_l1_split_vector,
+                               weight_l1_split_vector=mlp_weight_l1_split_vector) * (8 * 128 - 1) * 3,
+            simulate_tiled_mlp(hardware_parameter_dict,  # 输入和权重都在DRAM
+                               is_weight_offchip=True, 
+                               is_input_offchip=True, 
+                               is_output_offchip=True,
+                               input_offchip_split_vector=mlp_input_offchip_split_vector,
+                               input_l1_split_vector=mlp_input_l1_split_vector,
+                               weight_l1_split_vector=mlp_weight_l1_split_vector,
+                               weight_offchip_split_vector=mlp_weight_offchip_split_vector) * 3,
+            simulate_tiled_mlp(hardware_parameter_dict,   # 输入l1权重l2
+                               is_input_l1=True, 
+                               is_weight_l2=True, 
+                               is_output_offchip=False,
+                               input_offchip_split_vector=mlp_input_offchip_split_vector,
+                               input_l1_split_vector=mlp_input_l1_split_vector,
+                               weight_l1_split_vector=mlp_weight_l1_split_vector) * (8 * 128) * 3,
+            simulate_tiled_dot_product(hardware_parameter_dict,
+                                       is_weight_l1=True,
+                                       input_l1_split_vector=qk_input_l1_split_vector,
+                                       weight_l1_split_vector=qk_weight_l1_split_vector) * (128 * 8 * 2 - 8 * 2),
+            simulate_tiled_dot_product(hardware_parameter_dict, 
+                                       is_weight_l2=True,
+                                       input_l1_split_vector=qk_input_l1_split_vector,
+                                       weight_l1_split_vector=qk_weight_l1_split_vector) * (8 * 2 - 2),
+            simulate_tiled_dot_product(hardware_parameter_dict,  # 缺一个weight在DRAM
+                                       is_weight_offchip=True,
+                                       input_l1_split_vector=v_input_l1_split_vector,
+                                       weight_l1_split_vector=v_weight_l1_split_vector,
+                                       weight_offchip_split_vector=v_weight_offchip_split_vector),
+            simulate_tiled_dot_product(hardware_parameter_dict, 
+                                       transpose=False,
+                                       is_weight_l1=True,
+                                       input_l1_split_vector=v_input_l1_split_vector,
+                                       weight_l1_split_vector=v_weight_l1_split_vector) * (64 * 8 - 8),
+            simulate_tiled_dot_product(hardware_parameter_dict,
+                                       transpose=False, 
+                                       is_weight_l2=True,
+                                       input_l1_split_vector=v_input_l1_split_vector,
+                                       weight_l1_split_vector=v_weight_l1_split_vector) * (8 - 2)]
+
+# 192MB, 256KB, 32 * 32, 512
+latency2 = simulate_tiled_attention(mlp_input_offchip_split_vector=SplitVector(),
+                                    mlp_weight_offchip_split_vector=SplitVector(),
+                                    mlp_input_l1_split_vector=SplitVector(batch=8, token=128),
+                                    mlp_weight_l1_split_vector=SplitVector(nf=256),
+                                    qk_input_l1_split_vector=SplitVector(batch=8, token=64),
+                                    qk_weight_l1_split_vector=SplitVector(batch=8, token=128),
+                                    v_input_l1_split_vector=SplitVector(batch=8, token=32),
+                                    v_weight_l1_split_vector=SplitVector(batch=8, nf=128),
+                                    v_weight_offchip_split_vector=SplitVector(batch=2),
+                                    input_offchip_split_vector=SplitVector(),
+                                    weight_offchip_split_vector=SplitVector(batch=2),
+                                    input_l1_split_vector=SplitVector(batch=8, token=128),
+                                    weight_l1_split_vector=SplitVector(batch=8, token=128),
+                                    add_split_vector=SplitVector(batch=8, token=64),
+                                    value_offchip_split_vector=SplitVector(batch=2),
+                                    value_l1_split_vector=SplitVector(batch=8, nf=128),
+                                    output_offchip_split_vector=SplitVector(batch=2),
+                                    calculate_extra_latency=calculate_extra_latency2)
 
 # noc_bandwidth_paramters = []
 # noc_bandwidth_latencies = []
