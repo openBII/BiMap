@@ -48,7 +48,8 @@ def update_hardware(config: BoardConfig, hardware_parameter_dict={}):
             config.chiplet.core.local_memory["bandwidth"] = hardware_parameter_dict[type]
 
 
-def simulate_tiled_mlp(hardware_parameter_dict={},
+def simulate_tiled_mlp(config_file: str,
+                       hardware_parameter_dict={},
                        is_weight_offchip: bool = False,
                        is_weight_l1: bool = False,
                        is_weight_l2: bool = False,
@@ -139,7 +140,7 @@ def simulate_tiled_mlp(hardware_parameter_dict={},
                         width='1920px', height='1080px')
 
     # Update Hardware Configuration
-    config = toml.load("top/shared_memory_board.toml")
+    config = toml.load("top/" + config_file + ".toml")
     config = BoardConfig(config["PCB"], config["process_node"])
     update_hardware(config, hardware_parameter_dict)
 
@@ -189,7 +190,8 @@ def simulate_tiled_mlp(hardware_parameter_dict={},
     return env.get_latency()
 
 
-def simulate_tiled_dot_product(hardware_parameter_dict={},
+def simulate_tiled_dot_product(config_file: str,
+                               hardware_parameter_dict={},
                                transpose: bool = True,
                                is_weight_l1: bool = False,
                                is_weight_l2: bool = False,
@@ -241,7 +243,7 @@ def simulate_tiled_dot_product(hardware_parameter_dict={},
                       width='1920px', height='1080px')
 
     # Update Hardware Configuration
-    config = toml.load("top/shared_memory_board.toml")
+    config = toml.load("top/" + config_file + ".toml")
     config = BoardConfig(config["PCB"], config["process_node"])
     update_hardware(config, hardware_parameter_dict)
 
@@ -285,23 +287,26 @@ def simulate_tiled_dot_product(hardware_parameter_dict={},
     return env.get_latency()
 
 
-def calculate_extra_latency(hardware_parameter_dict={},
-                            mlp_input_offchip_split_vector: SplitVector = None,
-                            mlp_weight_offchip_split_vector: SplitVector = None,
-                            mlp_input_l1_split_vector: SplitVector = None,
-                            mlp_weight_l1_split_vector: SplitVector = None,
-                            qk_input_l1_split_vector: SplitVector = None,
-                            qk_weight_l1_split_vector: SplitVector = None,
-                            v_input_l1_split_vector: SplitVector = None,
-                            v_weight_l1_split_vector: SplitVector = None,
-                            v_weight_offchip_split_vector: SplitVector = None):
-    return [simulate_tiled_mlp(hardware_parameter_dict, 
+def calculate_extra_latency1(config_file: str,
+                             hardware_parameter_dict={},
+                             mlp_input_offchip_split_vector: SplitVector = None,
+                             mlp_weight_offchip_split_vector: SplitVector = None,
+                             mlp_input_l1_split_vector: SplitVector = None,
+                             mlp_weight_l1_split_vector: SplitVector = None,
+                             qk_input_l1_split_vector: SplitVector = None,
+                             qk_weight_l1_split_vector: SplitVector = None,
+                             v_input_l1_split_vector: SplitVector = None,
+                             v_weight_l1_split_vector: SplitVector = None,
+                             v_weight_offchip_split_vector: SplitVector = None):
+    return [simulate_tiled_mlp(config_file,
+                               hardware_parameter_dict, 
                                is_input_l2=True,
                                is_weight_l1=True, 
                                is_output_offchip=False, 
                                input_l1_split_vector=mlp_input_l1_split_vector,
                                weight_l1_split_vector=mlp_weight_l1_split_vector) * (8 * 64 - 2) * 3,
-            simulate_tiled_mlp(hardware_parameter_dict, 
+            simulate_tiled_mlp(config_file,
+                               hardware_parameter_dict, 
                                is_weight_offchip=True, 
                                is_input_offchip=True, 
                                is_output_offchip=True,
@@ -309,34 +314,40 @@ def calculate_extra_latency(hardware_parameter_dict={},
                                input_l1_split_vector=mlp_input_l1_split_vector,
                                weight_l1_split_vector=mlp_weight_l1_split_vector,
                                weight_offchip_split_vector=mlp_weight_offchip_split_vector) * 3,
-            simulate_tiled_mlp(hardware_parameter_dict, 
+            simulate_tiled_mlp(config_file,
+                               hardware_parameter_dict, 
                                is_input_offchip=True, 
                                is_weight_l1=True, 
                                is_output_offchip=True,
                                input_offchip_split_vector=mlp_input_offchip_split_vector,
                                input_l1_split_vector=mlp_input_l1_split_vector,
                                weight_l1_split_vector=mlp_weight_l1_split_vector) * 3,
-            simulate_tiled_dot_product(hardware_parameter_dict,
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict, 
                                        is_weight_l1=True,
                                        input_l1_split_vector=qk_input_l1_split_vector,
                                        weight_l1_split_vector=qk_weight_l1_split_vector) * (64 * 8 - 8),
-            simulate_tiled_dot_product(hardware_parameter_dict, 
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict, 
                                        is_weight_l2=True,
                                        input_l1_split_vector=qk_input_l1_split_vector,
                                        weight_l1_split_vector=qk_weight_l1_split_vector) * (8 - 2),
-            simulate_tiled_dot_product(hardware_parameter_dict, 
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict, 
                                        transpose=False,
                                        is_weight_l1=True,
                                        input_l1_split_vector=v_input_l1_split_vector,
                                        weight_l1_split_vector=v_weight_l1_split_vector) * (32 * 8 - 8),
-            simulate_tiled_dot_product(hardware_parameter_dict,
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict, 
                                        transpose=False, 
                                        is_weight_l2=True,
                                        input_l1_split_vector=v_input_l1_split_vector,
                                        weight_l1_split_vector=v_weight_l1_split_vector) * (8 - 2)]
 
 
-def simulate_tiled_attention(hardware_parameter_dict={},
+def simulate_tiled_attention(config_file: str,
+                             hardware_parameter_dict={},
                              mlp_input_offchip_split_vector: SplitVector = None,
                              mlp_weight_offchip_split_vector: SplitVector = None,
                              mlp_input_l1_split_vector: SplitVector = None,
@@ -354,7 +365,8 @@ def simulate_tiled_attention(hardware_parameter_dict={},
                              value_offchip_split_vector: SplitVector = None,
                              value_l1_split_vector: SplitVector = None,
                              output_offchip_split_vector: SplitVector = None,
-                             calculate_extra_latency=None):
+                             calculate_extra_latency=None,
+                             loop_info: LoopInfo = None):
     # Construct Task Graph
     IDGenerator.set_base_task_id(0)
     task_graph = TaskGraph()
@@ -447,7 +459,7 @@ def simulate_tiled_attention(hardware_parameter_dict={},
                       width='1920px', height='1080px')
 
     # Update Hardware Configuration
-    config = toml.load("top/shared_memory_board.toml")
+    config = toml.load("top/" + config_file + ".toml")
     config = BoardConfig(config["PCB"], config["process_node"])
     update_hardware(config, hardware_parameter_dict)
 
@@ -516,8 +528,9 @@ def simulate_tiled_attention(hardware_parameter_dict={},
     env.simulate()
     # env.show_overall_time()
     return env.get_latency(
-        loops=[LoopInfo(start=1, end=22, num=1)],
-        extra_latencies=calculate_extra_latency(hardware_parameter_dict,
+        loops=[loop_info],
+        extra_latencies=calculate_extra_latency(config_file,
+                                                hardware_parameter_dict,
                                                 mlp_input_offchip_split_vector,
                                                 mlp_weight_offchip_split_vector,
                                                 mlp_input_l1_split_vector,
@@ -538,7 +551,8 @@ def simulate_tiled_attention(hardware_parameter_dict={},
 # latency7 = simulate_tiled_dot_product(transpose=False)
 
 # 128MB, 512KB, 64 * 64, 256
-latency1 = simulate_tiled_attention(mlp_input_offchip_split_vector=SplitVector(batch=2),
+latency1 = simulate_tiled_attention(config_file="shared_memory_board64",
+                                    mlp_input_offchip_split_vector=SplitVector(batch=2),
                                     mlp_weight_offchip_split_vector=SplitVector(),
                                     mlp_input_l1_split_vector=SplitVector(batch=8, token=64),
                                     mlp_weight_l1_split_vector=SplitVector(nf=128),
@@ -554,9 +568,11 @@ latency1 = simulate_tiled_attention(mlp_input_offchip_split_vector=SplitVector(b
                                     value_offchip_split_vector=SplitVector(batch=2),
                                     value_l1_split_vector=SplitVector(batch=8, nf=128),
                                     output_offchip_split_vector=SplitVector(batch=2),
-                                    calculate_extra_latency=calculate_extra_latency)
+                                    calculate_extra_latency=calculate_extra_latency1,
+                                    loop_info=LoopInfo(start=1, end=22, num=1))
 
-def calculate_extra_latency2(hardware_parameter_dict={},
+def calculate_extra_latency2(config_file: str,
+                             hardware_parameter_dict={},
                              mlp_input_offchip_split_vector: SplitVector = None,
                              mlp_weight_offchip_split_vector: SplitVector = None,
                              mlp_input_l1_split_vector: SplitVector = None,
@@ -566,13 +582,15 @@ def calculate_extra_latency2(hardware_parameter_dict={},
                              v_input_l1_split_vector: SplitVector = None,
                              v_weight_l1_split_vector: SplitVector = None,
                              v_weight_offchip_split_vector: SplitVector = None):
-    return [simulate_tiled_mlp(hardware_parameter_dict,  # 输入l2权重l1
+    return [simulate_tiled_mlp(config_file,
+                               hardware_parameter_dict,  # 输入l2权重l1
                                is_input_l2=True,
                                is_weight_l1=True, 
                                is_output_offchip=False, 
                                input_l1_split_vector=mlp_input_l1_split_vector,
-                               weight_l1_split_vector=mlp_weight_l1_split_vector) * (8 * 128 - 1) * 3,
-            simulate_tiled_mlp(hardware_parameter_dict,  # 输入和权重都在DRAM
+                               weight_l1_split_vector=mlp_weight_l1_split_vector) * (8 * 64 - 1) * 3,
+            simulate_tiled_mlp(config_file,
+                               hardware_parameter_dict,  # 输入和权重都在DRAM
                                is_weight_offchip=True, 
                                is_input_offchip=True, 
                                is_output_offchip=True,
@@ -580,48 +598,49 @@ def calculate_extra_latency2(hardware_parameter_dict={},
                                input_l1_split_vector=mlp_input_l1_split_vector,
                                weight_l1_split_vector=mlp_weight_l1_split_vector,
                                weight_offchip_split_vector=mlp_weight_offchip_split_vector) * 3,
-            simulate_tiled_mlp(hardware_parameter_dict,   # 输入l1权重l2
+            simulate_tiled_mlp(config_file,
+                               hardware_parameter_dict,   # 输入l1权重l2
                                is_input_l1=True, 
                                is_weight_l2=True, 
                                is_output_offchip=False,
                                input_offchip_split_vector=mlp_input_offchip_split_vector,
                                input_l1_split_vector=mlp_input_l1_split_vector,
-                               weight_l1_split_vector=mlp_weight_l1_split_vector) * (8 * 128) * 3,
-            simulate_tiled_dot_product(hardware_parameter_dict,
+                               weight_l1_split_vector=mlp_weight_l1_split_vector) * (8 * 64) * 3,
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict,  # 输入l2权重l1
                                        is_weight_l1=True,
                                        input_l1_split_vector=qk_input_l1_split_vector,
-                                       weight_l1_split_vector=qk_weight_l1_split_vector) * (128 * 8 * 2 - 8 * 2),
-            simulate_tiled_dot_product(hardware_parameter_dict, 
+                                       weight_l1_split_vector=qk_weight_l1_split_vector) * (128 * 8 - 8),
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict,  # 输入l2权重l2
                                        is_weight_l2=True,
                                        input_l1_split_vector=qk_input_l1_split_vector,
-                                       weight_l1_split_vector=qk_weight_l1_split_vector) * (8 * 2 - 2),
-            simulate_tiled_dot_product(hardware_parameter_dict,  # 缺一个weight在DRAM
-                                       is_weight_offchip=True,
-                                       input_l1_split_vector=v_input_l1_split_vector,
-                                       weight_l1_split_vector=v_weight_l1_split_vector,
-                                       weight_offchip_split_vector=v_weight_offchip_split_vector),
-            simulate_tiled_dot_product(hardware_parameter_dict, 
+                                       weight_l1_split_vector=qk_weight_l1_split_vector) * (8 - 2),
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict, 
                                        transpose=False,
                                        is_weight_l1=True,
                                        input_l1_split_vector=v_input_l1_split_vector,
                                        weight_l1_split_vector=v_weight_l1_split_vector) * (64 * 8 - 8),
-            simulate_tiled_dot_product(hardware_parameter_dict,
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict,
                                        transpose=False, 
                                        is_weight_l2=True,
                                        input_l1_split_vector=v_input_l1_split_vector,
                                        weight_l1_split_vector=v_weight_l1_split_vector) * (8 - 2)]
 
 # 192MB, 256KB, 32 * 32, 512
-latency2 = simulate_tiled_attention(mlp_input_offchip_split_vector=SplitVector(),
+latency2 = simulate_tiled_attention(config_file="shared_memory_board32",
+                                    mlp_input_offchip_split_vector=SplitVector(),
                                     mlp_weight_offchip_split_vector=SplitVector(),
                                     mlp_input_l1_split_vector=SplitVector(batch=8, token=128),
                                     mlp_weight_l1_split_vector=SplitVector(nf=256),
-                                    qk_input_l1_split_vector=SplitVector(batch=8, token=64),
+                                    qk_input_l1_split_vector=SplitVector(batch=8, token=128),
                                     qk_weight_l1_split_vector=SplitVector(batch=8, token=128),
                                     v_input_l1_split_vector=SplitVector(batch=8, token=32),
                                     v_weight_l1_split_vector=SplitVector(batch=8, nf=128),
                                     v_weight_offchip_split_vector=SplitVector(batch=2),
-                                    input_offchip_split_vector=SplitVector(),
+                                    input_offchip_split_vector=SplitVector(batch=2),
                                     weight_offchip_split_vector=SplitVector(batch=2),
                                     input_l1_split_vector=SplitVector(batch=8, token=128),
                                     weight_l1_split_vector=SplitVector(batch=8, token=128),
@@ -629,7 +648,174 @@ latency2 = simulate_tiled_attention(mlp_input_offchip_split_vector=SplitVector()
                                     value_offchip_split_vector=SplitVector(batch=2),
                                     value_l1_split_vector=SplitVector(batch=8, nf=128),
                                     output_offchip_split_vector=SplitVector(batch=2),
-                                    calculate_extra_latency=calculate_extra_latency2)
+                                    calculate_extra_latency=calculate_extra_latency2,
+                                    loop_info=LoopInfo(start=1, end=22, num=1))
+
+def calculate_extra_latency3(config_file: str,
+                             hardware_parameter_dict={},
+                             mlp_input_offchip_split_vector: SplitVector = None,
+                             mlp_weight_offchip_split_vector: SplitVector = None,
+                             mlp_input_l1_split_vector: SplitVector = None,
+                             mlp_weight_l1_split_vector: SplitVector = None,
+                             qk_input_l1_split_vector: SplitVector = None,
+                             qk_weight_l1_split_vector: SplitVector = None,
+                             v_input_l1_split_vector: SplitVector = None,
+                             v_weight_l1_split_vector: SplitVector = None,
+                             v_weight_offchip_split_vector: SplitVector = None):
+    return [simulate_tiled_mlp(config_file,
+                               hardware_parameter_dict,  # 输入l2权重l1
+                               is_input_l2=True,
+                               is_weight_l1=True, 
+                               is_output_offchip=False, 
+                               input_l1_split_vector=mlp_input_l1_split_vector,
+                               weight_l1_split_vector=mlp_weight_l1_split_vector) * (8 * 256 - 1) * 3,
+            simulate_tiled_mlp(config_file,
+                               hardware_parameter_dict,  # 输入和权重都在DRAM
+                               is_weight_offchip=True, 
+                               is_input_offchip=True, 
+                               is_output_offchip=True,
+                               input_offchip_split_vector=mlp_input_offchip_split_vector,
+                               input_l1_split_vector=mlp_input_l1_split_vector,
+                               weight_l1_split_vector=mlp_weight_l1_split_vector,
+                               weight_offchip_split_vector=mlp_weight_offchip_split_vector) * 3,
+            simulate_tiled_mlp(config_file,
+                               hardware_parameter_dict,   # 输入l1权重l2
+                               is_input_l1=True, 
+                               is_weight_l2=True, 
+                               is_output_offchip=False,
+                               input_offchip_split_vector=mlp_input_offchip_split_vector,
+                               input_l1_split_vector=mlp_input_l1_split_vector,
+                               weight_l1_split_vector=mlp_weight_l1_split_vector) * (8 * 256 * 3) * 3,
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict,  # 输入l2权重l1
+                                       is_weight_l1=True,
+                                       input_l1_split_vector=qk_input_l1_split_vector,
+                                       weight_l1_split_vector=qk_weight_l1_split_vector) * (8 * 256 - 1),
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict,  # 输入l2权重l2
+                                       is_weight_l2=True,
+                                       input_l1_split_vector=qk_input_l1_split_vector,
+                                       weight_l1_split_vector=qk_weight_l1_split_vector) * (8 * 256),
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict,  # 输入l2权重l1
+                                       transpose=False,
+                                       is_weight_l1=True,
+                                       input_l1_split_vector=v_input_l1_split_vector,
+                                       weight_l1_split_vector=v_weight_l1_split_vector) * (8 * 128 - 1),
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict,  # 输入l2权重l2
+                                       transpose=False, 
+                                       is_weight_l2=True,
+                                       input_l1_split_vector=v_input_l1_split_vector,
+                                       weight_l1_split_vector=v_weight_l1_split_vector) * (8 * 128)]
+
+latency3 = simulate_tiled_attention(config_file="shared_memory_board16",
+                                    mlp_input_offchip_split_vector=SplitVector(),
+                                    mlp_weight_offchip_split_vector=SplitVector(),
+                                    mlp_input_l1_split_vector=SplitVector(batch=8, token=256),
+                                    mlp_weight_l1_split_vector=SplitVector(nf=512),
+                                    qk_input_l1_split_vector=SplitVector(batch=8, token=256),
+                                    qk_weight_l1_split_vector=SplitVector(batch=8, token=256),
+                                    v_input_l1_split_vector=SplitVector(batch=8, token=128),
+                                    v_weight_l1_split_vector=SplitVector(batch=8, nf=256),
+                                    input_offchip_split_vector=SplitVector(),
+                                    weight_offchip_split_vector=SplitVector(),
+                                    input_l1_split_vector=SplitVector(batch=8, token=256),
+                                    weight_l1_split_vector=SplitVector(batch=8, token=256),
+                                    add_split_vector=SplitVector(batch=8, token=128),
+                                    value_offchip_split_vector=SplitVector(),
+                                    value_l1_split_vector=SplitVector(batch=8, nf=256),
+                                    output_offchip_split_vector=SplitVector(),
+                                    calculate_extra_latency=calculate_extra_latency3,
+                                    loop_info=LoopInfo(start=9, end=14, num=8))
+
+def calculate_extra_latency4(config_file: str,
+                             hardware_parameter_dict={},
+                             mlp_input_offchip_split_vector: SplitVector = None,
+                             mlp_weight_offchip_split_vector: SplitVector = None,
+                             mlp_input_l1_split_vector: SplitVector = None,
+                             mlp_weight_l1_split_vector: SplitVector = None,
+                             qk_input_l1_split_vector: SplitVector = None,
+                             qk_weight_l1_split_vector: SplitVector = None,
+                             v_input_l1_split_vector: SplitVector = None,
+                             v_weight_l1_split_vector: SplitVector = None,
+                             v_weight_offchip_split_vector: SplitVector = None):
+    return [simulate_tiled_mlp(config_file,
+                               hardware_parameter_dict,  # 输入l2权重l1
+                               is_input_l2=True,
+                               is_weight_l1=True, 
+                               is_output_offchip=False, 
+                               input_l1_split_vector=mlp_input_l1_split_vector,
+                               weight_l1_split_vector=mlp_weight_l1_split_vector) * (8 * 256 - 8) * 3,
+            simulate_tiled_mlp(config_file,
+                               hardware_parameter_dict,  # 输入和权重都在DRAM
+                               is_weight_offchip=True, 
+                               is_input_offchip=True, 
+                               is_output_offchip=True,
+                               input_offchip_split_vector=mlp_input_offchip_split_vector,
+                               input_l1_split_vector=mlp_input_l1_split_vector,
+                               weight_l1_split_vector=mlp_weight_l1_split_vector,
+                               weight_offchip_split_vector=mlp_weight_offchip_split_vector) * 8 * 3,
+            simulate_tiled_mlp(config_file,
+                               hardware_parameter_dict,   # 输入l1权重l2
+                               is_input_l1=True, 
+                               is_weight_l2=True, 
+                               is_output_offchip=False,
+                               input_offchip_split_vector=mlp_input_offchip_split_vector,
+                               input_l1_split_vector=mlp_input_l1_split_vector,
+                               weight_l1_split_vector=mlp_weight_l1_split_vector) * (8 * 256 * 3) * 3,
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict,  # 输入l2权重l1
+                                       is_weight_l1=True,
+                                       input_l1_split_vector=qk_input_l1_split_vector,
+                                       weight_l1_split_vector=qk_weight_l1_split_vector) * (8 * 256 - 8),
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict,  # 输入l2权重l2
+                                       is_weight_l2=True,
+                                       input_l1_split_vector=qk_input_l1_split_vector,
+                                       weight_l1_split_vector=qk_weight_l1_split_vector) * (8 * 256),
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict,  # 输入l2权重l1
+                                       transpose=False,
+                                       is_weight_l1=True,
+                                       input_l1_split_vector=v_input_l1_split_vector,
+                                       weight_l1_split_vector=v_weight_l1_split_vector) * (8 * 128 - 8),
+            simulate_tiled_dot_product(config_file,
+                                       hardware_parameter_dict,  # 输入l2权重l2
+                                       transpose=False, 
+                                       is_weight_l2=True,
+                                       input_l1_split_vector=v_input_l1_split_vector,
+                                       weight_l1_split_vector=v_weight_l1_split_vector) * (8 * 128)]
+
+latency4 = simulate_tiled_attention(config_file="shared_memory_board128",
+                                    mlp_input_offchip_split_vector=SplitVector(batch=8),
+                                    mlp_weight_offchip_split_vector=SplitVector(nf=2),
+                                    mlp_input_l1_split_vector=SplitVector(batch=8, token=256),
+                                    mlp_weight_l1_split_vector=SplitVector(nf=512),
+                                    qk_input_l1_split_vector=SplitVector(batch=8, token=256),
+                                    qk_weight_l1_split_vector=SplitVector(batch=8, token=256),
+                                    v_input_l1_split_vector=SplitVector(batch=8, token=128),
+                                    v_weight_l1_split_vector=SplitVector(batch=8, nf=256),
+                                    input_offchip_split_vector=SplitVector(batch=8),
+                                    weight_offchip_split_vector=SplitVector(batch=8),
+                                    input_l1_split_vector=SplitVector(batch=8, token=256),
+                                    weight_l1_split_vector=SplitVector(batch=8, token=256),
+                                    add_split_vector=SplitVector(batch=8, token=128),
+                                    value_offchip_split_vector=SplitVector(batch=8),
+                                    value_l1_split_vector=SplitVector(batch=8, nf=256),
+                                    output_offchip_split_vector=SplitVector(batch=8),
+                                    calculate_extra_latency=calculate_extra_latency4,
+                                    loop_info=LoopInfo(start=1, end=22, num=8))
+
+numbers = ["(128, 512, 64, 256)", "(192, 256, 32, 512)", "(256, 128, 16, 128)", "(32, 128, 128, 128)"]
+latencies = [latency1, latency2, latency3, latency4]
+plt.plot(numbers, latencies, marker='o')
+plt.title("GPU-Like Shared Memory")
+plt.xlabel("Hardware Parameter")
+plt.ylabel("Latency")
+plt.xticks(rotation=45)  # 旋转x轴标签，使其更易读
+plt.tight_layout()       # 自动调整布局
+plt.savefig('temp/shared_memory_compute_memory.png', dpi=300)
 
 # noc_bandwidth_paramters = []
 # noc_bandwidth_latencies = []
@@ -648,7 +834,6 @@ latency2 = simulate_tiled_attention(mlp_input_offchip_split_vector=SplitVector()
 # for local_memory_bandwidth in (4, 8, 16, 32, 64, 128):
 #     local_memory_bandwidth_paramters.append(local_memory_bandwidth)
 #     local_memory_bandwidth_latencies.append(simulate(local_memory_bandwidth, "local_memory_bandwidth"))
-
 shared_memory_bandwidth_parameters = []
 shared_memory_latency_parameters = []
 local_memory_bandwidth_parameters = []
