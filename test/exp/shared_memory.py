@@ -217,7 +217,7 @@ def simulate_tiled_dot_product(config_file: str,
     task_graph.connect_tasks_in_sequence([input_l2, input_l1])
     if is_weight_offchip:
         weight_offchip = create_static(task_graph, weight_offchip_shape, Precision.FLOAT_16)
-        weight_l2 = create_data(task_graph, weight_shape, Precision.FLOAT_16)
+        weight_l2 = create_data(task_graph, weight_offchip_shape, Precision.FLOAT_16)
         weight_l1 = create_data(task_graph, weight_shape, Precision.FLOAT_16)
         task_graph.connect_tasks_in_sequence([weight_offchip, weight_l2, weight_l1])
     if is_weight_l2:
