@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 import math
 import pandas as pd
 from chiplet_actuary import module
@@ -323,6 +323,66 @@ def single_chiplet_multiple_systems(volume: int) -> pd.DataFrame:
             'reuse module NRE', 'reuse chip NRE', 'reuse package NRE'
         ]).div(sum_mcm))
     return cost_sheet
+
+
+def single_module_multiple_chiplets(volume: int = 500000, module_area: int = 50, 
+                                    numbers: Tuple[int] = (1, 2, 4, 8, 16),
+                                    process_node: str = '7') -> pd.DataFrame:
+    decreasing_mcms = []
+    decreasing_sis = []
+    increasing_mcms = []
+    increasing_sis = []
+    m1 = module.Module('module1', process_node, module_area)
+    soc16 = package.SoC('soc16', process_node, {m1: 16})
+    soc1 = package.SoC('soc1', process_node, {m1: 1})
+    chiplet1 = chip.Chiplet(m1, m1.area * 0.1)
+    for num in numbers:
+        # decreasing single die area
+        num_modules = 16 // num
+        m = module.Module('module' + str(num_modules), process_node, 
+                          module_area * num_modules)
+        chiplet = chip.Chiplet(m, m.area * 0.1)
+        mcm = package.OS('integration' + str(num), {chiplet: num})
+        si = package.SI('integration' + str(num), {chiplet: num})
+        decreasing_mcms.append(mcm)
+        decreasing_sis.append(si)
+        # increasing package area
+        mcm = package.OS('integration' + str(num), {chiplet1: num})
+        si = package.SI('integration' + str(num), {chiplet1: num})
+        increasing_mcms.append(mcm)
+        increasing_sis.append(si)
+
+    soc_NRE = utils.system_total_apporitioned_NRE_cost(
+        {soc1: volume, soc16: volume})
+    soc1_cost = sum(soc1.cost_RE()[0:2] + (soc1.cost_package(), ) + soc_NRE[soc1])
+    soc16_cost = sum(soc16.cost_RE()[0:2] + (soc16.cost_package(), ) + soc_NRE[soc16])
+
+    volumes = [volume] * len(numbers)
+    decreasing_mcm_NRE = utils.system_total_apporitioned_NRE_cost(dict(zip(decreasing_mcms, volumes)))
+    increasing_mcm_NRE = utils.system_total_apporitioned_NRE_cost(dict(zip(increasing_mcms, volumes)))
+    decreasing_si_NRE = utils.system_total_apporitioned_NRE_cost(dict(zip(decreasing_sis, volumes)))
+    increasing_si_NRE = utils.system_total_apporitioned_NRE_cost(dict(zip(increasing_sis, volumes)))
+
+    cost_decreasing_mcms = [soc16_cost]
+    cost_decreasing_sis = [soc16_cost] 
+    cost_increasing_mcms = [soc1_cost]
+    cost_increasing_sis = [soc1_cost]
+
+    for i in range(len(numbers)):
+        decreasing_mcm: package.OS = decreasing_mcms[i]
+        increasing_mcm: package.OS = increasing_mcms[i]
+        increasing_si: package.SI = increasing_sis[i]
+        decreasing_si: package.SI = decreasing_sis[i]
+        cost_decreasing_mcm = sum(decreasing_mcm.cost_RE()[0:2] + (decreasing_mcm.cost_package(), ) + decreasing_mcm_NRE[decreasing_mcm])
+        cost_decreasing_si = sum(decreasing_si.cost_RE()[0:2] + (decreasing_si.cost_package(), ) + decreasing_si_NRE[decreasing_si])
+        cost_increasing_mcm = sum(increasing_mcm.cost_RE()[0:2] + (increasing_mcm.cost_package(), ) + increasing_mcm_NRE[increasing_mcm])
+        cost_increasing_si = sum(increasing_si.cost_RE()[0:2] + (increasing_si.cost_package(), ) + increasing_si_NRE[increasing_si])
+        cost_decreasing_mcms.append(cost_decreasing_mcm)
+        cost_decreasing_sis.append(cost_decreasing_si)
+        cost_increasing_mcms.append(cost_increasing_mcm)
+        cost_increasing_sis.append(cost_increasing_si)
+
+    return cost_decreasing_mcms, cost_decreasing_sis, cost_increasing_mcms, cost_increasing_sis
 
 
 def one_center_multiple_extensions(volume: int) -> pd.DataFrame:
