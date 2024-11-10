@@ -243,10 +243,13 @@ class MultiPackageBoardMatrix(STMatrix):
                 num_row_package = coord[0]
         # Search the boundary chiplets
         num_row_chiplet = 0
+        num_column_chiplet = 0
         package_container = self.container[COMPUTE].container[Coord((0, 0))].container
         for coord in package_container:
             if coord[0] > num_row_chiplet:
                 num_row_chiplet = coord[0]
+            if coord[1] > num_column_chiplet:
+                num_column_chiplet = coord[1]
         # Search the boundary cores
         num_row_core = 0
         num_column_core = 0
@@ -332,7 +335,9 @@ class MultiPackageBoardMatrix(STMatrix):
                             boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
                             router = src.create_mlcoord_with_different_bottom_coord(ROUTER)
                             return [src, router, boundary_core, boundary_chip, boundary_package, dst]
-            elif dst.level == 5 and dst.bottom_coord in (TENSOR_UNIT, VECTOR_UNIT):  # Local Memory -> Tensor Unit / Vector Unit
+            elif dst.level == 5 and dst.bottom_coord in (TENSOR_UNIT, VECTOR_UNIT, SRAM_BUFFER):  # Local Memory -> Tensor Unit / Vector Unit
+                if dst.bottom_coord == SRAM_BUFFER:
+                    assert src[-1] != dst[-1] or src[-2] != dst[-2] or src[-3] != dst[-3]
                 if src[-1] == dst[-1] and src[-2] == dst[-2] and src[-3] == dst[-3]:  # In the same core
                     return [src, dst]
                 else:
@@ -382,78 +387,96 @@ class MultiPackageBoardMatrix(STMatrix):
                             if dst[-4][0] > src[-4][0] and dst[-4][1] > src[-4][1]:
                                 src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], 0)))
-                                src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_chiplet, src[-2][1])))
+                                src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_chiplet, src[-3][1])))
                                 dst_boundary_chip = dst.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-3][0], 0)))
-                            elif dst[-3][0] > src[-3][0] and dst[-3][1] < src[-3][1]:
+                            elif dst[-4][0] > src[-4][0] and dst[-4][1] < src[-4][1]:
                                 src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], num_column_core)))
+                                src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_chiplet, src[-3][1])))
+                                dst_boundary_chip = dst.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-3][0], num_column_chiplet)))
                             elif dst[-3][0] < src[-3][0] and dst[-3][1] > src[-3][1]:
                                 src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-2][1])))
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], 0)))
+                                src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-3][1])))
+                                dst_boundary_chip = dst.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-3][0], 0)))
                             elif dst[-3][0] < src[-3][0] and dst[-3][1] < src[-3][1]:
                                 src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-2][1])))
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], num_column_core)))
+                                src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-3][1])))
+                                dst_boundary_chip = dst.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-3][0], num_column_chiplet)))
                             elif dst[-3][0] > src[-3][0] and dst[-3][1] == src[-3][1]:
                                 src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, dst[-2][1])))
+                                src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_chiplet, src[-3][1])))
+                                dst_boundary_chip = dst.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, dst[-3][1])))
                             elif dst[-3][0] < src[-3][0] and dst[-3][1] == src[-3][1]:
                                 src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-2][1])))
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, dst[-2][1])))
+                                src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-3][1])))
+                                dst_boundary_chip = dst.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_chiplet, dst[-3][1])))
                             elif dst[-3][0] == src[-3][0] and dst[-3][1] > src[-3][1]:
                                 src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((src[-2][0], num_column_core)))
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], 0)))
+                                src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((src[-3][0], num_column_chiplet)))
+                                dst_boundary_chip = dst.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-3][0], 0)))
                             elif dst[-3][0] == src[-3][0] and dst[-3][1] < src[-3][1]:
                                 src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((src[-2][0], 0)))
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], num_column_core)))
+                                src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((src[-3][0], 0)))
+                                dst_boundary_chip = dst.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-3][0], num_column_chiplet)))
                             else:
                                 raise NotImplementedError
-                            path = [src, src_router, src_boundary_core, dst.outer_coord.outer_coord, dst_boundary_core, dst_router, dst]
+                            path = [src, src_router, src_boundary_core, src_boundary_chip, dst.outer_coord.outer_coord.outer_coord, dst_boundary_chip, dst_boundary_core, dst_router, dst]
                             if dst_boundary_core == dst.outer_coord:
                                 path.remove(dst_boundary_core)
                             if src_boundary_core == src.outer_coord:
                                 path.remove(src_boundary_core)
+                            if src_boundary_chip == src.outer_coord.outer_coord:
+                                path.remove(src_boundary_chip)
+                            if dst_boundary_chip == dst.outer_coord.outer_coord:
+                                path.remove(dst_boundary_chip)
                             return path
-            elif dst.level == 5 and dst.bottom_coord == SRAM_BUFFER:  # Local memory -> Another Local Memory
-                assert src.outer_coord != dst.outer_coord or src.outer_coord.outer_coord != dst.outer_coord.outer_coord
-                if src.outer_coord.outer_coord == dst.outer_coord.outer_coord:  # Same chiplet
-                    src_router = src.create_mlcoord_with_different_bottom_coord(ROUTER)
-                    dst_router = dst.create_mlcoord_with_different_bottom_coord(ROUTER)
-                    return [src, src_router, dst.outer_coord, dst_router, dst]
-                else:
-                    src_router = src.create_mlcoord_with_different_bottom_coord(ROUTER)
-                    dst_router = dst.create_mlcoord_with_different_bottom_coord(ROUTER)
-                    if dst[-3][0] > src[-3][0] and dst[-3][1] > src[-3][1]:
-                        src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
-                        dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], 0)))
-                    elif dst[-3][0] > src[-3][0] and dst[-3][1] < src[-3][1]:
-                        src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
-                        dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], num_column_core)))
-                    elif dst[-3][0] < src[-3][0] and dst[-3][1] > src[-3][1]:
-                        src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-2][1])))
-                        dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], 0)))
-                    elif dst[-3][0] < src[-3][0] and dst[-3][1] < src[-3][1]:
-                        src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-2][1])))
-                        dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], num_column_core)))
-                    elif dst[-3][0] > src[-3][0] and dst[-3][1] == src[-3][1]:
-                        src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
-                        dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, dst[-2][1])))
-                    elif dst[-3][0] < src[-3][0] and dst[-3][1] == src[-3][1]:
-                        src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-2][1])))
-                        dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, dst[-2][1])))
-                    elif dst[-3][0] == src[-3][0] and dst[-3][1] > src[-3][1]:
-                        src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((src[-2][0], num_column_core)))
-                        dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], 0)))
-                    elif dst[-3][0] == src[-3][0] and dst[-3][1] < src[-3][1]:
-                        src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((src[-2][0], 0)))
-                        dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], num_column_core)))
-                    else:
-                        raise NotImplementedError
-                    path = [src, src_router, src_boundary_core, dst.outer_coord.outer_coord, dst_boundary_core, dst_router, dst]
-                    if dst_boundary_core == dst.outer_coord:
-                        path.remove(dst_boundary_core)
-                    if src_boundary_core == src.outer_coord:
-                        path.remove(src_boundary_core)
-                    return path
+            # elif dst.level == 5 and dst.bottom_coord == SRAM_BUFFER:  # Local memory -> Another Local Memory
+            #     assert src.outer_coord != dst.outer_coord or src.outer_coord.outer_coord != dst.outer_coord.outer_coord
+            #     if src.outer_coord.outer_coord == dst.outer_coord.outer_coord:  # Same chiplet
+            #         src_router = src.create_mlcoord_with_different_bottom_coord(ROUTER)
+            #         dst_router = dst.create_mlcoord_with_different_bottom_coord(ROUTER)
+            #         return [src, src_router, dst.outer_coord, dst_router, dst]
+            #     else:
+            #         src_router = src.create_mlcoord_with_different_bottom_coord(ROUTER)
+            #         dst_router = dst.create_mlcoord_with_different_bottom_coord(ROUTER)
+            #         if dst[-3][0] > src[-3][0] and dst[-3][1] > src[-3][1]:
+            #             src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
+            #             dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], 0)))
+            #         elif dst[-3][0] > src[-3][0] and dst[-3][1] < src[-3][1]:
+            #             src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
+            #             dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], num_column_core)))
+            #         elif dst[-3][0] < src[-3][0] and dst[-3][1] > src[-3][1]:
+            #             src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-2][1])))
+            #             dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], 0)))
+            #         elif dst[-3][0] < src[-3][0] and dst[-3][1] < src[-3][1]:
+            #             src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-2][1])))
+            #             dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], num_column_core)))
+            #         elif dst[-3][0] > src[-3][0] and dst[-3][1] == src[-3][1]:
+            #             src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
+            #             dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, dst[-2][1])))
+            #         elif dst[-3][0] < src[-3][0] and dst[-3][1] == src[-3][1]:
+            #             src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-2][1])))
+            #             dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, dst[-2][1])))
+            #         elif dst[-3][0] == src[-3][0] and dst[-3][1] > src[-3][1]:
+            #             src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((src[-2][0], num_column_core)))
+            #             dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], 0)))
+            #         elif dst[-3][0] == src[-3][0] and dst[-3][1] < src[-3][1]:
+            #             src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((src[-2][0], 0)))
+            #             dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], num_column_core)))
+            #         else:
+            #             raise NotImplementedError
+            #         path = [src, src_router, src_boundary_core, dst.outer_coord.outer_coord, dst_boundary_core, dst_router, dst]
+            #         if dst_boundary_core == dst.outer_coord:
+            #             path.remove(dst_boundary_core)
+            #         if src_boundary_core == src.outer_coord:
+            #             path.remove(src_boundary_core)
+            #         return path
             else:
                 raise NotImplementedError
         elif src.level == 5 and src.bottom_coord in (TENSOR_UNIT, VECTOR_UNIT):  # Tensor Unit / Vector Unit -> Local Memory

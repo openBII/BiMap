@@ -69,6 +69,17 @@ class PackageConfig(Config):
         self.network = self.config["network"]
 
 
+class ComputeDomainConfig(Config):
+    def __init__(self, config, process_node = None):
+        super().__init__(config, process_node)
+
+    def handler(self):
+        self.package = PackageConfig(self.config["package"],
+                                     self.process_node)
+        self.size = self.config["size"]
+        self.network = self.config["network"]
+
+
 class BoardConfig(Config):
     def __init__(self, config, process_node=None):
         super().__init__(config, process_node)
@@ -77,6 +88,9 @@ class BoardConfig(Config):
         if "package" in self.config:
             self.package = PackageConfig(self.config["package"],
                                          self.process_node)
+        elif "compute_domain" in self.config:
+            self.compute_domain = ComputeDomainConfig(
+                self.config["compute_domain"], self.process_node)
         else:
             self.chiplet = ComputeChipletConfig(self.config["chiplet"], 
                                                 self.process_node)

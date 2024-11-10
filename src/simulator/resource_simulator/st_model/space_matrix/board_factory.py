@@ -1,8 +1,9 @@
 from enum import Enum
+from src.simulator.resource_simulator.st_model.space_matrix.compute_domain_factory import ComputeDomainFactory
 from src.simulator.resource_simulator.config.matrix_config import BoardConfig
 from src.simulator.resource_simulator.st_model.space_matrix.factory import Factory
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
-from src.simulator.resource_simulator.st_model.space_matrix.board_matrix import ManyCoreBoardMatrix, SharedMemoryBoardMatrix, ChipletBoardMatrix
+from src.simulator.resource_simulator.st_model.space_matrix.board_matrix import ManyCoreBoardMatrix, MultiPackageBoardMatrix, SharedMemoryBoardMatrix, ChipletBoardMatrix
 from src.simulator.resource_simulator.st_model.space_point.communication_point import SharedMemoryCommunicationPoint
 from src.simulator.resource_simulator.st_model.space_point.memory_point import DRAMPoint
 from src.simulator.resource_simulator.config.communication_config import CommunicationConfig
@@ -15,6 +16,7 @@ class BoardType(Enum):
     SHARED_MEMORY = 0
     DISTRIBUTED_MANY_CORE = 1
     CHIPLET = 2
+    PACKAGE = 3
 
 
 class BoardFactory(Factory):
@@ -30,12 +32,18 @@ class BoardFactory(Factory):
             board = SharedMemoryBoardMatrix(dim=1, space_level=3)
         elif type == BoardType.CHIPLET:
             board = ChipletBoardMatrix(dim=1, space_level=4)
+        elif type == BoardType.PACKAGE:
+            board = MultiPackageBoardMatrix(dim=1, space_level=5)
         else:
             board = STMatrix(dim=1, space_level=3)
 
         if type == BoardType.CHIPLET:
             package = PackageFactory.create_matrix(config.package)
             board.add_element(coord=Coord(0), element=package)
+        elif type == BoardType.PACKAGE:
+            compute_domain = ComputeDomainFactory.create_matrix(
+                config.compute_domain)
+            board.add_element(coord=Coord(0), element=compute_domain)
         else:
             chiplet = ComputeChipletFactory.create_matrix(config.chiplet)
             board.add_element(coord=Coord(0), element=chiplet)
