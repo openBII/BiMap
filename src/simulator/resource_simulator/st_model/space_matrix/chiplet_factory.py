@@ -39,8 +39,10 @@ class ComputeChipletFactory(Factory):
             raise NotImplementedError
         elif config.network["topology"] == "mesh":
             communication_config = CommunicationConfig(
-                config.network["bandwidth"], (size_x, size_y),
-                config.network["latency"]
+                bandwidth=config.network["bandwidth"], 
+                process_node=config.process_node,
+                size=(size_x, size_y),
+                latency=config.network["latency"]
             )
             communication_network = CommunicationPoint(communication_config)
         else:

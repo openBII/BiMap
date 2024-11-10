@@ -2,17 +2,19 @@ from enum import Enum
 from src.simulator.resource_simulator.config.matrix_config import BoardConfig
 from src.simulator.resource_simulator.st_model.space_matrix.factory import Factory
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
-from src.simulator.resource_simulator.st_model.space_matrix.board_matrix import ManyCoreBoardMatrix, SharedMemoryBoardMatrix
+from src.simulator.resource_simulator.st_model.space_matrix.board_matrix import ManyCoreBoardMatrix, SharedMemoryBoardMatrix, ChipletBoardMatrix
 from src.simulator.resource_simulator.st_model.space_point.communication_point import SharedMemoryCommunicationPoint
 from src.simulator.resource_simulator.st_model.space_point.memory_point import DRAMPoint
 from src.simulator.resource_simulator.config.communication_config import CommunicationConfig
 from src.simulator.resource_simulator.st_model.st_coord import Coord
 from src.simulator.resource_simulator.st_model.space_matrix.chiplet_factory import ComputeChipletFactory
+from src.simulator.resource_simulator.st_model.space_matrix.package_factory import PackageFactory
 
 
 class BoardType(Enum):
     SHARED_MEMORY = 0
     DISTRIBUTED_MANY_CORE = 1
+    CHIPLET = 2
 
 
 class BoardFactory(Factory):
@@ -26,10 +28,17 @@ class BoardFactory(Factory):
             board = ManyCoreBoardMatrix(dim=1, space_level=3)
         elif type == BoardType.SHARED_MEMORY:
             board = SharedMemoryBoardMatrix(dim=1, space_level=3)
+        elif type == BoardType.CHIPLET:
+            board = ChipletBoardMatrix(dim=1, space_level=4)
         else:
             board = STMatrix(dim=1, space_level=3)
-        chiplet = ComputeChipletFactory.create_matrix(config.chiplet)
-        board.add_element(coord=Coord(0), element=chiplet)
+
+        if type == BoardType.CHIPLET:
+            package = PackageFactory.create_matrix(config.package)
+            board.add_element(coord=Coord(0), element=package)
+        else:
+            chiplet = ComputeChipletFactory.create_matrix(config.chiplet)
+            board.add_element(coord=Coord(0), element=chiplet)
 
         dram = DRAMPoint(config.DRAM["capacity"],
                          config.process_node)

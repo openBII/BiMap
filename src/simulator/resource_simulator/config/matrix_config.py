@@ -58,13 +58,28 @@ class ComputeChipletConfig(Config):
             self.shared_memory = self.config["shared_memory"]
 
 
+class PackageConfig(Config):
+    def __init__(self, config, process_node = None):
+        super().__init__(config, process_node)
+
+    def handler(self):
+        self.chiplet = ComputeChipletConfig(self.config["chiplet"],
+                                            self.process_node)
+        self.size = self.config["size"]
+        self.network = self.config["network"]
+
+
 class BoardConfig(Config):
     def __init__(self, config, process_node=None):
         super().__init__(config, process_node)
 
     def handler(self):
-        self.chiplet = ComputeChipletConfig(self.config["chiplet"], 
-                                            self.process_node)
+        if "package" in self.config:
+            self.package = PackageConfig(self.config["package"],
+                                         self.process_node)
+        else:
+            self.chiplet = ComputeChipletConfig(self.config["chiplet"], 
+                                                self.process_node)
         self.DRAM = self.config["DRAM"]
         self.network = self.config["network"]
 
