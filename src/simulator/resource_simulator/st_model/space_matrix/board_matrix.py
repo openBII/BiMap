@@ -300,15 +300,15 @@ class MultiPackageBoardMatrix(STMatrix):
                             return [src, boundary_package, boundary_chip, boundary_core, router, dst]
             else:
                 raise NotImplementedError
-        elif src.level == 4 and src.bottom_coord == SRAM_BUFFER:
+        elif src.level == 5 and src.bottom_coord == SRAM_BUFFER:
             if dst.level == 1 and dst.bottom_coord == DRAM:  # Local Memory -> DRAM
+                router = src.create_mlcoord_with_different_bottom_coord(ROUTER)
                 if src[-4][0] == num_row_package:
                     if src[-3][0] == num_row_chiplet:
                         if src[-2][0] == num_row_core:
                             return [src, router, dst]
                         else:
                             boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
-                            router = src.create_mlcoord_with_different_bottom_coord(ROUTER)
                             return [src, router, boundary_core, dst]
                     else:
                         boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_chiplet, src[-3][1])))
@@ -316,16 +316,14 @@ class MultiPackageBoardMatrix(STMatrix):
                             return [src, router, boundary_chip, dst]
                         else:
                             boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
-                            router = src.create_mlcoord_with_different_bottom_coord(ROUTER)
                             return [src, router, boundary_core, boundary_chip, dst]
                 else:
-                    boundary_package = src.outer_coord.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_package, dst[-4][1])))
+                    boundary_package = src.outer_coord.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_package, src[-4][1])))
                     if src[-3][0] == num_row_chiplet:
                         if src[-2][0] == num_row_core:
                             return [src, router, boundary_package, dst]
                         else:
                             boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
-                            router = src.create_mlcoord_with_different_bottom_coord(ROUTER)
                             return [src, router, boundary_core, boundary_package, dst]
                     else:
                         boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_chiplet, src[-3][1])))
@@ -333,20 +331,19 @@ class MultiPackageBoardMatrix(STMatrix):
                             return [src, router, boundary_chip, boundary_package, dst]
                         else:
                             boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
-                            router = src.create_mlcoord_with_different_bottom_coord(ROUTER)
                             return [src, router, boundary_core, boundary_chip, boundary_package, dst]
             elif dst.level == 5 and dst.bottom_coord in (TENSOR_UNIT, VECTOR_UNIT, SRAM_BUFFER):  # Local Memory -> Tensor Unit / Vector Unit
                 if dst.bottom_coord == SRAM_BUFFER:
-                    assert src[-1] != dst[-1] or src[-2] != dst[-2] or src[-3] != dst[-3]
-                if src[-1] == dst[-1] and src[-2] == dst[-2] and src[-3] == dst[-3]:  # In the same core
+                    assert src[-2] != dst[-2] or src[-3] != dst[-3] or src[-4] != dst[-4]
+                if src[-2] == dst[-2] and src[-3] == dst[-3] and src[-4] == dst[-4]:  # In the same core
                     return [src, dst]
                 else:
-                    if src[-1] != dst[-1] and src[-2] == dst[-2] and src[-3] == dst[-3]:  # different core, same chiplet, same package
+                    if src[-2] != dst[-2] and src[-3] == dst[-3] and src[-4] == dst[-4]:  # different core, same chiplet, same package
                         src_router = src.create_mlcoord_with_different_bottom_coord(ROUTER)
                         dst_router = dst.create_mlcoord_with_different_bottom_coord(ROUTER)
                         return [src, src_router, dst.outer_coord, dst_router, dst]
                     else:
-                        if src[-1] != dst[-1] and src[-2] != dst[-2] and src[-3] == dst[-3]:  # different core, different chiplet, same package
+                        if src[-3] != dst[-3] and src[-4] == dst[-4]:  # different core, different chiplet, same package
                             src_router = src.create_mlcoord_with_different_bottom_coord(ROUTER)
                             dst_router = dst.create_mlcoord_with_different_bottom_coord(ROUTER)
                             if dst[-3][0] > src[-3][0] and dst[-3][1] > src[-3][1]:
@@ -394,32 +391,32 @@ class MultiPackageBoardMatrix(STMatrix):
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], num_column_core)))
                                 src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_chiplet, src[-3][1])))
                                 dst_boundary_chip = dst.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-3][0], num_column_chiplet)))
-                            elif dst[-3][0] < src[-3][0] and dst[-3][1] > src[-3][1]:
+                            elif dst[-4][0] < src[-4][0] and dst[-4][1] > src[-4][1]:
                                 src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-2][1])))
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], 0)))
                                 src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-3][1])))
                                 dst_boundary_chip = dst.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-3][0], 0)))
-                            elif dst[-3][0] < src[-3][0] and dst[-3][1] < src[-3][1]:
+                            elif dst[-4][0] < src[-4][0] and dst[-4][1] < src[-4][1]:
                                 src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-2][1])))
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], num_column_core)))
                                 src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-3][1])))
                                 dst_boundary_chip = dst.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-3][0], num_column_chiplet)))
-                            elif dst[-3][0] > src[-3][0] and dst[-3][1] == src[-3][1]:
+                            elif dst[-4][0] > src[-4][0] and dst[-4][1] == src[-4][1]:
                                 src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, src[-2][1])))
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, dst[-2][1])))
                                 src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_chiplet, src[-3][1])))
                                 dst_boundary_chip = dst.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, dst[-3][1])))
-                            elif dst[-3][0] < src[-3][0] and dst[-3][1] == src[-3][1]:
+                            elif dst[-4][0] < src[-4][0] and dst[-4][1] == src[-4][1]:
                                 src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-2][1])))
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_core, dst[-2][1])))
                                 src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((0, src[-3][1])))
                                 dst_boundary_chip = dst.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((num_row_chiplet, dst[-3][1])))
-                            elif dst[-3][0] == src[-3][0] and dst[-3][1] > src[-3][1]:
+                            elif dst[-4][0] == src[-4][0] and dst[-4][1] > src[-4][1]:
                                 src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((src[-2][0], num_column_core)))
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], 0)))
                                 src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((src[-3][0], num_column_chiplet)))
                                 dst_boundary_chip = dst.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-3][0], 0)))
-                            elif dst[-3][0] == src[-3][0] and dst[-3][1] < src[-3][1]:
+                            elif dst[-4][0] == src[-4][0] and dst[-4][1] < src[-4][1]:
                                 src_boundary_core = src.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((src[-2][0], 0)))
                                 dst_boundary_core = dst.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((dst[-2][0], num_column_core)))
                                 src_boundary_chip = src.outer_coord.outer_coord.create_mlcoord_with_different_bottom_coord(Coord((src[-3][0], 0)))
@@ -481,7 +478,7 @@ class MultiPackageBoardMatrix(STMatrix):
                 raise NotImplementedError
         elif src.level == 5 and src.bottom_coord in (TENSOR_UNIT, VECTOR_UNIT):  # Tensor Unit / Vector Unit -> Local Memory
             if dst.level == 5 and dst.bottom_coord == SRAM_BUFFER:
-                assert src[-1] == dst[-1] and src[-2] == dst[-2] and src[-3] == dst[-3]
+                assert src[-2] == dst[-2] and src[-3] == dst[-3] and src[-4] == dst[-4]
                 return [src, dst]
             else:
                 raise NotImplementedError
