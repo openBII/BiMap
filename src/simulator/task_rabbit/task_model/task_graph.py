@@ -257,7 +257,7 @@ class TaskGraph():
             self._groups[new_group_id] = task_ids
 
     # TODO: implement this in C++
-    def topologize(self) -> None:
+    def topologize(self, sync_dict: Dict[int, int] = {}) -> None:
         """
         将所有结点拓扑排序并重新存到_nodes里
 
@@ -268,11 +268,20 @@ class TaskGraph():
         for node_id in self._nodes.keys():
             in_degrees[node_id] = len(self._nodes[node_id].input_edges)
         vertex_num = len(in_degrees)
-        node_zero_in = [u for u in in_degrees if in_degrees[u] == 0]
+        node_zero_in = [u for u in in_degrees if in_degrees[u] == 0 and u not in sync_dict]
+        node_sync = [u for u in in_degrees if in_degrees[u] == 0 and u in sync_dict]
         nodes_topo = OrderedDict()
         while node_zero_in:
             u = node_zero_in.pop()
             nodes_topo[u] = self._nodes[u]
+            for v in sync_dict:
+                if sync_dict[v] == u and v in node_sync:
+                    nodes_topo[v] = self._nodes[v]
+                    for edge in nodes_topo[v].output_edges:
+                        out_task_id = edge.out_task.id
+                        in_degrees[out_task_id] -= 1
+                        if in_degrees[out_task_id] == 0:
+                            node_zero_in.append(out_task_id)  # 再次筛选入度为0的顶点
             for edge in nodes_topo[u].output_edges:
                 out_task_id = edge.out_task.id
                 in_degrees[out_task_id] -= 1

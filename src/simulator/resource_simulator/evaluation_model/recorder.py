@@ -69,6 +69,15 @@ class MemoryRecorder(Recorder):
             self.recorder_time[(id, iteration)][0] = start_time
 
 
+class Record:
+    def __init__(self, start: float, end: float):
+        self.start = start
+        self.end = end
+
+    def __repr__(self) -> str:
+        return "[" + str(self.start) + ", " + str(self.end) + "]"
+
+
 class CommunicationRecord:
     def __init__(self, start_time: float = 0, end_time: float = 0, percent: float = 0) -> None:
         self.start_time = start_time

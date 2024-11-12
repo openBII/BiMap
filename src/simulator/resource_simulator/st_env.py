@@ -8,6 +8,7 @@ STEnv类描述性能级仿真环境
 
 from copy import copy, deepcopy
 from typing import List, Union, Dict, Tuple, Iterable
+from collections import OrderedDict
 from top.config import GlobalConfig
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
@@ -26,7 +27,7 @@ from src.simulator.resource_simulator.scheduler import Scheduler
 from src.simulator.task_rabbit.task_model.input_type import InputType
 from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.resource_simulator.st_model.hop import Hop
-from src.simulator.resource_simulator.evaluation_model.recorder import CommunicationRecord
+from src.simulator.resource_simulator.evaluation_model.recorder import CommunicationRecord, Record
 from src.simulator.task_rabbit.task_model.vtask_block import VTaskBlock
 from src.simulator.resource_simulator.sync.sync_table import SyncTable
 from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
@@ -41,10 +42,12 @@ from src.simulator.task_rabbit.task_model.transformer import AttentionType
 
 
 class LoopInfo:
-    def __init__(self, start: int, end: int, num: int):
+    def __init__(self, start: int, end: int, num: int, 
+                 use_start_time: bool = False):
         self.start = start
         self.end = end
         self.num = num
+        self.use_start_time = use_start_time
 
 
 class STEnv():
@@ -199,6 +202,120 @@ class STEnv():
                             else:
                                 break
 
+    def collect_time(self, tick_num: int = 1, pipeline: bool = True,
+                     sync: Dict[int, int] = {}):
+        self._task_graph.topologize()
+        recorder: OrderedDict[Union[TaskBlock, Tuple[TaskBlock]], Union[Record, List[Record]]] = OrderedDict()
+        for iteration in range(tick_num):
+            for task_id, task in self._task_graph:
+                if not task.is_enable():
+                    continue
+                start, end = self.get_task_time(task, iteration)
+                if not (start is None or end is None):
+                    recorder[task] = Record(start, end)
+                    # print("Task {:d}: [{:2f}, {:2f}]".format(task_id, start, end))
+                    for edge in task.output_edges:
+                        if not edge.is_enable():
+                            continue
+                        src_task = edge.in_task
+                        segment_record: List[Record] = []
+                        while True:
+                            # container_coord, network_id, time_dict = self.get_edge_time(edge, iteration)
+                            # for hop in time_dict:
+                            #     assert time_dict[hop].percent == 1, "Unfinished edge"
+                            #     print("From Task {:d} to {:d} Network {:s} Hop {:s}: [{:2f}, {:2f}]".format(edge.in_task.id, edge.out_task.id, repr(container_coord) + '.' + str(network_id), repr(hop), time_dict[hop].start_time, time_dict[hop].end_time))
+                            container_coord, network_id, record = self.get_edge_time(edge, iteration)
+                            assert record.percent == 1, "Unfinished edge"
+                            # print("From Task {:d} to {:d} Network {:s}: [{:2f}, {:2f}]".format(edge.in_task.id, edge.out_task.id, repr(container_coord) + '.' + str(network_id), record.start_time, record.end_time))
+                            dst_task = edge.out_task
+                            segment_record.append(Record(record.start_time, record.end_time))
+                            if isinstance(edge.out_task, VTaskBlock):
+                                edge = edge.out_task.output_edges[0]
+                            else:
+                                break
+                        recorder[(src_task, dst_task)] = segment_record
+
+        if pipeline:
+            for task in recorder:
+                if type(task) is tuple:
+                    start = float("inf")
+                    duration = 0
+                    for segment in recorder[task]:
+                        if segment.start < start:
+                            start = segment.start
+                        segment_duration = segment.end - segment.start
+                        if segment_duration > duration:
+                            duration = segment_duration
+                    recorder[task] = Record(start, start + duration)
+            self._task_graph.topologize(sync)
+            visited = set()
+            for task_id, task in self._task_graph:
+                if task in recorder:
+                    if task.id in sync and not self._task_graph[sync[task.id]] in visited:
+                        task
+                    visited.add(task)
+                    input_edges = []
+                    output_edges = []
+                    for key in recorder:
+                        if type(key) is tuple:
+                            if key[1] == task:
+                                input_edges.append(key)
+                            if key[0] == task:
+                                output_edges.append(key)
+                    if input_edges != []:
+                        old_start = recorder[task].start
+                        if isinstance(task, CTaskBlock):
+                            recorder[task].start = max([recorder[input_edge].end for input_edge in input_edges])
+                        else:
+                            recorder[task].start = min([recorder[input_edge].end for input_edge in input_edges])
+                        diff = recorder[task].start - old_start
+                        assert diff <= 0
+                        recorder[task].end += diff
+                        for output_edge in output_edges:
+                            recorder[output_edge].start += diff
+                            recorder[output_edge].end += diff
+                    if task.id in sync:  # 目前只有存储任务会出现在sync中
+                        assert self._task_graph[sync[task.id]] in visited
+                        old_start = recorder[task].start
+                        recorder[task].start = min(recorder[task].start, recorder[self._task_graph[sync[task.id]]].end)
+                        diff = recorder[task].start - old_start
+                        assert diff <= 0
+                        recorder[task].end += diff
+                        for output_edge in output_edges:
+                            recorder[output_edge].start += diff
+                            recorder[output_edge].end += diff
+            return recorder
+        else:
+            return recorder
+    
+    def get_latency_pipeline(self, loops: Union[LoopInfo, List[LoopInfo]] = None,
+                             extra_latencies: List[int] = None, 
+                             pipeline: bool = True,
+                             sync: Dict[int, int] = {}):
+        recorder = self.collect_time(pipeline=pipeline, sync=sync)
+        latency = 0
+        for output_id in self._task_graph._outputs:
+            output = self._task_graph[output_id]
+            end = recorder[output].end
+            latency = max(end, latency)
+        if loops is not None:
+            if isinstance(loops, LoopInfo):
+                loops = [loops]
+            for loop in loops:
+                start_task = self._task_graph[loop.start]
+                end_task = self._task_graph[loop.end]
+                start = recorder[start_task].start
+                if loop.use_start_time:
+                    end = recorder[end_task].start
+                else:
+                    end = recorder[end_task].end
+                latency += (end - start) * loop.num
+                # print((end - start) * loop.num)
+        if extra_latencies is not None:
+            for extra_latency in extra_latencies:
+                latency += extra_latency
+        return latency
+
     def get_latency(self, iteration: int = 0, 
                     loops: Union[LoopInfo, List[LoopInfo]] = None,
                     extra_latencies: List[int] = None):
@@ -219,7 +336,7 @@ class STEnv():
         if extra_latencies is not None:
             for extra_latency in extra_latencies:
                 latency += extra_latency
-        return latency 
+        return latency
     
     def eval_area(self, ml_coord: MLCoord):
         hardware = self.get_hardware(ml_coord)
