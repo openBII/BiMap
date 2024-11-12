@@ -1,7 +1,7 @@
 from typing import Tuple, Dict
-from chiplet_actuary.chip import Chip
-from chiplet_actuary.module import Module
-import chiplet_actuary.spec as spec
+from src.simulator.resource_simulator.evaluation_model.chiplet.chiplet_actuary.chip import Chip
+from src.simulator.resource_simulator.evaluation_model.chiplet.chiplet_actuary.module import Module
+import src.simulator.resource_simulator.evaluation_model.chiplet.chiplet_actuary.spec as spec
 import math
 
 

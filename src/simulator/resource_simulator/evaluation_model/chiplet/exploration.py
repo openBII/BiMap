@@ -1,11 +1,11 @@
 from typing import Tuple, List
 import math
 import pandas as pd
-from chiplet_actuary import module
-from chiplet_actuary import chip
-from chiplet_actuary import package
-from chiplet_actuary import utils
-from chiplet_actuary import spec
+from src.simulator.resource_simulator.evaluation_model.chiplet.chiplet_actuary import module
+from src.simulator.resource_simulator.evaluation_model.chiplet.chiplet_actuary import chip
+from src.simulator.resource_simulator.evaluation_model.chiplet.chiplet_actuary import package
+from src.simulator.resource_simulator.evaluation_model.chiplet.chiplet_actuary import utils
+from src.simulator.resource_simulator.evaluation_model.chiplet.chiplet_actuary import spec
 
 
 def yield_area() -> pd.DataFrame:

@@ -1,6 +1,6 @@
-from chiplet_actuary.package import Package, OS, FO, SI
-from chiplet_actuary.chip import Chip
-from chiplet_actuary.module import Module
+from src.simulator.resource_simulator.evaluation_model.chiplet.chiplet_actuary.package import Package, OS, FO, SI
+from src.simulator.resource_simulator.evaluation_model.chiplet.chiplet_actuary.chip import Chip
+from src.simulator.resource_simulator.evaluation_model.chiplet.chiplet_actuary.module import Module
 import math
 from typing import Set, Dict, Tuple
 

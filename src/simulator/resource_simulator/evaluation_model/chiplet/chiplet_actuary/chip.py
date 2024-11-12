@@ -1,5 +1,5 @@
-from chiplet_actuary.module import Module, D2D
-import chiplet_actuary.spec as spec
+from src.simulator.resource_simulator.evaluation_model.chiplet.chiplet_actuary.module import Module, D2D
+import src.simulator.resource_simulator.evaluation_model.chiplet.chiplet_actuary.spec as spec
 import math
 
 

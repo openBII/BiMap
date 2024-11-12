@@ -1,4 +1,4 @@
-import chiplet_actuary.spec as spec
+import src.simulator.resource_simulator.evaluation_model.chiplet.chiplet_actuary.spec as spec
 
 
 class Module():

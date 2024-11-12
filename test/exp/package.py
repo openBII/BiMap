@@ -242,12 +242,29 @@ def simulate_chiplet_decoder_1mb(chip_num: int, hardware_paramter_dict: Dict[str
 
     env.simulate()
     # env.show_overall_time()
-    overall_latency = env.get_latency(loops=[
-        LoopInfo(input_offchip.id,                                  arrange_q_task_dict["output"].id, 2),     # Q, K, V Loop
+    sync_dict = {}
+    sync_dict[8] = 5
+    for i in range(9, 24):
+        sync_dict[i] = 7
+    sync_dict[26] = 7
+    sync_dict[31] = 28
+    for i in range(33, 47):
+        sync_dict[i] = 30
+    sync_dict[52] = 50
+    sync_dict[57] = 54
+    # pipeline_recorder1 = env.collect_time(sync=sync_dict)
+    # print(pipeline_recorder1[task_graph[59]])
+    # pipeline_recorder2 = env.collect_time()
+    # recorder = env.collect_time(pipeline=False)
+    # latency1 = env.get_latency()
+    # latency2 = env.get_latency_pipeline(sync=sync_dict)
+    # latency3 = env.get_latency_pipeline(pipeline=False)
+    overall_latency = env.get_latency_pipeline(loops=[
+        LoopInfo(input_offchip.id,                                  arrange_q_task_dict["output"].id, 2, True),     # Q, K, V Loop
         LoopInfo(mlp_task_dict["cyclic_weight_on_chip"].id,         mlp_task_dict["cyclic_compute"].id, 12-3), # Q,K,V cyclic
         LoopInfo(dot_product_task_dict["cyclic_weight_offchip"].id, dot_product_task_dict["cyclic_compute"].id, 1), # Q * K cyclic
         LoopInfo(attention_task_dict["cyclic_weight_offchip"].id,   attention_task_dict["cyclic_compute"].id, 1)  # Q * K cyclic
-        ])
+        ], sync=sync_dict)
     return overall_latency
 
 
@@ -630,6 +647,7 @@ def simulate_chiplet_decoder_2p5mb(chip_num: int, hardware_paramter_dict: Dict[s
 
 
 if __name__ == '__main__':
+    import numpy as np
     from test.exp.distributed_many_core_decoder import simulate_decoder_2p5mb_3mb
     # print("------3------")
     # print(simulate_chiplet_decoder_2p5mb(2, {},  ram=3))
@@ -648,8 +666,14 @@ if __name__ == '__main__':
     # print(simulate_chiplet_decoder_2mb(8, {},  ram=2))
     # print(simulate_chiplet_decoder_2mb(16, {}, ram=2))
     print("------1----")
-    print(simulate_chiplet_decoder_1mb(1, {},  ram=1))
-    print(simulate_chiplet_decoder_1mb(2, {},  ram=1))
-    print(simulate_chiplet_decoder_1mb(4, {},  ram=1))
-    print(simulate_chiplet_decoder_1mb(8, {},  ram=1))
-    print(simulate_chiplet_decoder_1mb(16, {}, ram=1))
+    latency1 = simulate_chiplet_decoder_1mb(1, {},  ram=1)
+    latency2 = simulate_chiplet_decoder_1mb(2, {},  ram=1)
+    latency3 = simulate_chiplet_decoder_1mb(4, {},  ram=1)
+    latency4 = simulate_chiplet_decoder_1mb(8, {},  ram=1)
+    latency5 = simulate_chiplet_decoder_1mb(16, {}, ram=1)
+    np.save('test/exp/multi_package_data.npy', np.array([latency1, latency2, latency3, latency4, latency5]))
+    print(latency1)
+    print(latency2)
+    print(latency3)
+    print(latency4)
+    print(latency5)

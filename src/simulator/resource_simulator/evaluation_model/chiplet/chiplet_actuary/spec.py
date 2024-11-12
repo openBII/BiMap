@@ -1,6 +1,6 @@
 from configparser import ConfigParser
 
-parameter_path = "src/simulator/resource_simulator/evaluation_model/chiplet-actuary-dac2022/parameter.ini"
+parameter_path = "src/simulator/resource_simulator/evaluation_model/chiplet/parameter.ini"
 
 param = ConfigParser()
 param.read(parameter_path)
