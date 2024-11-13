@@ -5,7 +5,7 @@ from src.simulator.task_rabbit.task_model.task_graph import TaskGraph
 from src.simulator.task_rabbit.task_model.task_block import TaskBlock
 from src.simulator.resource_simulator.config.matrix_config import BoardConfig
 from src.simulator.resource_simulator.st_model.space_matrix.board_factory import BoardFactory, BoardType
-from src.simulator.resource_simulator.st_model.st_coord import create_mlcoord
+from src.simulator.resource_simulator.st_model.st_coord import Coord, create_mlcoord
 from src.simulator.resource_simulator.st_draw import STDraw
 from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
 from src.simulator.task_rabbit.task_model.transformer import create_prefill_attention, create_input, AttentionType, create_tiled_mlp_cyclic_weight, create_tiled_elementwise, create_pointwise, create_data
@@ -613,6 +613,9 @@ def simulate(hardware_paramter_dict: Dict[str, int] = []):
     # Update Hardware Configuration
     config = toml.load("top/distributed_many_core_board.toml")
     config = BoardConfig(config["PCB"], config["process_node"])
+    config.chiplet.core.local_memory["capacity"] = 2560
+    config.chiplet.core.mac_array["fp16"]["parallelism"] = [32, 32]
+    config.chiplet.core.vector_unit["fp16"]["parallelism"] = 128
     for type in hardware_paramter_dict:
         if type == "noc_bandwidth":
             config.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
@@ -620,6 +623,9 @@ def simulate(hardware_paramter_dict: Dict[str, int] = []):
             config.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
         elif type == "local_memory_bandwidth":
             config.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "mac_array":
+            config.chiplet.core.mac_array["fp16"]["parallelism"] = hardware_paramter_dict[type]
+            config.chiplet.core.mac_array["fp16"]["latency"] = hardware_paramter_dict[type][0] * 2
 
     # Create Hardware
     many_core_board = BoardFactory.create_matrix(config, 
@@ -819,6 +825,10 @@ def simulate_3mb(hardware_paramter_dict: Dict[str, int] = []):
     # Update Hardware Configuration
     config = toml.load("top/distributed_many_core_board.toml")
     config = BoardConfig(config["PCB"], config["process_node"])
+    config.chiplet.core.local_memory["capacity"] = 3072
+    config.chiplet.core.mac_array["fp16"]["parallelism"] = [16, 16]
+    config.chiplet.core.mac_array["fp16"]["latency"] = 32
+    config.chiplet.core.vector_unit["fp16"]["parallelism"] = 128
     for type in hardware_paramter_dict:
         if type == "noc_bandwidth":
             config.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
@@ -826,9 +836,9 @@ def simulate_3mb(hardware_paramter_dict: Dict[str, int] = []):
             config.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
         elif type == "local_memory_bandwidth":
             config.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
-    config.chiplet.core.local_memory["capacity"] = 3072
-    config.chiplet.core.mac_array["fp16"]["parallelism"] = [16, 16]
-    config.chiplet.core.vector_unit["fp16"]["parallelism"] = 128
+        elif type == "mac_array":
+            config.chiplet.core.mac_array["fp16"]["parallelism"] = hardware_paramter_dict[type]
+            config.chiplet.core.mac_array["fp16"]["latency"] = hardware_paramter_dict[type][0] * 2
 
     # Create Hardware
     many_core_board = BoardFactory.create_matrix(config, 
@@ -1004,6 +1014,10 @@ def simulate_2mb(hardware_paramter_dict: Dict[str, int] = []):
     # Update Hardware Configuration
     config = toml.load("top/distributed_many_core_board.toml")
     config = BoardConfig(config["PCB"])
+    config.chiplet.core.local_memory["capacity"] = 2048
+    config.chiplet.core.mac_array["fp16"]["parallelism"] = [64, 64]
+    config.chiplet.core.mac_array["fp16"]["latency"] = 128
+    config.chiplet.core.vector_unit["fp16"]["parallelism"] = 512
     for type in hardware_paramter_dict:
         if type == "noc_bandwidth":
             config.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
@@ -1011,10 +1025,9 @@ def simulate_2mb(hardware_paramter_dict: Dict[str, int] = []):
             config.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
         elif type == "local_memory_bandwidth":
             config.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
-
-    config.chiplet.core.local_memory["capacity"] = 2048
-    config.chiplet.core.mac_array["fp16"]["parallelism"] = [64, 64]
-    config.chiplet.core.vector_unit["fp16"]["parallelism"] = 512
+        elif type == "mac_array":
+            config.chiplet.core.mac_array["fp16"]["parallelism"] = hardware_paramter_dict[type]
+            config.chiplet.core.mac_array["fp16"]["latency"] = hardware_paramter_dict[type][0] * 2
 
     # Create Hardware
     many_core_board = BoardFactory.create_matrix(config, 
@@ -1155,7 +1168,11 @@ def simulate_1mb(hardware_paramter_dict: Dict[str, int] = []):
 
     # Update Hardware Configuration
     config = toml.load("top/distributed_many_core_board.toml")
-    config = BoardConfig(config["PCB"])
+    config = BoardConfig(config["PCB"], config["process_node"])
+    config.chiplet.core.local_memory["capacity"] = 1024
+    config.chiplet.core.mac_array["fp16"]["parallelism"] = [128, 128]
+    config.chiplet.core.mac_array["fp16"]["latency"] = 256
+    config.chiplet.core.vector_unit["fp16"]["parallelism"] = 128
     for type in hardware_paramter_dict:
         if type == "noc_bandwidth":
             config.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
@@ -1163,14 +1180,18 @@ def simulate_1mb(hardware_paramter_dict: Dict[str, int] = []):
             config.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
         elif type == "local_memory_bandwidth":
             config.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
-
-    config.chiplet.core.local_memory["capacity"] = 1024
-    config.chiplet.core.mac_array["fp16"]["parallelism"] = [128, 128]
-    config.chiplet.core.vector_unit["fp16"]["parallelism"] = 128
+        elif type == "mac_array":
+            config.chiplet.core.mac_array["fp16"]["parallelism"] = hardware_paramter_dict[type]
+            config.chiplet.core.mac_array["fp16"]["latency"] = hardware_paramter_dict[type][0] * 2
 
     # Create Hardware
     many_core_board = BoardFactory.create_matrix(config, 
                                                  BoardType.DISTRIBUTED_MANY_CORE)
+    
+    # print(many_core_board.container[Coord(CHIP)].area)
+    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area())
+    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area())
+    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area())
 
     # Create DSE snvironment
     env = STEnv(task_graph, many_core_board)
@@ -1257,24 +1278,38 @@ plt.ylabel("Latency")
 plt.xticks(rotation=45)  # 旋转x轴标签，使其更易读
 # plt.legend()
 plt.tight_layout()       # 自动调整布局
-plt.savefig('temp/distributed_many_core_compute_memory.png', dpi=300)
+plt.savefig('test/exp/distributed_many_core_compute_memory.png', dpi=300)
 
 
 noc_bandwidth_paramters = []
 local_memory_latency_paramters = []
 local_memory_bandwidth_paramters = []
+mac_array1 = {16: [146, 146], 32: [146, 146], 64: [145, 145], 128: [142, 142], 256: [138, 138], 512: [128, 128]}
+mac_array2 = {8: [107, 107], 16: [105, 105], 32: [103, 103], 64: [98, 98], 128: [88, 88], 256: [64, 64]}
+mac_array2_5 = {4: [73, 73], 8: [72, 72], 16: [69, 69], 32: [64, 64], 64: [51, 51], 128: [32, 32]}
+mac_array3 = {4: [72, 72], 8: [71, 71], 16: [68, 68], 32: [60, 60], 64: [44, 44], 128: [16, 16]}
 # paramters = []
 latencies = []
-for local_memory_bandwidth in (4, 8, 16, 32, 64, 128):
-    for local_memory_latency in range(20, 1, -2):
+local_memory_bandwidth1 = (16, 32, 64, 128, 256, 512)
+local_memory_bandwidth2 = (8, 16, 32, 64, 128, 256)
+local_memory_bandwidth3 = (4, 8, 16, 32, 64, 128)
+for local_memory_bandwidth in local_memory_bandwidth1:
+    for local_memory_latency in range(80, 1, -10):
         for noc_bandwidth in (4, 8, 16, 32, 64):
             noc_bandwidth_paramters.append(noc_bandwidth)
             local_memory_latency_paramters.append(local_memory_latency)
             local_memory_bandwidth_paramters.append(local_memory_bandwidth)
             # paramters.append((local_memory_bandwidth, local_memory_latency, noc_bandwidth))
-            latencies.append(simulate({'noc_bandwidth': noc_bandwidth,
-                             'local_memory_latency': local_memory_latency,
-                             'local_memory_bandwidth': local_memory_bandwidth}))
+            latencies.append(simulate_1mb({'noc_bandwidth': noc_bandwidth,
+                                           'local_memory_latency': local_memory_latency,
+                                           'local_memory_bandwidth': local_memory_bandwidth,
+                                           'mac_array': mac_array1[local_memory_bandwidth]}))
+               
+np.savez('{:s}.npz'.format("test/exp/many_core_1_prefill"), 
+         noc_bandwidth_paramters=np.array(noc_bandwidth_paramters), 
+         local_memory_latency_paramters=np.array(local_memory_latency_paramters),
+         local_memory_bandwidth_paramters=np.array(local_memory_bandwidth_paramters),
+         latencies=np.array(latencies))
 
 # parameter_labels = [f"({x}, {y}, {z})" for x, y, z in paramters]
 # plt.plot(noc_bandwidth_paramters, noc_bandwidth_latencies, marker='o', label='NoC Bandwidth')
