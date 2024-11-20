@@ -35,4 +35,4 @@ add = 1
 [PCB.chiplet.core.local_memory]
 capacity = 2560  # KB, 512
 latency = 1
-bandwidth = 32
+bandwidth = 128

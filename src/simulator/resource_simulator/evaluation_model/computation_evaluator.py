@@ -2,7 +2,7 @@ import math
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
 from src.simulator.resource_simulator.evaluation_model.evaluator import Evaluator, EvaluationMode
-from src.simulator.resource_simulator.config.computation_config import ComputationConfig
+from src.simulator.resource_simulator.config.computation_config import ComputationConfig, ComputationInfo
 from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from src.simulator.resource_simulator.evaluation_model.area.cost_model import calc_systolic_array_area_mm2, find_logic_sram_transistor_density
 from src.simulator.resource_simulator.evaluation_model.area.cost_model import calc_vector_area_mm2
@@ -27,13 +27,24 @@ class MACArrayEvaluator(ComputationEvaluator):
         assert precision in self.config, "Cannot process task in {:s}".format(precision.name)
         computation_info = self.config[precision]
         if task.task_type == TaskBlockType.CVM:
-            if computation_info.parallelism[0] == computation_info.parallelism[1]:
-                length = computation_info.parallelism[0]
-                num_tiles = math.ceil(task.shape.volume / length**3)
-                one_time_latency = 2 * self.config.local_memory_latency + computation_info.latency * max(1, 2 * math.ceil(length / self.config.local_memory_bandwidth))
+            if task.shape.token == 1:
+                num_tiles = math.ceil(
+                    task.shape.volume / math.prod(computation_info.parallelism))
+                num_data = (computation_info.parallelism[0] + 1) * computation_info.parallelism[1]
+                one_time_latency = 2 * self.config.local_memory_latency + computation_info.latency * max(1, math.ceil(num_data * 2 / self.config.local_memory_bandwidth))
                 return num_tiles * one_time_latency
             else:
-                raise NotImplementedError
+                if computation_info.parallelism[0] == computation_info.parallelism[1]:
+                    length = computation_info.parallelism[0]
+                    num_tiles = math.ceil(task.shape.volume / length**3)
+                    one_time_latency = 2 * self.config.local_memory_latency + computation_info.latency * max(1, math.ceil(2 * length / self.config.local_memory_bandwidth))
+                    # one_time_latency = 2 * self.config.local_memory_latency + computation_info.latency * max(1, 2 * math.ceil(length / self.config.local_memory_bandwidth))
+                    if len(computation_info.parallelism) == 3:
+                        return num_tiles * one_time_latency / computation_info.parallelism[2]
+                    else:
+                        return num_tiles * one_time_latency
+                else:
+                    raise NotImplementedError
         else:
             raise NotImplementedError
         
@@ -140,3 +151,15 @@ class VectorUnitEvaluator(ComputationEvaluator):
             transistor_density_mil_mm2)
 
         return area
+    
+
+if __name__ == "__main__":
+    from src.simulator.resource_simulator.evaluation_model.area.process_node import ProcessNode
+
+
+    config = ComputationConfig()
+    config.dict[Precision.FLOAT_16] = ComputationInfo((83, 83), 256)
+    config.process_node = ProcessNode.SEVEN
+    evaluator = MACArrayEvaluator(config)
+    area = evaluator.eval_area()
+    print(area)

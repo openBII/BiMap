@@ -18,6 +18,8 @@ class ComputationInfo:
                     self.latency[TaskBlockType.CSoftMax] = latency[op]
                 elif op == 'add':
                     self.latency[TaskBlockType.CADD] = latency[op]
+                elif op == "layer_norm":
+                    self.latency[TaskBlockType.CLayerNorm] = latency[op]
                 else:
                     raise NotImplementedError(
                         'Operation ' + op + ' is not supported')

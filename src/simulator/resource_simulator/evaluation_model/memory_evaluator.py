@@ -40,3 +40,26 @@ class RegisterFileEvaluator(MemoryEvaluator):
         return calc_reg_file_area(self.num_files, self.num_registers,
                                   self.bitwidth, self.num_ports,
                                   transistor_density_mil_mm2)
+    
+
+
+if __name__ == "__main__":
+    area = {}
+    for i in (262144, 524288, 655360, 786432):
+        area[i] = {}
+        for j in (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024):
+            evaluator = RegisterFileEvaluator(num_files=1, num_registers=i, 
+                                              bitwidth=32, num_ports=j, 
+                                              process_node=ProcessNode.SEVEN)
+            area[i][j] = evaluator.eval_area()
+    
+    ratio = {}
+    for i in (262144, 524288, 655360, 786432):
+        ratio[i] = []
+        for j in (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024):
+            ratio[i].append(area[i][j] / area[i][1])
+
+    for capacity in (1024, 2048, 2560, 3072):
+        sram_evaluator = MemoryEvaluator(capacity=capacity, 
+                                         process_node=ProcessNode.SEVEN)
+        print(sram_evaluator.eval_area())

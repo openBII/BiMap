@@ -203,7 +203,8 @@ class STEnv():
                                 break
 
     def collect_time(self, tick_num: int = 1, pipeline: bool = True,
-                     sync: Dict[int, int] = {}):
+                     sync: Dict[int, int] = {}, 
+                     access_compute_pipeline: bool = False):
         self._task_graph.topologize()
         recorder: OrderedDict[Union[TaskBlock, Tuple[TaskBlock]], Union[Record, List[Record]]] = OrderedDict()
         for iteration in range(tick_num):
@@ -251,8 +252,6 @@ class STEnv():
             visited = set()
             for task_id, task in self._task_graph:
                 if task in recorder:
-                    if task.id in sync and not self._task_graph[sync[task.id]] in visited:
-                        task
                     visited.add(task)
                     input_edges = []
                     output_edges = []
@@ -264,16 +263,34 @@ class STEnv():
                                 output_edges.append(key)
                     if input_edges != []:
                         old_start = recorder[task].start
-                        if isinstance(task, CTaskBlock):
-                            recorder[task].start = max([recorder[input_edge].end for input_edge in input_edges])
+                        if access_compute_pipeline:
+                            if isinstance(task, CTaskBlock):
+                                recorder[task].start = max([recorder[input_edge].start for input_edge in input_edges])
+                                recorder[task].end = max(recorder[task].end - old_start + recorder[task].start, 
+                                                         max([recorder[input_edge].end for input_edge in input_edges]))
+                                for output_edge in output_edges:
+                                    old_edge_start = recorder[output_edge].start
+                                    recorder[output_edge].start = recorder[task].end
+                                    recorder[output_edge].end += recorder[task].end - old_edge_start
+                            else:
+                                recorder[task].start = min([recorder[input_edge].end for input_edge in input_edges])
+                                diff = recorder[task].start - old_start
+                                assert diff <= 0
+                                recorder[task].end += diff
+                                for output_edge in output_edges:
+                                    recorder[output_edge].start += diff
+                                    recorder[output_edge].end += diff
                         else:
-                            recorder[task].start = min([recorder[input_edge].end for input_edge in input_edges])
-                        diff = recorder[task].start - old_start
-                        assert diff <= 0
-                        recorder[task].end += diff
-                        for output_edge in output_edges:
-                            recorder[output_edge].start += diff
-                            recorder[output_edge].end += diff
+                            if isinstance(task, CTaskBlock):
+                                recorder[task].start = max([recorder[input_edge].end for input_edge in input_edges])
+                            else:
+                                recorder[task].start = min([recorder[input_edge].end for input_edge in input_edges])
+                            diff = recorder[task].start - old_start
+                            assert diff <= 0
+                            recorder[task].end += diff
+                            for output_edge in output_edges:
+                                recorder[output_edge].start += diff
+                                recorder[output_edge].end += diff
                     if task.id in sync:  # 目前只有存储任务会出现在sync中
                         assert self._task_graph[sync[task.id]] in visited
                         old_start = recorder[task].start
@@ -287,12 +304,84 @@ class STEnv():
             return recorder
         else:
             return recorder
+        
+    def get_compute_time(self, loops: Union[LoopInfo, List[LoopInfo]] = None,
+                         extra_latencies: List[int] = None, 
+                         pipeline: bool = True,
+                         sync: Dict[int, int] = {}):
+        recorder = self.collect_time(pipeline=pipeline, sync=sync)
+        compute_time = 0
+        for task in recorder:
+            if isinstance(task, CTaskBlock):
+                compute_time += recorder[task].end - recorder[task].start
+        if loops is not None:
+            if isinstance(loops, LoopInfo):
+                loops = [loops]
+            for loop in loops:
+                start_task = self._task_graph[loop.start]
+                end_task = self._task_graph[loop.end]
+                task_queue = [start_task]
+                visited = set(task_queue)
+                while len(task_queue) != 0:
+                    task = task_queue.pop(0)
+                    if isinstance(task, CTaskBlock):
+                        compute_time += (recorder[task].end - recorder[task].start) * loop.num
+                    visited.add(task)
+                    # for in_task in task.in_tasks:
+                    #     if in_task not in visited:
+                    #         task_queue.append(in_task)
+                    if task != end_task:
+                        for out_task in task.out_tasks:
+                            if (not out_task in visited) and (not out_task in task_queue):
+                                task_queue.append(out_task)
+        if extra_latencies is not None:
+            for extra_latency in extra_latencies:
+                compute_time += extra_latency
+        return compute_time
+
+    def get_communication_time(self, loops: Union[LoopInfo, List[LoopInfo]] = None,
+                               extra_latencies: List[int] = None, 
+                               pipeline: bool = True,
+                               sync: Dict[int, int] = {}):
+        recorder = self.collect_time(pipeline=pipeline, sync=sync)
+        communication_time = 0
+        for task in recorder:
+            if type(task) is tuple:
+                communication_time += recorder[task].end - recorder[task].start
+        if loops is not None:
+            if isinstance(loops, LoopInfo):
+                loops = [loops]
+            for loop in loops:
+                start_task = self._task_graph[loop.start]
+                end_task = self._task_graph[loop.end]
+                task_queue = [start_task]
+                visited = set(task_queue)
+                while len(task_queue) != 0:
+                    task = task_queue.pop(0)
+                    for key in recorder:
+                        if type(key) is tuple:
+                            if key[0] == task:
+                                communication_time += (recorder[key].end - recorder[key].start) * loop.num
+                    visited.add(task)
+                    if task != start_task:    
+                        for in_task in task.in_tasks:
+                            if (not in_task in visited) and (not in_task in task_queue):
+                                task_queue.append(in_task)
+                    for out_task in task.out_tasks:
+                        if (not out_task == end_task) and (not out_task in visited) and (not out_task in task_queue):
+                            task_queue.append(out_task)
+        if extra_latencies is not None:
+            for extra_latency in extra_latencies:
+                communication_time += extra_latency
+        return communication_time
     
     def get_latency_pipeline(self, loops: Union[LoopInfo, List[LoopInfo]] = None,
                              extra_latencies: List[int] = None, 
                              pipeline: bool = True,
-                             sync: Dict[int, int] = {}):
-        recorder = self.collect_time(pipeline=pipeline, sync=sync)
+                             sync: Dict[int, int] = {},
+                             access_compute_pipeline: bool = False):
+        recorder = self.collect_time(
+            pipeline=pipeline, sync=sync)
         latency = 0
         for output_id in self._task_graph._outputs:
             output = self._task_graph[output_id]
