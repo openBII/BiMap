@@ -4,7 +4,7 @@ from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
 from src.simulator.resource_simulator.st_model.space_point.communication_point import CommunicationPoint
 from src.simulator.resource_simulator.config.communication_config import CommunicationConfig
 from src.simulator.resource_simulator.st_model.st_coord import Coord
-from src.simulator.resource_simulator.st_model.space_matrix.board_factory import BoardFactory
+from src.simulator.resource_simulator.st_model.space_matrix.board_factory import BoardFactory, BoardType
 from src.simulator.resource_simulator.st_model.space_matrix.gpu_server_matrix import GPUServerMatrix
 
 
@@ -12,13 +12,12 @@ class ServerFactory(Factory):
     """
     Factory class for creating ComputeChiplet objects
     """
-
     @staticmethod
-    def create_matrix(config: ServerConfig) -> STMatrix:
+    def create_matrix(config: ServerConfig, type: BoardType) -> STMatrix:
         server = GPUServerMatrix(dim=2, space_level=4)
         for i in range(config.size[0]):
             for j in range(config.size[1]):
-                board = BoardFactory.create_matrix(config.PCB)
+                board = BoardFactory.create_matrix(config.PCB, type)
                 server.add_element(coord=Coord((i, j)), element=board)
 
         if config.network["topology"] == "mesh":

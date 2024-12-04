@@ -1,3 +1,4 @@
+from src.simulator.resource_simulator.st_model.space_matrix.board_factory import BoardType
 from src.simulator.resource_simulator.st_env import STEnv
 from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.task_rabbit.task_model.precision import Precision
@@ -21,11 +22,11 @@ STDraw.draw_graph(task_graph, out_path='temp/mlp.task.html',
 
 # Construct a hardware
 config = ServerConfig("top/gpu_server.toml")
-server = ServerFactory.create_matrix(config)
+server = ServerFactory.create_matrix(config, BoardType.SHARED_MEMORY)
 
 # Construct a simulation environment
 env = STEnv(task_graph, server)
-env.enable_pipeline()
+# env.enable_pipeline()
 
 # Define some constants for writing coordinates
 SIZE_X, SIZE_Y = config.PCB.chiplet.size
