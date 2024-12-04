@@ -15,6 +15,8 @@ from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from typing import Dict
 import numpy as np
 from copy import deepcopy
+import datetime
+from matplotlib.ticker import ScalarFormatter
 
 
 # Algorithm Parameters
@@ -631,10 +633,10 @@ def simulate(hardware_paramter_dict: Dict[str, int] = []):
     many_core_board = BoardFactory.create_matrix(config, 
                                                  BoardType.DISTRIBUTED_MANY_CORE)
     
-    # print(many_core_board.container[Coord(CHIP)].area)
-    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area())
-    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area())
-    # print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area())
+    print(many_core_board.container[Coord(CHIP)].area)
+    print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(TENSOR_UNIT)].evaluator.eval_area())
+    print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(VECTOR_UNIT)].evaluator.eval_area())
+    print(many_core_board.container[Coord(CHIP)].container[Coord((0, 0))].container[Coord(SRAM_BUFFER)].evaluator.eval_area())
 
     # Create DSE snvironment
     env = STEnv(task_graph, many_core_board)
@@ -1262,6 +1264,173 @@ def simulate_1mb(hardware_paramter_dict: Dict[str, int] = []):
 #     local_memory_bandwidth_paramters.append(local_memory_bandwidth)
 #     local_memory_bandwidth_latencies.append(simulate(local_memory_bandwidth, "local_memory_bandwidth"))
 
+# local memory bandwidth色度图
+mac_array1 = {16: [146, 146], 32: [146, 146], 64: [145, 145], 128: [142, 142], 256: [138, 138], 512: [128, 128]}
+mac_array2 = {8: [107, 107], 16: [105, 105], 32: [103, 103], 64: [98, 98], 128: [88, 88], 256: [64, 64]}
+mac_array2_5 = {4: [73, 73], 8: [72, 72], 16: [69, 69], 32: [64, 64], 64: [51, 51], 128: [32, 32]}
+mac_array3 = {4: [72, 72], 8: [71, 71], 16: [68, 68], 32: [60, 60], 64: [44, 44], 128: [16, 16]}
+latencies = np.zeros((6, 4))
+local_bandwidth1 = (16, 32, 64, 128, 256, 512)
+local_bandwidth2 = (8, 16, 32, 64, 128, 256)
+local_bandwidth3 = (4, 8, 16, 32, 64, 128)
+local_bandwidth4 = (4, 8, 16, 32, 64, 128)
+
+for j in range(4):
+    for i in range(6):
+        if j == 0:
+            latency = simulate_1mb(
+                {'local_memory_bandwidth': local_bandwidth1[i],
+                 'mac_array': mac_array1[local_bandwidth1[i]]})
+            latencies[i][j] = latency
+        if j == 1:
+            latency = simulate_2mb(
+                {'local_memory_bandwidth': local_bandwidth2[i],
+                 'mac_array': mac_array2[local_bandwidth2[i]]})
+            latencies[i][j] = latency
+        if j == 2:
+            latency = simulate(
+                {'local_memory_bandwidth': local_bandwidth3[i],
+                 'mac_array': mac_array2_5[local_bandwidth3[i]]})
+            latencies[i][j] = latency
+        if j == 3:
+            latency = simulate_3mb(
+                {'local_memory_bandwidth': local_bandwidth4[i],
+                 'mac_array': mac_array3[local_bandwidth4[i]]})
+            latencies[i][j] = latency
+
+# 创建二维色度图
+fig, ax = plt.subplots()
+c = ax.imshow(latencies / 1000, cmap='GnBu', origin='lower', aspect=0.75)
+colorbar = fig.colorbar(c, ax=ax, fraction=0.03, pad=0.04)
+colorbar.ax.set_ylabel('Latency (K Cycle)', fontsize=14)
+colorbar.ax.tick_params(labelsize=12)
+colorbar.formatter = ScalarFormatter(useMathText=True)
+colorbar.formatter.set_scientific(True)
+colorbar.formatter.set_powerlimits((-1, 1))
+colorbar.update_ticks()
+
+for i in range(latencies.shape[0]):
+    for j in range(latencies.shape[1]):
+        if latencies[i, j] > 60000000:
+            ax.text(j, i, f'{int(latencies[i, j] / 1000):d}', ha='center', va='center', color='white', fontsize=12)
+        else:
+            ax.text(j, i, f'{int(latencies[i, j] / 1000):d}', ha='center', va='center', color='black', fontsize=12)
+
+ax.set_xticks(np.arange(latencies.shape[1]), pad=0)
+ax.set_yticks(np.arange(latencies.shape[0]))
+ax.set_xticklabels(((1, 128, 128), (2, 64, 512), (2.5, 32, 128), (3, 16, 128)), fontsize=12, rotation=15)
+ax.set_yticklabels((16, 32, 64, 128, 256, 512), fontsize=12)
+
+plt.xlabel('Compute-Memory Configuration', fontsize=14)
+plt.ylabel('Local Memory Bandwidth (B/cycle)', fontsize=14)
+plt.tight_layout()
+
+plt.savefig("test/exp/many_core_prefill_local_bandwidth" + '.png', dpi=300, transparent=True)
+
+# NoC Bandwidth的色度图
+latencies = np.zeros((5, 4))
+noc_bandwidth = (4, 8, 16, 32, 64)
+
+for j in range(4):
+    for i in range(5):
+        if j == 0:
+            latency = simulate_1mb(
+                {'noc_bandwidth': noc_bandwidth[i]})
+            latencies[i][j] = latency
+        if j == 1:
+            latency = simulate_2mb(
+                {'noc_bandwidth': noc_bandwidth[i]})
+            latencies[i][j] = latency
+        if j == 2:
+            latency = simulate(
+                {'noc_bandwidth': noc_bandwidth[i]})
+            latencies[i][j] = latency
+        if j == 3:
+            latency = simulate_3mb(
+                {'noc_bandwidth': noc_bandwidth[i]})
+            latencies[i][j] = latency
+
+# 创建二维色度图
+fig, ax = plt.subplots()
+c = ax.imshow(latencies / 1000, cmap='GnBu', origin='lower', aspect=0.75)
+colorbar = fig.colorbar(c, ax=ax, fraction=0.03, pad=0.04)
+colorbar.ax.set_ylabel('Latency (K Cycle)', fontsize=14)
+colorbar.ax.tick_params(labelsize=12)
+colorbar.formatter = ScalarFormatter(useMathText=True)
+colorbar.formatter.set_scientific(True)
+colorbar.formatter.set_powerlimits((-1, 1))
+colorbar.update_ticks()
+
+for i in range(latencies.shape[0]):
+    for j in range(latencies.shape[1]):
+        if latencies[i, j] > 60000000:
+            ax.text(j, i, f'{int(latencies[i, j] / 1000):d}', ha='center', va='center', color='white', fontsize=12)
+        else:
+            ax.text(j, i, f'{int(latencies[i, j] / 1000):d}', ha='center', va='center', color='black', fontsize=12)
+
+ax.set_xticks(np.arange(latencies.shape[1]), pad=0)
+ax.set_yticks(np.arange(latencies.shape[0]))
+ax.set_xticklabels(((1, 128, 128), (2, 64, 512), (2.5, 32, 128), (3, 16, 128)), fontsize=12, rotation=15)
+ax.set_yticklabels(noc_bandwidth, fontsize=12)
+
+plt.xlabel('Compute-Memory Configuration', fontsize=14)
+plt.ylabel('NoC Bandwidth (B/cycle)', fontsize=14)
+plt.tight_layout()
+
+plt.savefig("test/exp/many_core_prefill_noc_bandwidth" + '.png', dpi=300, transparent=True)
+
+# Local Memory Latency色度图
+latencies = np.zeros((8, 4))
+local_memory_latency = list(range(80, 1, -10))
+
+for j in range(4):
+    for i in range(8):
+        if j == 0:
+            latency = simulate_1mb(
+                {'local_memory_latency': local_memory_latency[i]})
+            latencies[i][j] = latency
+        if j == 1:
+            latency = simulate_2mb(
+                {'local_memory_latency': local_memory_latency[i]})
+            latencies[i][j] = latency
+        if j == 2:
+            latency = simulate(
+                {'local_memory_latency': local_memory_latency[i]})
+            latencies[i][j] = latency
+        if j == 3:
+            latency = simulate_3mb(
+                {'local_memory_latency': local_memory_latency[i]})
+            latencies[i][j] = latency
+
+# 创建二维色度图
+fig, ax = plt.subplots()
+c = ax.imshow(latencies / 1000, cmap='GnBu', origin='lower', aspect=0.7)
+colorbar = fig.colorbar(c, ax=ax, fraction=0.03, pad=0.04)
+colorbar.ax.set_ylabel('Latency (K Cycle)', fontsize=14)
+colorbar.ax.tick_params(labelsize=12)
+colorbar.formatter = ScalarFormatter(useMathText=True)
+colorbar.formatter.set_scientific(True)
+colorbar.formatter.set_powerlimits((-1, 1))
+colorbar.update_ticks()
+
+for i in range(latencies.shape[0]):
+    for j in range(latencies.shape[1]):
+        if latencies[i, j] > 140000000:
+            ax.text(j, i, f'{int(latencies[i, j] / 1000):d}', ha='center', va='center', color='white', fontsize=12)
+        else:
+            ax.text(j, i, f'{int(latencies[i, j] / 1000):d}', ha='center', va='center', color='black', fontsize=12)
+
+ax.set_xticks(np.arange(latencies.shape[1]), pad=0)
+ax.set_yticks(np.arange(latencies.shape[0]))
+ax.set_xticklabels(((1, 128, 128), (2, 64, 512), (2.5, 32, 128), (3, 16, 128)), fontsize=12, rotation=15)
+ax.set_yticklabels(local_memory_latency, fontsize=12)
+
+plt.xlabel('Compute-Memory Configuration', fontsize=14)
+plt.ylabel('Local Memory Latency (Cycle)', fontsize=14)
+plt.tight_layout()
+
+plt.savefig("test/exp/many_core_prefill_local_latency" + '.png', dpi=300, transparent=True)
+
 latency1 = simulate_1mb()
 latency2 = simulate_2mb()
 latency2_5 = simulate()
@@ -1293,6 +1462,7 @@ latencies = []
 local_memory_bandwidth1 = (16, 32, 64, 128, 256, 512)
 local_memory_bandwidth2 = (8, 16, 32, 64, 128, 256)
 local_memory_bandwidth3 = (4, 8, 16, 32, 64, 128)
+start = datetime.datetime.now()
 for local_memory_bandwidth in local_memory_bandwidth1:
     for local_memory_latency in range(80, 1, -10):
         for noc_bandwidth in (4, 8, 16, 32, 64):
@@ -1304,6 +1474,8 @@ for local_memory_bandwidth in local_memory_bandwidth1:
                                            'local_memory_latency': local_memory_latency,
                                            'local_memory_bandwidth': local_memory_bandwidth,
                                            'mac_array': mac_array1[local_memory_bandwidth]}))
+end = datetime.datetime.now()
+print((end - start).seconds)
                
 np.savez('{:s}.npz'.format("test/exp/many_core_1_prefill"), 
          noc_bandwidth_paramters=np.array(noc_bandwidth_paramters), 

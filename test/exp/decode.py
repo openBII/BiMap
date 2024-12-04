@@ -785,15 +785,16 @@ if __name__ == '__main__':
     # draw_one_ram_size(ram=2.5, file_name='temp/sch_1113/many_core_decoder_2p5mb')
     # draw_one_ram_size(ram=3,   file_name='temp/sch_1113/many_core_decoder_3mb')
     # draw_diff_config()
-    print(simulate_decoder_mlp_1mb(
-        {}, is_weight_onchip=True, 
-        split_vector=SplitVector(batch=1, token=1, nf=128)))
-    print(simulate_decoder_mlp_1mb(
-        {}, is_weight_onchip=False, 
-        split_vector=SplitVector(batch=1, token=1, nf=512)))
-    print(simulate_decoder_mlp_1mb_attention(
-        {}, is_weight_onchip=True, 
-        split_vector=SplitVector(batch=1, token=1, nf=128)))
+
+    # print(simulate_decoder_mlp_1mb(
+    #     {}, is_weight_onchip=True, 
+    #     split_vector=SplitVector(batch=1, token=1, nf=128)))
+    # print(simulate_decoder_mlp_1mb(
+    #     {}, is_weight_onchip=False, 
+    #     split_vector=SplitVector(batch=1, token=1, nf=512)))
+    # print(simulate_decoder_mlp_1mb_attention(
+    #     {}, is_weight_onchip=True, 
+    #     split_vector=SplitVector(batch=1, token=1, nf=128)))
     
     num_chiplets = (1, 2, 3, 4, 6, 8, 12)
     draw_dict = {1: 1, 2: 2, 3: 3, 4: 4, 6: 5, 8: 6, 12: 7, 24: 8}
@@ -820,15 +821,18 @@ if __name__ == '__main__':
     fig, ax1 = plt.subplots()
 
     width = 0.35
-    bar1 = ax1.bar(np.array([1, 2, 3, 4, 5, 6, 7]), mcm_latencies, width, color='#304E7E', label='Latency')
-    bar2 = ax1.bar(np.array([1, 2, 3, 4, 5, 6, 7]) + width, mcm_routings, width, color='#4D1F03', label="Inter-Chip Communication")
-    ax1.set_xlabel('Number of Chiplets', fontsize=14)
-    ax1.set_ylabel('Latency', fontsize=14)
-    ax1.set_xticks([1, 2, 3, 4, 5, 6, 7])
+    bar1 = ax1.bar(np.array([1, 2, 3, 4, 5, 6, 7]), np.array(mcm_latencies) / 1000, width, color='#1B3F7D', label='Latency')
+    bar2 = ax1.bar(np.array([1, 2, 3, 4, 5, 6, 7]) + width, np.array(mcm_routings) / 1000, width, color='#2F6D60', label="Inter-Chip Communication")
+    ax1.set_xlabel('Number of Chiplets', fontsize=14, labelpad=2)
+    ax1.set_ylabel('Latency (K Cycle)', fontsize=14, labelpad=2)
+    ax1.set_xticks(num_chiplets)
     ax2 = ax1.twinx()
-    line1, = ax1.plot(np.array([1, 2, 3, 4, 5, 6, 7]), 1600000000000 / np.array(mcm_latencies) / (cost_increasing_mcms[0:1] + cost_increasing_mcms[2:]), marker='o', linestyle='-', color='#81D0D6', label='Performance-Cost Ratio')
-    line2, = ax2.plot([1, 2, 3, 4, 5, 6, 7], cost_increasing_mcms[0:1] + cost_increasing_mcms[2:], marker='o', linestyle='-', color='#FDBC63', label='Cost')
-    ax2.set_ylabel('Cost', fontsize=14)
+    line1, = ax1.plot(np.array([1, 2, 3, 4, 5, 6, 7]), 1600000000000 / np.array(mcm_latencies) / (cost_increasing_mcms[0:1] + cost_increasing_mcms[2:]), marker='o', linestyle='-', linewidth=2, markersize=8, color='#87CEFA', label='Performance-Cost Ratio')
+    line2, = ax2.plot([1, 2, 3, 4, 5, 6, 7], cost_increasing_mcms[0:1] + cost_increasing_mcms[2:], marker='o', linestyle='-', linewidth=2, markersize=8, color='#00FF7F', label='Cost')
+    ax2.set_ylabel('Cost', fontsize=14, labelpad=2)
+    ax1.tick_params(axis='x', labelsize=12)  # 设置 x 轴刻度值的字体大小
+    ax1.tick_params(axis='y', labelsize=12)  # 设置 y 轴刻度值的字体大小
+    ax2.tick_params(axis='y', labelsize=12)  # 设置 y 轴刻度值的字体大小
 
     # 添加标题和标签
     # plt.title('Multi-Chip-Modulo Integration', fontsize=18)
@@ -836,26 +840,29 @@ if __name__ == '__main__':
     # ax2.legend()
     lns = [bar1, bar2, line1, line2]
     labels = [l.get_label() for l in lns]
-    ax1.legend(lns, labels, loc='upper left', ncol=2, prop={'size': 9.5})
-    ax1.set_ylim(0, 85000)
+    # ax1.legend(lns, labels, loc='upper left', prop={'size': 12})
+    ax1.set_ylim(0, 80000 / 1000)
     ax2.set_ylim(0, 3000)
     plt.tight_layout()
-    plt.savefig("test/exp/decode_chiplet_mcm" + '.png', dpi=300)
+    plt.savefig("test/exp/decode_chiplet_mcm" + '.png', dpi=300, transparent=True)
 
 
     plt.clf()
     fig, ax1 = plt.subplots()
 
     width = 0.35
-    bar1 = ax1.bar(np.array([1, 2, 3, 4, 5, 6, 7]), si_latencies, width, color='#304E7E', label='Latency')
-    bar2 = ax1.bar(np.array([1, 2, 3, 4, 5, 6, 7]) + width, si_routings, width, color='#4D1F03', label="Inter-Chip Communication")
-    ax1.set_xlabel('Number of Chiplets', fontsize=14)
-    ax1.set_ylabel('Latency', fontsize=14)
-    ax1.set_xticks([1, 2, 3, 4, 5, 6, 7])
+    bar1 = ax1.bar(np.array([1, 2, 3, 4, 5, 6, 7]), np.array(si_latencies) / 1000, width, color='#1B3F7D', label='Latency')
+    bar2 = ax1.bar(np.array([1, 2, 3, 4, 5, 6, 7]) + width, np.array(si_routings) / 1000, width, color='#2F6D60', label="Inter-Chip Communication")
+    ax1.set_xlabel('Number of Chiplets', fontsize=14, labelpad=2)
+    ax1.set_ylabel('Latency (K Cycle)', fontsize=14, labelpad=2)
+    ax1.set_xticks(num_chiplets)
     ax2 = ax1.twinx()
-    line1, = ax1.plot(np.array([1, 2, 3, 4, 5, 6, 7]), 1600000000000 / np.array(si_latencies) / (cost_increasing_sis[0:1] + cost_increasing_sis[2:]), marker='o', linestyle='-', color='#81D0D6', label='Performance-Cost Ratio')
-    line2, = ax2.plot([1, 2, 3, 4, 5, 6, 7], cost_increasing_sis[0:1] + cost_increasing_sis[2:], marker='o', linestyle='-', color='#FDBC63', label='Cost')
-    ax2.set_ylabel('Cost', fontsize=14)
+    line1, = ax1.plot(np.array([1, 2, 3, 4, 5, 6, 7]), 1600000000000 / np.array(si_latencies) / (cost_increasing_sis[0:1] + cost_increasing_sis[2:]), marker='o', linestyle='-', linewidth=2, markersize=8, color='#87CEFA', label='Performance-Cost Ratio')
+    line2, = ax2.plot([1, 2, 3, 4, 5, 6, 7], cost_increasing_sis[0:1] + cost_increasing_sis[2:], marker='o', linestyle='-', linewidth=2, markersize=8, color='#00FF7F', label='Cost')
+    ax2.set_ylabel('Cost', fontsize=14, labelpad=2)
+    ax1.tick_params(axis='x', labelsize=12)  # 设置 x 轴刻度值的字体大小
+    ax1.tick_params(axis='y', labelsize=12)  # 设置 y 轴刻度值的字体大小
+    ax2.tick_params(axis='y', labelsize=12)  # 设置 y 轴刻度值的字体大小
 
     # 添加标题和标签
     # plt.title('2.5D (CoWos) Integration', fontsize=18)
@@ -863,59 +870,179 @@ if __name__ == '__main__':
     # ax2.legend()
     lns = [bar1, bar2, line1, line2]
     labels = [l.get_label() for l in lns]
-    ax1.legend(lns, labels, loc='upper left', ncol=2, prop={'size': 9.5})
-    ax1.set_ylim(0, 85000)
+    # ax1.legend(lns, labels, loc='upper left', prop={'size': 12})
+    ax1.set_ylim(0, 80000 / 1000)
     ax2.set_ylim(0, 30000)
     plt.tight_layout()
-    plt.savefig("test/exp/decode_chiplet_si" + '.png', dpi=300)
+    plt.savefig("test/exp/decode_chiplet_si" + '.png', dpi=300, transparent=True)
 
     
+    # mac_array1 = {256: [83, 83], 512: [82, 82], 1024: [80, 80], 2048: [74, 74], 4096: [64, 64], 8192: [32, 32]}
+    # latencies = []
+    # noc_bandwidth_parameters = []
+    # local_memory_latency_parameters = []
+    # local_memory_bandwidth_parameters = []
+    # chiplet_parameters = []
+    # local_memory_bandwidth1 = (8192, 4096, 2048, 1024, 512, 256)
+    # for local_memory_bandwidth in local_memory_bandwidth1:
+    #     latency, routing = simulate_decoder_mlp_1mb(
+    #         {'local_memory_bandwidth': local_memory_bandwidth,
+    #          'mac_array': mac_array1[local_memory_bandwidth]}, 
+    #         is_weight_onchip=True, 
+    #         split_vector=SplitVector(batch=1, token=1, nf=128))
+    #     compute = (latency - routing * 3) * 8
+    #     for num in (1, 2, 3, 4, 6, 8, 12, 24):
+    #         local_memory_bandwidth_parameters.append(local_memory_bandwidth)
+    #         chiplet_parameters.append(num)
+    #         latency = compute + (24 / num - 1) * (300 + 4096 / 8) + (num - 1) * (24 / num) * (150 + 4096 / 16)
+    #         latencies.append(latency)
+    #         print(latency)
+
+    # # 创建三维图形
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+
+    # chiplet_positions = [draw_dict[p] for p in chiplet_parameters]
+
+    # # 绘制三维散点图
+    # scatter = ax.scatter(chiplet_positions, np.log2(local_memory_bandwidth_parameters), latencies, c=chiplet_positions, cmap='viridis', alpha=1)
+    # plt.xticks(ticks=range(len(num_chiplets)), labels=num_chiplets)
+    # plt.yticks(ticks=(13, 12, 11, 10, 9, 8), labels=(8192, 4096, 2048, 1024, 512, 256))
+
+    # # ax.plot(chiplet_positions, np.log2(local_memory_bandwidth_parameters), latencies, color='r', label='Line along x')
+
+    # # 添加坐标轴标签
+    # ax.set_xlabel('Number of Chiplets')
+    # ax.set_ylabel('Local Memory Bandwidth (B/cycle)')
+    # ax.set_zlabel('Latency (Cycles)')
+
+    # colorbar = plt.colorbar(scatter, ax=ax, shrink=0.5, aspect=10)
+    # colorbar.set_label('Number of Chiplets')
+    # plt.gca().invert_yaxis()
+
+    # # 显示图形
+    # ax.view_init(elev=30, azim=-45)
+    # plt.savefig("test/exp/decode_chiplet_local_bandwidth" + '.png', dpi=300)
     mac_array1 = {256: [83, 83], 512: [82, 82], 1024: [80, 80], 2048: [74, 74], 4096: [64, 64], 8192: [32, 32]}
-    latencies = []
+    latencies = np.zeros((7, 6))
     noc_bandwidth_parameters = []
     local_memory_latency_parameters = []
     local_memory_bandwidth_parameters = []
     chiplet_parameters = []
-    local_memory_bandwidth1 = (8192, 4096, 2048, 1024, 512, 256)
-    for local_memory_bandwidth in local_memory_bandwidth1:
+    local_memory_bandwidth1 = (256, 512, 1024, 2048, 4096, 8192)
+    num_chiplets = (1, 2, 3, 4, 6, 8, 12)
+    for j in range(len(local_memory_bandwidth1)):
         latency, routing = simulate_decoder_mlp_1mb(
-            {'local_memory_bandwidth': local_memory_bandwidth,
-             'mac_array': mac_array1[local_memory_bandwidth]}, 
+            {'local_memory_bandwidth': local_memory_bandwidth1[j],
+             'mac_array': mac_array1[local_memory_bandwidth1[j]]}, 
             is_weight_onchip=True, 
             split_vector=SplitVector(batch=1, token=1, nf=128))
         compute = (latency - routing * 3) * 8
-        for num in (1, 2, 3, 4, 6, 8, 12, 24):
-            local_memory_bandwidth_parameters.append(local_memory_bandwidth)
-            chiplet_parameters.append(num)
-            latency = compute + (24 / num - 1) * (300 + 4096 / 8) + (num - 1) * (24 / num) * (150 + 4096 / 16)
-            latencies.append(latency)
-            print(latency)
+        for i in range(len(num_chiplets)):
+            latency = compute + (24 / num_chiplets[i] - 1) * (300 + 4096 / 8) + (num_chiplets[i] - 1) * (24 / num_chiplets[i]) * (150 + 4096 / 16)
+            latencies[i][j] = latency
 
-    # 创建三维图形
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    # 创建二维色度图
+    fig, ax = plt.subplots()
+    c = ax.imshow(latencies, cmap='PuBuGn', origin='lower', aspect='auto', vmin=50000, vmax=185000)
+    colorbar = fig.colorbar(c, ax=ax, fraction=0.035, pad=0.03)
+    colorbar.ax.set_ylabel('Latency (K Cycle)', fontsize=14)
 
-    chiplet_positions = [draw_dict[p] for p in chiplet_parameters]
+    for i in range(latencies.shape[0]):
+        for j in range(latencies.shape[1]):
+            if latencies[i, j] > 140000:
+                ax.text(j, i, f'{int(latencies[i, j]):d}', ha='center', va='center', color='white', fontsize=12)
+            else:
+                ax.text(j, i, f'{int(latencies[i, j]):d}', ha='center', va='center', color='black', fontsize=12)
 
-    # 绘制三维散点图
-    scatter = ax.scatter(chiplet_positions, np.log2(local_memory_bandwidth_parameters), latencies, c=chiplet_positions, cmap='viridis', alpha=1)
-    plt.xticks(ticks=range(len(num_chiplets)), labels=num_chiplets)
-    plt.yticks(ticks=(13, 12, 11, 10, 9, 8), labels=(8192, 4096, 2048, 1024, 512, 256))
+    ax.set_xticks(np.arange(latencies.shape[1]))
+    ax.set_yticks(np.arange(latencies.shape[0]))
+    ax.set_yticklabels((1, 2, 3, 4, 6, 8, 12), fontsize=12)
+    ax.set_xticklabels((256, 512, 1024, 2048, 4096, 8192), fontsize=12)
 
-    # ax.plot(chiplet_positions, np.log2(local_memory_bandwidth_parameters), latencies, color='r', label='Line along x')
+    plt.ylabel('Number of Chiplets', fontsize=14)
+    plt.xlabel('Local Memory Bandwidth (B/cycle)', fontsize=14)
+    plt.tight_layout()
 
-    # 添加坐标轴标签
-    ax.set_xlabel('Number of Chiplets')
-    ax.set_ylabel('Local Memory Bandwidth (B/cycle)')
-    ax.set_zlabel('Latency (Cycles)')
+    plt.savefig("test/exp/decode_attention_chiplet_bandwidth" + '.png', dpi=300, transparent=True)
 
-    colorbar = plt.colorbar(scatter, ax=ax, shrink=0.5, aspect=10)
-    colorbar.set_label('Number of Chiplets')
-    plt.gca().invert_yaxis()
 
-    # 显示图形
-    ax.view_init(elev=30, azim=-45)
-    plt.savefig("test/exp/decode_chiplet_local_bandwidth" + '.png', dpi=300)
+    noc_bandwidth_parameters = (4, 8, 16, 32, 64)
+    latencies = np.zeros((7, 5))
+    num_chiplets = (1, 2, 3, 4, 6, 8, 12)
+    for j in range(len(noc_bandwidth_parameters)):
+        latency, routing = simulate_decoder_mlp_1mb(
+            {'noc_bandwidth': noc_bandwidth_parameters[j]}, 
+            is_weight_onchip=True, 
+            split_vector=SplitVector(batch=1, token=1, nf=128))
+        compute = (latency - routing * 3) * 8
+        for i in range(len(num_chiplets)):
+            latency = compute + (24 / num_chiplets[i] - 1) * (300 + 4096 / 8) + (num_chiplets[i] - 1) * (24 / num_chiplets[i]) * (150 + 4096 / 16)
+            latencies[i][j] = latency
+
+    # 创建二维色度图
+    fig, ax = plt.subplots()
+    c = ax.imshow(latencies, cmap='PuBuGn', origin='lower', aspect='auto', vmin=50000, vmax=185000)
+    colorbar = fig.colorbar(c, ax=ax, fraction=0.035, pad=0.03)
+    colorbar.ax.set_ylabel('Latency (Cycle)', fontsize=14)
+
+    for i in range(latencies.shape[0]):
+        for j in range(latencies.shape[1]):
+            if latencies[i, j] > 140000:
+                ax.text(j, i, f'{int(latencies[i, j]):d}', ha='center', va='center', color='white', fontsize=12)
+            else:
+                ax.text(j, i, f'{int(latencies[i, j]):d}', ha='center', va='center', color='black', fontsize=12)
+
+    ax.set_xticks(np.arange(latencies.shape[1]))
+    ax.set_yticks(np.arange(latencies.shape[0]))
+    ax.set_yticklabels((1, 2, 3, 4, 6, 8, 12), fontsize=12)
+    ax.set_xticklabels(noc_bandwidth_parameters, fontsize=12)
+
+    plt.ylabel('Number of Chiplets', fontsize=14)
+    plt.xlabel('NoC Bandwidth (B/cycle)', fontsize=14)
+    plt.tight_layout()
+
+    plt.savefig("test/exp/decode_attention_chiplet_noc_bandwidth" + '.png', dpi=300, transparent=True)
+
+
+    local_memory_latency_parameters = list(range(10, 1, -2))
+    latencies = np.zeros((7, 5))
+    num_chiplets = (1, 2, 3, 4, 6, 8, 12)
+    for j in range(len(local_memory_latency_parameters)):
+        latency, routing = simulate_decoder_mlp_1mb(
+            {'local_memory_latency': local_memory_latency_parameters[j]}, 
+            is_weight_onchip=True, 
+            split_vector=SplitVector(batch=1, token=1, nf=128))
+        compute = (latency - routing * 3) * 8
+        for i in range(len(num_chiplets)):
+            latency = compute + (24 / num_chiplets[i] - 1) * (300 + 4096 / 8) + (num_chiplets[i] - 1) * (24 / num_chiplets[i]) * (150 + 4096 / 16)
+            latencies[i][j] = latency
+
+    # 创建二维色度图
+    fig, ax = plt.subplots()
+    c = ax.imshow(latencies, cmap='PuBuGn', origin='lower', aspect='auto', vmin=50000, vmax=185000)
+    colorbar = fig.colorbar(c, ax=ax, fraction=0.035, pad=0.03)
+    colorbar.ax.set_ylabel('Latency (Cycle)', fontsize=14)
+    colorbar.ax.tick_params(labelsize=12)
+
+    for i in range(latencies.shape[0]):
+        for j in range(latencies.shape[1]):
+            if latencies[i, j] > 140000:
+                ax.text(j, i, f'{int(latencies[i, j]):d}', ha='center', va='center', color='white', fontsize=12)
+            else:
+                ax.text(j, i, f'{int(latencies[i, j]):d}', ha='center', va='center', color='black', fontsize=12)
+
+    ax.set_xticks(np.arange(latencies.shape[1]))
+    ax.set_yticks(np.arange(latencies.shape[0]))
+    ax.set_yticklabels((1, 2, 3, 4, 6, 8, 12), fontsize=12)
+    ax.set_xticklabels(range(10, 1, -2), fontsize=12)
+
+    plt.ylabel('Number of Chiplets', fontsize=14)
+    plt.xlabel('Local Memory Latency (B/cycle)', fontsize=14)
+    plt.tight_layout()
+
+    plt.savefig("test/exp/decode_attention_chiplet_latency" + '.png', dpi=300, transparent=True)
+
 
     noc_bandwidth_parameters = []
     local_memory_latency_parameters = []

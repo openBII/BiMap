@@ -1,3 +1,4 @@
+from matplotlib.ticker import ScalarFormatter
 from src.simulator.resource_simulator.st_env import STEnv, LoopInfo
 from src.simulator.task_rabbit.task_model.shape import Shape, SplitVector
 from src.simulator.task_rabbit.task_model.precision import Precision
@@ -46,6 +47,8 @@ def update_hardware(config: BoardConfig, hardware_parameter_dict={}):
             config.chiplet.core.local_memory["latency"] = hardware_parameter_dict[type]
         elif type == "local_memory_bandwidth":
             config.chiplet.core.local_memory["bandwidth"] = hardware_parameter_dict[type]
+        else:
+            raise NotImplementedError
 
 
 def simulate_tiled_mlp(config_file: str,
@@ -807,15 +810,140 @@ latency4 = simulate_tiled_attention(config_file="shared_memory_board128",
                                     calculate_extra_latency=calculate_extra_latency4,
                                     loop_info=LoopInfo(start=1, end=22, num=8))
 
-numbers = ["(128, 512, 64, 256)", "(192, 256, 32, 512)", "(256, 128, 16, 128)", "(32, 128, 128, 128)"]
-latencies = [latency1, latency2, latency3, latency4]
+numbers = ["(256, 128, 16, 128)", "(192, 256, 32, 512)", "(128, 512, 64, 256)", "(32, 128, 128, 128)"]
+latencies = [latency3, latency2, latency1, latency4]
 plt.plot(numbers, latencies, marker='o')
 plt.title("GPU-Like Shared Memory")
 plt.xlabel("Hardware Parameter")
 plt.ylabel("Latency")
 plt.xticks(rotation=45)  # 旋转x轴标签，使其更易读
 plt.tight_layout()       # 自动调整布局
-plt.savefig('temp/shared_memory_compute_memory.png', dpi=300)
+plt.savefig('test/exp/shared_memory_compute_memory.png', dpi=300)
+
+# Shared Memory Bandwidth
+latencies = np.zeros((6, 4))
+shared_memory_bandwidth = (256, 512, 1024, 2048, 4096, 8192)
+
+for j in range(4):
+    for i in range(6):
+        if j == 0:
+            latency = simulate_tiled_attention(config_file="shared_memory_board16",
+                                               mlp_input_offchip_split_vector=SplitVector(),
+                                               mlp_weight_offchip_split_vector=SplitVector(),
+                                               mlp_input_l1_split_vector=SplitVector(batch=8, token=256),
+                                               mlp_weight_l1_split_vector=SplitVector(nf=512),
+                                               qk_input_l1_split_vector=SplitVector(batch=8, token=256),
+                                               qk_weight_l1_split_vector=SplitVector(batch=8, token=256),
+                                               v_input_l1_split_vector=SplitVector(batch=8, token=128),
+                                               v_weight_l1_split_vector=SplitVector(batch=8, nf=256),
+                                               input_offchip_split_vector=SplitVector(),
+                                               weight_offchip_split_vector=SplitVector(),
+                                               input_l1_split_vector=SplitVector(batch=8, token=256),
+                                               weight_l1_split_vector=SplitVector(batch=8, token=256),
+                                               add_split_vector=SplitVector(batch=8, token=128),
+                                               value_offchip_split_vector=SplitVector(),
+                                               value_l1_split_vector=SplitVector(batch=8, nf=256),
+                                               output_offchip_split_vector=SplitVector(),
+                                               calculate_extra_latency=calculate_extra_latency3,
+                                               loop_info=LoopInfo(start=9, end=14, num=8),
+                                               hardware_parameter_dict={'shared_memory_bandwidth': shared_memory_bandwidth[i]})
+            latencies[i][j] = latency
+        if j == 1:
+            latency = simulate_tiled_attention(config_file="shared_memory_board32",
+                                               mlp_input_offchip_split_vector=SplitVector(),
+                                               mlp_weight_offchip_split_vector=SplitVector(),
+                                               mlp_input_l1_split_vector=SplitVector(batch=8, token=128),
+                                               mlp_weight_l1_split_vector=SplitVector(nf=256),
+                                               qk_input_l1_split_vector=SplitVector(batch=8, token=128),
+                                               qk_weight_l1_split_vector=SplitVector(batch=8, token=128),
+                                               v_input_l1_split_vector=SplitVector(batch=8, token=32),
+                                               v_weight_l1_split_vector=SplitVector(batch=8, nf=128),
+                                               v_weight_offchip_split_vector=SplitVector(batch=2),
+                                               input_offchip_split_vector=SplitVector(batch=2),
+                                               weight_offchip_split_vector=SplitVector(batch=2),
+                                               input_l1_split_vector=SplitVector(batch=8, token=128),
+                                               weight_l1_split_vector=SplitVector(batch=8, token=128),
+                                               add_split_vector=SplitVector(batch=8, token=64),
+                                               value_offchip_split_vector=SplitVector(batch=2),
+                                               value_l1_split_vector=SplitVector(batch=8, nf=128),
+                                               output_offchip_split_vector=SplitVector(batch=2),
+                                               calculate_extra_latency=calculate_extra_latency2,
+                                               loop_info=LoopInfo(start=1, end=22, num=1),
+                                               hardware_parameter_dict={'shared_memory_bandwidth': shared_memory_bandwidth[i]})
+            latencies[i][j] = latency
+        if j == 2:
+            latency = simulate_tiled_attention(config_file="shared_memory_board64",
+                                               mlp_input_offchip_split_vector=SplitVector(batch=2),
+                                               mlp_weight_offchip_split_vector=SplitVector(),
+                                               mlp_input_l1_split_vector=SplitVector(batch=8, token=64),
+                                               mlp_weight_l1_split_vector=SplitVector(nf=128),
+                                               qk_input_l1_split_vector=SplitVector(batch=8, token=64),
+                                               qk_weight_l1_split_vector=SplitVector(batch=8, token=128),
+                                               v_input_l1_split_vector=SplitVector(batch=8, token=32),
+                                               v_weight_l1_split_vector=SplitVector(batch=8, nf=128),
+                                               input_offchip_split_vector=SplitVector(batch=2),
+                                               weight_offchip_split_vector=SplitVector(batch=2),
+                                               input_l1_split_vector=SplitVector(batch=8, token=64),
+                                               weight_l1_split_vector=SplitVector(batch=8, token=128),
+                                               add_split_vector=SplitVector(batch=8, token=32),
+                                               value_offchip_split_vector=SplitVector(batch=2),
+                                               value_l1_split_vector=SplitVector(batch=8, nf=128),
+                                               output_offchip_split_vector=SplitVector(batch=2),
+                                               calculate_extra_latency=calculate_extra_latency1,
+                                               loop_info=LoopInfo(start=1, end=22, num=1),
+                                               hardware_parameter_dict={'shared_memory_bandwidth': shared_memory_bandwidth[i]})
+            latencies[i][j] = latency
+        if j == 3:
+            latency = simulate_tiled_attention(config_file="shared_memory_board128",
+                                               mlp_input_offchip_split_vector=SplitVector(batch=8),
+                                               mlp_weight_offchip_split_vector=SplitVector(nf=2),
+                                               mlp_input_l1_split_vector=SplitVector(batch=8, token=256),
+                                               mlp_weight_l1_split_vector=SplitVector(nf=512),
+                                               qk_input_l1_split_vector=SplitVector(batch=8, token=256),
+                                               qk_weight_l1_split_vector=SplitVector(batch=8, token=256),
+                                               v_input_l1_split_vector=SplitVector(batch=8, token=128),
+                                               v_weight_l1_split_vector=SplitVector(batch=8, nf=256),
+                                               input_offchip_split_vector=SplitVector(batch=8),
+                                               weight_offchip_split_vector=SplitVector(batch=8),
+                                               input_l1_split_vector=SplitVector(batch=8, token=256),
+                                               weight_l1_split_vector=SplitVector(batch=8, token=256),
+                                               add_split_vector=SplitVector(batch=8, token=128),
+                                               value_offchip_split_vector=SplitVector(batch=8),
+                                               value_l1_split_vector=SplitVector(batch=8, nf=256),
+                                               output_offchip_split_vector=SplitVector(batch=8),
+                                               calculate_extra_latency=calculate_extra_latency4,
+                                               loop_info=LoopInfo(start=1, end=22, num=8),
+                                               hardware_parameter_dict={'shared_memory_bandwidth': shared_memory_bandwidth[i]})
+            latencies[i][j] = latency
+
+# 创建二维色度图
+fig, ax = plt.subplots()
+c = ax.imshow(latencies / 1000000, cmap='GnBu', origin='lower', aspect=1)
+colorbar = fig.colorbar(c, ax=ax, fraction=0.03, pad=0.04)
+colorbar.ax.set_ylabel('Latency (M Cycle)', fontsize=14)
+colorbar.ax.tick_params(labelsize=12)
+colorbar.formatter = ScalarFormatter(useMathText=True)
+colorbar.formatter.set_scientific(True)
+colorbar.formatter.set_powerlimits((-1, 1))
+colorbar.update_ticks()
+
+for i in range(latencies.shape[0]):
+    for j in range(latencies.shape[1]):
+        if latencies[i, j] > 350000000:
+            ax.text(j, i, f'{int(latencies[i, j] / 1000000):d}', ha='center', va='center', color='white', fontsize=12)
+        else:
+            ax.text(j, i, f'{int(latencies[i, j] / 1000000):d}', ha='center', va='center', color='black', fontsize=12)
+
+ax.set_xticks(np.arange(latencies.shape[1]), pad=0)
+ax.set_yticks(np.arange(latencies.shape[0]))
+ax.set_xticklabels(("(256, 128, 16)", "(192, 256, 32)", "(128, 512, 64)", "(32, 128, 128)"), fontsize=12, rotation=20)
+ax.set_yticklabels(shared_memory_bandwidth, fontsize=12)
+
+plt.xlabel('Compute-Memory Configuration', fontsize=14)
+plt.ylabel('Shared Memory Bandwidth\n(B/cycle)', fontsize=14)
+plt.tight_layout()
+
+plt.savefig("test/exp/gpu_prefill_shared_bandwidth" + '.png', dpi=300, transparent=True)
 
 # noc_bandwidth_paramters = []
 # noc_bandwidth_latencies = []

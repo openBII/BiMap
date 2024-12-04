@@ -99,25 +99,34 @@ def simulate_chiplet_decoder_1mb(chip_num: int, hardware_paramter_dict: Dict[str
         cyclic=1,
         cyclic_from_offchip=True
     )
-    STDraw.draw_graph(task_graph, out_path='temp/tiled_attention.task.html',
+    STDraw.draw_graph(task_graph, out_path='temp/multi_package.task.html',
                         width='1920px', height='1080px')
 
     # Update Hardware Configuration
     config = toml.load("top/distributed_many_core_package{:d}.toml".format(chip_num))
     config = BoardConfig(config["PCB"], config["process_node"])
-    chiplet_board = BoardFactory.create_matrix(config, 
-                                               BoardType.PACKAGE)
     for type in hardware_paramter_dict:
         if type == "noc_bandwidth":
-            config.package.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
+            config.compute_domain.package.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
         elif type == "local_memory_latency":
-            config.package.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
+            config.compute_domain.package.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
         elif type == "local_memory_bandwidth":
-            config.package.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+            config.compute_domain.package.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "nop_bandwidth":
+            config.compute_domain.package.network["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "nop_latency":
+            config.compute_domain.package.network["latency"] = hardware_paramter_dict[type]
+        else:
+            raise NotImplementedError
 
     config.compute_domain.package.chiplet.core.mac_array["fp16"]["parallelism"] = [128, 128]
     config.compute_domain.package.chiplet.core.vector_unit["fp16"]["parallelism"] = 128
     config.compute_domain.package.chiplet.core.local_memory["capacity"] = 1 * 1024
+    config.compute_domain.package.chiplet.core.mac_array["fp16"]["latency"] = 256
+
+    # Create Hardware
+    chiplet_board = BoardFactory.create_matrix(config, 
+                                               BoardType.PACKAGE)
 
     # Create DSE snvironment
     env = STEnv(task_graph, chiplet_board)
@@ -252,11 +261,26 @@ def simulate_chiplet_decoder_1mb(chip_num: int, hardware_paramter_dict: Dict[str
         sync_dict[i] = 30
     sync_dict[52] = 50
     sync_dict[57] = 54
+    compute_time = env.get_compute_time(loops=[
+        LoopInfo(input_offchip.id,                                  arrange_q_task_dict["output"].id, 2, True),     # Q, K, V Loop
+        LoopInfo(mlp_task_dict["cyclic_weight_on_chip"].id,         mlp_task_dict["cyclic_compute"].id, 12-3), # Q,K,V cyclic
+        LoopInfo(dot_product_task_dict["cyclic_weight_offchip"].id, dot_product_task_dict["cyclic_compute"].id, 1), # Q * K cyclic
+        LoopInfo(attention_task_dict["cyclic_weight_offchip"].id,   attention_task_dict["cyclic_compute"].id, 1)  # Q * K cyclic
+        ], sync=sync_dict)
+    # communication_time = env.get_communication_time(loops=[
+    #     LoopInfo(input_offchip.id,                                  arrange_q_task_dict["output"].id, 2, True),     # Q, K, V Loop
+    #     LoopInfo(mlp_task_dict["cyclic_weight_on_chip"].id,         mlp_task_dict["cyclic_compute"].id, 12-3), # Q,K,V cyclic
+    #     LoopInfo(dot_product_task_dict["cyclic_weight_offchip"].id, dot_product_task_dict["cyclic_compute"].id, 1), # Q * K cyclic
+    #     LoopInfo(attention_task_dict["cyclic_weight_offchip"].id,   attention_task_dict["cyclic_compute"].id, 1)  # Q * K cyclic
+    #     ], sync=sync_dict)
     # pipeline_recorder1 = env.collect_time(sync=sync_dict)
     # print(pipeline_recorder1[task_graph[59]])
     # pipeline_recorder2 = env.collect_time()
-    # recorder = env.collect_time(pipeline=False)
-    # latency1 = env.get_latency()
+    pipeline_recorder = env.collect_time(sync=sync_dict)
+    recorder = env.collect_time(pipeline=False)
+    # recorder2 = env.collect_time(sync=sync_dict, access_compute_pipeline=True)
+    # latency1 = env.get_latency_pipeline(sync=sync_dict, 
+    #                                     access_compute_pipeline=True)
     # latency2 = env.get_latency_pipeline(sync=sync_dict)
     # latency3 = env.get_latency_pipeline(pipeline=False)
     overall_latency = env.get_latency_pipeline(loops=[
@@ -265,12 +289,12 @@ def simulate_chiplet_decoder_1mb(chip_num: int, hardware_paramter_dict: Dict[str
         LoopInfo(dot_product_task_dict["cyclic_weight_offchip"].id, dot_product_task_dict["cyclic_compute"].id, 1), # Q * K cyclic
         LoopInfo(attention_task_dict["cyclic_weight_offchip"].id,   attention_task_dict["cyclic_compute"].id, 1)  # Q * K cyclic
         ], sync=sync_dict)
-    return overall_latency
+    return max(overall_latency - compute_time, compute_time)
 
 
 def simulate_chiplet_decoder_2mb(chip_num: int, hardware_paramter_dict: Dict[str, int], ram):
     assert ram == 2
-    assert(chip_num in [2, 4, 8, 16])
+    assert (chip_num in [1, 2, 4, 8, 16])
     # Construct Task Graph
     IDGenerator.set_base_task_id(0)
     task_graph = TaskGraph()
@@ -332,25 +356,32 @@ def simulate_chiplet_decoder_2mb(chip_num: int, hardware_paramter_dict: Dict[str
         is_output=True,
         output_offchip=True
     )
-    STDraw.draw_graph(task_graph, out_path='temp/tiled_attention.task.html',
+    STDraw.draw_graph(task_graph, out_path='temp/tiled_attention_2mb.task.html',
                         width='1920px', height='1080px')
 
     # Update Hardware Configuration
-    config = toml.load("top/distributed_many_core_chiplet{:d}.toml".format(chip_num))
+    config = toml.load("top/distributed_many_core_package{:d}.toml".format(chip_num))
     config = BoardConfig(config["PCB"], config["process_node"])
-    chiplet_board = BoardFactory.create_matrix(config, 
-                                            BoardType.CHIPLET)
     for type in hardware_paramter_dict:
         if type == "noc_bandwidth":
-            config.package.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
+            config.compute_domain.package.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
         elif type == "local_memory_latency":
-            config.package.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
+            config.compute_domain.package.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
         elif type == "local_memory_bandwidth":
-            config.package.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+            config.compute_domain.package.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "nop_bandwidth":
+            config.compute_domain.package.network["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "nop_latency":
+            config.compute_domain.package.network["latency"] = hardware_paramter_dict[type]
+        else:
+            raise NotImplementedError
+    config.compute_domain.package.chiplet.core.mac_array["fp16"]["parallelism"] = [64, 64]
+    config.compute_domain.package.chiplet.core.vector_unit["fp16"]["parallelism"] = 512
+    config.compute_domain.package.chiplet.core.local_memory["capacity"] = 2 * 1024
+    config.compute_domain.package.chiplet.core.mac_array["fp16"]["latency"] = 128
 
-    config.package.chiplet.core.mac_array["fp16"]["parallelism"] = [64, 64]
-    config.package.chiplet.core.vector_unit["fp16"]["parallelism"] = 512
-    config.package.chiplet.core.local_memory["capacity"] = 2 * 1024
+    chiplet_board = BoardFactory.create_matrix(config, 
+                                               BoardType.PACKAGE)
 
     # Create DSE snvironment
     env = STEnv(task_graph, chiplet_board)
@@ -364,21 +395,24 @@ def simulate_chiplet_decoder_2mb(chip_num: int, hardware_paramter_dict: Dict[str
     # DRAM
     dram = create_mlcoord(DRAM)
 
-    local_memory = create_mlcoord(COMPUTE, (0, 0), (0, 0), SRAM_BUFFER)
-    arrange_q_local_memory = create_mlcoord(COMPUTE, (0, 0), (0, 0), SRAM_BUFFER)
-    arrange_qk_local_memory = create_mlcoord(COMPUTE, (0, 0), (0, 0), SRAM_BUFFER)
-    if chip_num == 2:
-        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (1, 0), (7, 0), SRAM_BUFFER)
-        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (1, 0), (7, 0), SRAM_BUFFER)
+    local_memory = create_mlcoord(COMPUTE, (0, 0), (0, 0), (0, 0), SRAM_BUFFER)
+    arrange_q_local_memory = create_mlcoord(COMPUTE, (0, 0), (0, 0), (0, 0), SRAM_BUFFER)
+    arrange_qk_local_memory = create_mlcoord(COMPUTE, (0, 0), (0, 0), (0, 0), SRAM_BUFFER)
+    if chip_num == 1:
+        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (15, 0), (0, 0), (0, 0), SRAM_BUFFER)
+        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (15, 0), (0, 0), (0, 0), SRAM_BUFFER)
+    elif chip_num == 2:
+        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (7, 0), (1, 0), (0, 0), SRAM_BUFFER)
+        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (7, 0), (1, 0), (0, 0), SRAM_BUFFER)
     elif chip_num == 4:
-        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (3, 0), (3, 0), SRAM_BUFFER)
-        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (3, 0), (3, 0), SRAM_BUFFER)
+        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (3, 0), (3, 0), (0, 0), SRAM_BUFFER)
+        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (3, 0), (3, 0), (0, 0), SRAM_BUFFER)
     elif chip_num == 8:
-        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (7, 0), (1, 0), SRAM_BUFFER)
-        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (7, 0), (1, 0), SRAM_BUFFER)
+        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (1, 0), (7, 0), (0, 0), SRAM_BUFFER)
+        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (1, 0), (7, 0), (0, 0), SRAM_BUFFER)
     elif chip_num == 16:
-        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (15, 0), (0, 0), SRAM_BUFFER)
-        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (15, 0), (0, 0), SRAM_BUFFER)
+        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (0, 0), (15, 0), (0, 0), SRAM_BUFFER)
+        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (0, 0), (15, 0), (0, 0), SRAM_BUFFER)
 
     sync_id1 = env.get_sync_id()
     sync_id2 = env.get_sync_id()
@@ -390,7 +424,7 @@ def simulate_chiplet_decoder_2mb(chip_num: int, hardware_paramter_dict: Dict[str
     env.put_in(local_memory, mlp_task_dict["input_on_chip"].id)
     env.put_in(dram, mlp_task_dict["weight_offchip"].id)
     env.put_in(local_memory, mlp_task_dict["weight_on_chip"].id) 
-    tensor_unit = create_mlcoord(COMPUTE, (0, 0), (0, 0), TENSOR_UNIT)
+    tensor_unit = create_mlcoord(COMPUTE, (0, 0), (0, 0), (0, 0), TENSOR_UNIT)
     env.put_in(tensor_unit, mlp_task_dict["compute"].id)
 
     # sync 1
@@ -399,7 +433,6 @@ def simulate_chiplet_decoder_2mb(chip_num: int, hardware_paramter_dict: Dict[str
 
     # Q,K,V cyclic
     env.put_in(local_memory, mlp_task_dict["cyclic_weight_on_chip"].id)
-    tensor_unit = create_mlcoord(COMPUTE, (0, 0), (0, 0), TENSOR_UNIT)
     env.put_in(tensor_unit, mlp_task_dict["cyclic_compute"].id)
 
     # sync 2
@@ -417,7 +450,6 @@ def simulate_chiplet_decoder_2mb(chip_num: int, hardware_paramter_dict: Dict[str
     # Q * K
     env.put_in(dram, dot_product_task_dict["weight_offchip"].id)
     env.put_in(local_memory, dot_product_task_dict["weight_on_chip"].id)
-    tensor_unit = create_mlcoord(COMPUTE, (0, 0), (0, 0), TENSOR_UNIT)
     env.put_in(tensor_unit, dot_product_task_dict["compute"].id)
 
     # sync 3
@@ -432,7 +464,7 @@ def simulate_chiplet_decoder_2mb(chip_num: int, hardware_paramter_dict: Dict[str
     env.put_in(local_memory, arrange_qk_task_dict["output"].id)
 
     # softmax
-    vector_unit = create_mlcoord(COMPUTE, (0, 0), (0, 0), VECTOR_UNIT)
+    vector_unit = create_mlcoord(COMPUTE, (0, 0), (0, 0), (0, 0), VECTOR_UNIT)
     env.put_in(vector_unit, softmax_task_dict["compute"].id)
 
     # sync 4
@@ -444,7 +476,6 @@ def simulate_chiplet_decoder_2mb(chip_num: int, hardware_paramter_dict: Dict[str
     env.put_in(dram, attention_task_dict["weight_offchip"].id)
     env.put_in(local_memory, attention_task_dict["weight_on_chip"].id)
     env.put_in(local_memory, attention_task_dict["output_on_chip"].id)
-    tensor_unit = create_mlcoord(COMPUTE, (0, 0), (0, 0), TENSOR_UNIT)
     env.put_in(tensor_unit, attention_task_dict["compute"].id)
     env.put_in(dram, attention_task_dict["output_offchip"].id)
 
@@ -453,15 +484,35 @@ def simulate_chiplet_decoder_2mb(chip_num: int, hardware_paramter_dict: Dict[str
 
     env.simulate()
     # env.show_overall_time()
-    overall_latency = env.get_latency(loops=[
+    sync_dict = {}
+    sync_dict[8] = 5
+    for i in range(9, 24):
+        sync_dict[i] = 7
+    sync_dict[26] = 7
+    sync_dict[31] = 28
+    for i in range(30, 45):
+        sync_dict[i] = 28
+    sync_dict[49] = 47
+    compute_time = env.get_compute_time(loops=[
         LoopInfo(input_offchip.id, arrange_q_task_dict["output"].id, 2)     # Q, K, V Loop
-        ])
-    return overall_latency
+        ], sync=sync_dict)
+    
+    overall_latency = env.get_latency_pipeline(loops=[
+        LoopInfo(input_offchip.id, arrange_q_task_dict["output"].id, 2)     # Q, K, V Loop
+        ], sync=sync_dict)
+    
+    pipeline_recorder = env.collect_time(sync=sync_dict)
+    recorder = env.collect_time(pipeline=False)
+    
+    # overall_latency = env.get_latency(loops=[
+    #     LoopInfo(input_offchip.id, arrange_q_task_dict["output"].id, 2)     # Q, K, V Loop
+    #     ])
+    return max(overall_latency - compute_time, compute_time)
 
 
 # 2.5MB == 3MB
 def simulate_chiplet_decoder_2p5mb(chip_num: int, hardware_paramter_dict: Dict[str, int], ram):  # 2, 4, 8, 16
-    assert(chip_num in [2, 4, 8, 16])
+    assert(chip_num in [1, 2, 4, 8, 16])
     # Construct Task Graph
     IDGenerator.set_base_task_id(0)
     task_graph = TaskGraph()
@@ -525,28 +576,37 @@ def simulate_chiplet_decoder_2p5mb(chip_num: int, hardware_paramter_dict: Dict[s
                         width='1920px', height='1080px')
 
     # Create Hardware
-    config = toml.load("top/distributed_many_core_chiplet{:d}.toml".format(chip_num))
+    config = toml.load("top/distributed_many_core_package{:d}.toml".format(chip_num))
     config = BoardConfig(config["PCB"], config["process_node"])
-    chiplet_board = BoardFactory.create_matrix(config, 
-                                            BoardType.CHIPLET)
     for type in hardware_paramter_dict:
         if type == "noc_bandwidth":
-            config.package.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
+            config.compute_domain.package.chiplet.network["bandwidth"] = hardware_paramter_dict[type]
         elif type == "local_memory_latency":
-            config.package.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
+            config.compute_domain.package.chiplet.core.local_memory["latency"] = hardware_paramter_dict[type]
         elif type == "local_memory_bandwidth":
-            config.package.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+            config.compute_domain.package.chiplet.core.local_memory["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "nop_bandwidth":
+            config.compute_domain.package.network["bandwidth"] = hardware_paramter_dict[type]
+        elif type == "nop_latency":
+            config.compute_domain.package.network["latency"] = hardware_paramter_dict[type]
+        else:
+            raise NotImplementedError
 
     if ram == 2.5:
-        config.package.chiplet.core.mac_array["fp16"]["parallelism"] = [32, 32]
-        config.package.chiplet.core.vector_unit["fp16"]["parallelism"] = 128
-        config.package.chiplet.core.local_memory["capacity"] = 2.5 * 1024
+        config.compute_domain.package.chiplet.core.mac_array["fp16"]["parallelism"] = [32, 32]
+        config.compute_domain.package.chiplet.core.vector_unit["fp16"]["parallelism"] = 128
+        config.compute_domain.package.chiplet.core.local_memory["capacity"] = 2.5 * 1024
+        config.compute_domain.package.chiplet.core.mac_array["fp16"]["latency"] = 64
     elif ram == 3:
-        config.package.chiplet.core.mac_array["fp16"]["parallelism"] = [16, 16]
-        config.package.chiplet.core.vector_unit["fp16"]["parallelism"] = 128
-        config.package.chiplet.core.local_memory["capacity"] = 3 * 1024
+        config.compute_domain.package.chiplet.core.mac_array["fp16"]["parallelism"] = [16, 16]
+        config.compute_domain.package.chiplet.core.vector_unit["fp16"]["parallelism"] = 128
+        config.compute_domain.package.chiplet.core.local_memory["capacity"] = 3 * 1024
+        config.compute_domain.package.chiplet.core.mac_array["fp16"]["latency"] = 32
     else:
         raise NotImplementedError
+    
+    chiplet_board = BoardFactory.create_matrix(config, 
+                                               BoardType.PACKAGE)
 
     # Create DSE snvironment
     env = STEnv(task_graph, chiplet_board)
@@ -560,21 +620,24 @@ def simulate_chiplet_decoder_2p5mb(chip_num: int, hardware_paramter_dict: Dict[s
     # DRAM
     dram = create_mlcoord(DRAM)
 
-    local_memory = create_mlcoord(COMPUTE, (0, 0), (0, 0), SRAM_BUFFER)
-    arrange_q_local_memory = create_mlcoord(COMPUTE, (0, 0), (0, 0), SRAM_BUFFER)
-    arrange_qk_local_memory = create_mlcoord(COMPUTE, (0, 0), (0, 0), SRAM_BUFFER)
-    if chip_num == 2:
-        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (1, 0), (7, 0), SRAM_BUFFER)
-        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (1, 0), (7, 0), SRAM_BUFFER)
+    local_memory = create_mlcoord(COMPUTE, (0, 0), (0, 0), (0, 0), SRAM_BUFFER)
+    arrange_q_local_memory = create_mlcoord(COMPUTE, (0, 0), (0, 0), (0, 0), SRAM_BUFFER)
+    arrange_qk_local_memory = create_mlcoord(COMPUTE, (0, 0), (0, 0), (0, 0), SRAM_BUFFER)
+    if chip_num == 1:
+        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (15, 0), (0, 0), (0, 0), SRAM_BUFFER)
+        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (15, 0), (0, 0), (0, 0), SRAM_BUFFER)
+    elif chip_num == 2:
+        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (7, 0), (1, 0), (0, 0), SRAM_BUFFER)
+        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (7, 0), (1, 0), (0, 0), SRAM_BUFFER)
     elif chip_num == 4:
-        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (3, 0), (3, 0), SRAM_BUFFER)
-        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (3, 0), (3, 0), SRAM_BUFFER)
+        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (3, 0), (3, 0), (0, 0), SRAM_BUFFER)
+        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (3, 0), (3, 0), (0, 0), SRAM_BUFFER)
     elif chip_num == 8:
-        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (7, 0), (1, 0), SRAM_BUFFER)
-        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (7, 0), (1, 0), SRAM_BUFFER)
+        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (1, 0), (7, 0), (0, 0), SRAM_BUFFER)
+        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (1, 0), (7, 0), (0, 0), SRAM_BUFFER)
     elif chip_num == 16:
-        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (15, 0), (0, 0), SRAM_BUFFER)
-        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (15, 0), (0, 0), SRAM_BUFFER)
+        arrange_q_arrange_memory = create_mlcoord(COMPUTE, (0, 0), (15, 0), (0, 0), SRAM_BUFFER)
+        arrange_qk_arrange_memory = create_mlcoord(COMPUTE, (0, 0), (15, 0), (0, 0), SRAM_BUFFER)
 
     sync_id1 = env.get_sync_id()
     sync_id2 = env.get_sync_id()
@@ -585,7 +648,7 @@ def simulate_chiplet_decoder_2p5mb(chip_num: int, hardware_paramter_dict: Dict[s
     env.put_in(local_memory, mlp_task_dict["input_on_chip"].id)
     env.put_in(dram, mlp_task_dict["weight_offchip"].id)
     env.put_in(local_memory, mlp_task_dict["weight_on_chip"].id) 
-    tensor_unit = create_mlcoord(COMPUTE, (0, 0), (0, 0), TENSOR_UNIT)
+    tensor_unit = create_mlcoord(COMPUTE, (0, 0), (0, 0), (0, 0), TENSOR_UNIT)
     env.put_in(tensor_unit, mlp_task_dict["compute"].id)
 
     # sync 1
@@ -603,7 +666,6 @@ def simulate_chiplet_decoder_2p5mb(chip_num: int, hardware_paramter_dict: Dict[s
     # Q * K
     env.put_in(dram, dot_product_task_dict["weight_offchip"].id)
     env.put_in(local_memory, dot_product_task_dict["weight_on_chip"].id)
-    tensor_unit = create_mlcoord(COMPUTE, (0, 0), (0, 0), TENSOR_UNIT)
     env.put_in(tensor_unit, dot_product_task_dict["compute"].id)
 
     # sync 2
@@ -618,7 +680,7 @@ def simulate_chiplet_decoder_2p5mb(chip_num: int, hardware_paramter_dict: Dict[s
     env.put_in(local_memory, arrange_qk_task_dict["output"].id)
 
     # softmax
-    vector_unit = create_mlcoord(COMPUTE, (0, 0), (0, 0), VECTOR_UNIT)
+    vector_unit = create_mlcoord(COMPUTE, (0, 0), (0, 0), (0, 0), VECTOR_UNIT)
     env.put_in(vector_unit, softmax_task_dict["compute"].id)
 
     # sync 3
@@ -630,7 +692,6 @@ def simulate_chiplet_decoder_2p5mb(chip_num: int, hardware_paramter_dict: Dict[s
     env.put_in(dram, attention_task_dict["weight_offchip"].id)
     env.put_in(local_memory, attention_task_dict["weight_on_chip"].id)
     env.put_in(local_memory, attention_task_dict["output_on_chip"].id)
-    tensor_unit = create_mlcoord(COMPUTE, (0, 0), (0, 0), TENSOR_UNIT)
     env.put_in(tensor_unit, attention_task_dict["compute"].id)
     env.put_in(dram, attention_task_dict["output_offchip"].id)
 
@@ -639,11 +700,21 @@ def simulate_chiplet_decoder_2p5mb(chip_num: int, hardware_paramter_dict: Dict[s
 
     env.simulate()
     # env.show_overall_time()
-    overall_latency = env.get_latency(loops=[
+    sync_dict = {}
+    for i in range(7, 22):
+        sync_dict[i] = 5
+    sync_dict[24] = 5
+    for i in range(28, 43):
+        sync_dict[i] = 26
+    sync_dict[47] = 45
+    compute_time = env.get_compute_time(loops=[
         LoopInfo(input_offchip.id, arrange_q_task_dict["output"].id, 2)     # Q, K, V Loop
-        ])
-
-    return overall_latency
+        ], sync=sync_dict)
+    
+    overall_latency = env.get_latency_pipeline(loops=[
+        LoopInfo(input_offchip.id, arrange_q_task_dict["output"].id, 2)     # Q, K, V Loop
+        ], sync=sync_dict)
+    return max(overall_latency - compute_time, compute_time)
 
 
 if __name__ == '__main__':
@@ -665,15 +736,48 @@ if __name__ == '__main__':
     # print(simulate_chiplet_decoder_2mb(4, {},  ram=2))
     # print(simulate_chiplet_decoder_2mb(8, {},  ram=2))
     # print(simulate_chiplet_decoder_2mb(16, {}, ram=2))
-    print("------1----")
-    latency1 = simulate_chiplet_decoder_1mb(1, {},  ram=1)
-    latency2 = simulate_chiplet_decoder_1mb(2, {},  ram=1)
-    latency3 = simulate_chiplet_decoder_1mb(4, {},  ram=1)
-    latency4 = simulate_chiplet_decoder_1mb(8, {},  ram=1)
-    latency5 = simulate_chiplet_decoder_1mb(16, {}, ram=1)
-    np.save('test/exp/multi_package_data.npy', np.array([latency1, latency2, latency3, latency4, latency5]))
-    print(latency1)
-    print(latency2)
-    print(latency3)
-    print(latency4)
-    print(latency5)
+    # print("------1------")
+    # latency1 = simulate_chiplet_decoder_1mb(1, {},  ram=1)
+    # latency2 = simulate_chiplet_decoder_1mb(2, {},  ram=1)
+    # latency3 = simulate_chiplet_decoder_1mb(4, {},  ram=1)
+    # latency4 = simulate_chiplet_decoder_1mb(8, {},  ram=1)
+    # latency5 = simulate_chiplet_decoder_1mb(16, {}, ram=1)
+    # data1_mcm = np.array([latency1, latency2, latency3, latency4, latency5])
+    # np.save('test/exp/multi_package_data_1mb_mcm.npy', data1_mcm)
+    # print(data1_mcm)
+    # hardware_parameter_dict = {"nop_bandwidth": 24, "nop_latency": 100}
+    # latency1 = simulate_chiplet_decoder_1mb(1, hardware_parameter_dict,  ram=1)
+    # latency2 = simulate_chiplet_decoder_1mb(2, hardware_parameter_dict,  ram=1)
+    # latency3 = simulate_chiplet_decoder_1mb(4, hardware_parameter_dict,  ram=1)
+    # latency4 = simulate_chiplet_decoder_1mb(8, hardware_parameter_dict,  ram=1)
+    # latency5 = simulate_chiplet_decoder_1mb(16, hardware_parameter_dict, ram=1)
+    # data1_si = np.array([latency1, latency2, latency3, latency4, latency5])
+    # np.save('test/exp/multi_package_data_1mb_cowos.npy', data1_si)
+    # print(data1_si)
+    print("------2------")
+    latency1 = simulate_chiplet_decoder_2mb(1, {},  ram=2)
+    latency2 = simulate_chiplet_decoder_2mb(2, {},  ram=2)
+    latency3 = simulate_chiplet_decoder_2mb(4, {},  ram=2)
+    latency4 = simulate_chiplet_decoder_2mb(8, {},  ram=2)
+    latency5 = simulate_chiplet_decoder_2mb(16, {}, ram=2)
+    data2_mcm = np.array([latency1, latency2, latency3, latency4, latency5])
+    np.save('test/exp/multi_package_data_2mb_mcm.npy', data2_mcm)
+    print(data2_mcm)
+    print("------2.5------")
+    latency1 = simulate_chiplet_decoder_2p5mb(1, {},  ram=2.5)
+    latency2 = simulate_chiplet_decoder_2p5mb(2, {},  ram=2.5)
+    latency3 = simulate_chiplet_decoder_2p5mb(4, {},  ram=2.5)
+    latency4 = simulate_chiplet_decoder_2p5mb(8, {},  ram=2.5)
+    latency5 = simulate_chiplet_decoder_2p5mb(16, {}, ram=2.5)
+    data2_5_mcm = np.array([latency1, latency2, latency3, latency4, latency5])
+    np.save('test/exp/multi_package_data_2.5mb_mcm.npy', data2_5_mcm)
+    print(data2_5_mcm)
+    print("------3------")
+    latency1 = simulate_chiplet_decoder_2p5mb(1, {},  ram=3)
+    latency2 = simulate_chiplet_decoder_2p5mb(2, {},  ram=3)
+    latency3 = simulate_chiplet_decoder_2p5mb(4, {},  ram=3)
+    latency4 = simulate_chiplet_decoder_2p5mb(8, {},  ram=3)
+    latency5 = simulate_chiplet_decoder_2p5mb(16, {}, ram=3)
+    data3_mcm = np.array([latency1, latency2, latency3, latency4, latency5])
+    np.save('test/exp/multi_package_data_3mb_mcm.npy', data3_mcm)
+    print(data3_mcm)
