@@ -1319,7 +1319,7 @@ class STEnv():
     def delete_column(self, space_coord):
         return self._actor.delete_column(space_coord)
 
-    def put_in(self, ml_coord: MLCoord, task_id):
+    def put_in(self, ml_coord: MLCoord, task_id: Union[int, TaskBlock]):
         self._actor.put_in(ml_coord, task_id)
         reverse_call = Call(self._actor.take_out, ml_coord, task_id)
         self._history.push_state(reverse_call)

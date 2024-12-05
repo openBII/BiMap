@@ -10,14 +10,15 @@ from src.simulator.resource_simulator.st_model.space_matrix.gpu_server_matrix im
 
 class ServerFactory(Factory):
     """
-    Factory class for creating ComputeChiplet objects
+    Factory class for creating server objects
     """
     @staticmethod
-    def create_matrix(config: ServerConfig, type: BoardType) -> STMatrix:
+    def create_matrix(config: ServerConfig) -> STMatrix:
         server = GPUServerMatrix(dim=2, space_level=4)
         for i in range(config.size[0]):
             for j in range(config.size[1]):
-                board = BoardFactory.create_matrix(config.PCB, type)
+                board = BoardFactory.create_matrix(config.PCB, 
+                                                   BoardType.SHARED_MEMORY)
                 server.add_element(coord=Coord((i, j)), element=board)
 
         if config.network["topology"] == "mesh":

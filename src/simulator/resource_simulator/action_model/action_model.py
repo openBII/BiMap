@@ -1099,6 +1099,8 @@ class ActionModel():
         return d.task_list
 
     def put_in(self, ml_coord: MLCoord, task_id: int):
+        if isinstance(task_id, TaskBlock):
+            task_id = task_id.id
         self._st_matrix.add_task(ml_coord, self._task_graph.get_node(task_id))
         self._context.put_task_to(ml_coord, task_id)
 
