@@ -44,7 +44,22 @@ class MACArrayEvaluator(ComputationEvaluator):
                     else:
                         return num_tiles * one_time_latency
                 else:
-                    raise NotImplementedError
+                    num_tiles = math.ceil(
+                        task.shape.volume / 
+                        math.prod(computation_info.parallelism))
+                    num_data = ((computation_info.parallelism[0] + 1) * 
+                                computation_info.parallelism[1])
+                    one_time_latency = (
+                        2 * self.config.local_memory_latency + 
+                        computation_info.latency * 
+                        max(1, math.ceil(num_data * 
+                                         Precision.get_bytes(precision) / 
+                                         self.config.local_memory_bandwidth)))
+                    if len(computation_info.parallelism) == 3:
+                        return (num_tiles * one_time_latency / 
+                                computation_info.parallelism[2])
+                    else:
+                        return num_tiles * one_time_latency
         else:
             raise NotImplementedError
         

@@ -15,7 +15,7 @@ _, input_data = create_input(task_graph, Shape(batch=64, token=512, nf=2048),
                              Precision.FLOAT_16)
 output0, dict0 = create_mlp(
     task_graph, input_data, Shape(batch=64, token=512, nr=2048, nf=4096), 
-    Precision.FLOAT_16, False)
+    Precision.FLOAT_16)
 output1, dict1 = create_mlp(
     task_graph, output0, Shape(batch=64, token=512, nr=4096, nf=1024), 
     Precision.FLOAT_16, True)
@@ -30,7 +30,6 @@ server = ServerFactory.create_matrix(config)
 
 # Construct a simulation environment
 st_env = STEnv(task_graph, server)
-st_env.enable_pipeline()
 
 # Define some constants for writing coordinates
 CHIP = 0
@@ -52,10 +51,10 @@ st_env.put_in(dram0, dict1["weight"].id)
 st_env.put_in(dram0, dict0["output"].id)
 st_env.put_in(dram0, dict1["output"].id)
 
-mac_array0 = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
-st_env.put_in(mac_array0, dict0["compute"].id)
-st_env.sync(mac_array0, sync_id0)
-st_env.put_in(mac_array0, dict1["compute"].id)
+tensor_unit0 = create_mlcoord((0, 0), CHIP, (0, 0), TENSOR_UNIT)
+st_env.put_in(tensor_unit0, dict0["compute"].id)
+st_env.sync(tensor_unit0, sync_id0)
+st_env.put_in(tensor_unit0, dict1["compute"].id)
 
 # Edge Mapping
 st_env.auto_edge_map()

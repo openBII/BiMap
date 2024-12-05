@@ -32,6 +32,21 @@ class Precision(Enum):
     def get_precision_name(value: int):
         precision = Precision.get_precision(value)
         return str(precision)
+    
+    @staticmethod
+    def get_bytes(precision):
+        if precision in (Precision.INT_8, Precision.UINT_8):
+            return 1
+        elif precision in (Precision.INT_16, Precision.UINT_16, 
+                           Precision.FLOAT_16):
+            return 2
+        elif precision in (Precision.INT_32, Precision.UINT_32, 
+                           Precision.FLOAT_32):
+            return 4
+        elif precision in (Precision.FLOAT_64, ):
+            return 8
+        else:
+            raise NotImplementedError
 
     @staticmethod
     def is_float(value: int):
