@@ -1,4 +1,3 @@
-from src.simulator.resource_simulator.st_model.space_matrix.board_factory import BoardType
 from src.simulator.resource_simulator.st_env import STEnv
 from src.simulator.task_rabbit.task_model.shape import Shape
 from src.simulator.task_rabbit.task_model.precision import Precision
@@ -13,7 +12,7 @@ from src.simulator.task_rabbit.task_model.transformer import create_input, creat
 
 # Construct a task graph
 task_graph = TaskGraph()
-input, mlp_input = create_input(task_graph, Shape(nf=2048), Precision.FLOAT_16)
+_, mlp_input = create_input(task_graph, Shape(nf=2048), Precision.FLOAT_16)
 output, task_dict = create_mlp(task_graph, mlp_input, Shape(nr=2048, nf=4096), 
                                Precision.FLOAT_16, True)
 
@@ -22,7 +21,7 @@ STDraw.draw_graph(task_graph, out_path='temp/mlp.task.html',
 
 # Construct a hardware
 config = ServerConfig("top/gpu_server.toml")
-server = ServerFactory.create_matrix(config, BoardType.SHARED_MEMORY)
+server = ServerFactory.create_matrix(config)
 
 # Construct a simulation environment
 env = STEnv(task_graph, server)
