@@ -23,3 +23,11 @@ build/clock_simulator
 docs/**/build
 
 **/temp/
+
+# Latex-Related
+*.aux
+*.toc
+*.log
+*.pdf
+
+3rdParties/booksim2/src/booksim
