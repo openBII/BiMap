@@ -41,6 +41,9 @@ WorkloadTrafficManager::WorkloadTrafficManager( const Configuration &config,
   workload.resize(_classes, workload.back());
 
   _workload.resize(_classes);
+  // for(int c = 0; c < _classes; ++c) {
+  //   std::cout << "[workloadtrafficmanager.cpp]:45 " << c << ":" << workload[c] << std::endl;
+  // }
   for(int c = 0; c < _classes; ++c) {
     Workload * wl = Workload::New(workload[c], _nodes, &config);
     assert(wl);

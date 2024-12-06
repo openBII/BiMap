@@ -1767,20 +1767,18 @@ string TrafficManager::_OverallClassStatsCSV(int c) const
 void TrafficManager::_LoadWatchList(const string & filename){
   ifstream watch_list;
   watch_list.open(filename.c_str());
-  
   string line;
   if(watch_list.is_open()) {
     while(!watch_list.eof()) {
       getline(watch_list, line);
       if(line != "") {
-	if(line[0] == 'p') {
-	  _packets_to_watch.insert(atoi(line.c_str()+1));
-	} else {
-	  _flits_to_watch.insert(atoi(line.c_str()));
-	}
+        if(line[0] == 'p') {
+          _packets_to_watch.insert(atoi(line.c_str()+1));
+        } else {
+          _flits_to_watch.insert(atoi(line.c_str()));
+        }
       }
     }
-    
   } else {
     Error("Unable to open flit watch file: " + filename);
   }

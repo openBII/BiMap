@@ -62,18 +62,21 @@ Workload * Workload::New(string const & workload, int nodes,
     param_str = workload.substr(left+1, right-left-1);
   }
   vector<string> params = tokenize_str(param_str);
-  
+  // Debugging ---------------------------------------------
+  std::cout << "[workload.cpp]:65 wld_name: " << workload_name << " wld: " << workload << " paras:\n -> ";
+  for (auto & para : params) std::cout << " " << para;
+  std::cout << std::endl;
+  // -------------------------------------------------------
   Workload * result = NULL;
   if(workload_name == "null") {
     result = new NullWorkload(nodes);
   } else if(workload_name == "synthetic") {
     if(params.size() < 2) {
-      cout << "Error: Missing parameter in synthetic workload definition: "
-	   << workload << endl;
+      cout << "Error: Missing parameter in synthetic workload definition: " << workload << endl;
       exit(-1);
     }
-    double load = atof(params[0].c_str());
-    string traffic = params[1];
+    double load = atof(params[0].c_str()); // default: 0.1
+    string traffic = params[1]; // default: 0.1
     string injection = (params.size() > 2) ? params[2] : (config ? config->GetStr("injection_process") : "bernoulli");
     vector<int> sizes = (params.size() > 3) ? tokenize_int(params[3]) : vector<int>(1, config ? config->GetInt("packet_size") : 1);
     vector<int> rates = (params.size() > 4) ? tokenize_int(params[4]) : vector<int>(1, 1);
@@ -82,8 +85,7 @@ Workload * Workload::New(string const & workload, int nodes,
 				   rates, config);
   } else if(workload_name == "trace") {
     if(params.size() < 2) {
-      cout << "Error: Missing parameter in trace workload definition: "
-	   << workload << endl;
+      cout << "Error: Missing parameter in trace workload definition: " << workload << endl;
       exit(-1);
     }
     string const & filename = params[0];
@@ -94,17 +96,16 @@ Workload * Workload::New(string const & workload, int nodes,
     if(params.size() > 2) {
       limit = atoi(params[2].c_str());
       if(params.size() > 3) {
-	skip = atoi(params[3].c_str());
-	if(params.size() > 4) {
-	  scale = atoi(params[4].c_str());
-	}
+        skip = atoi(params[3].c_str());
+        if(params.size() > 4) {
+          scale = atoi(params[4].c_str());
+        }
       }
     }
     result = new TraceWorkload(nodes, filename, packet_sizes, limit, skip, scale);
-  } else if(workload_name == "netrace") {
+  } else if (workload_name == "netrace") {
     if(params.size() < 1) {
-      cout << "Error: Missing parameter in trace workload definition: "
-	   << workload << endl;
+      cout << "Error: Missing parameter in trace workload definition: " << workload << endl;
       exit(-1);
     }
     string const & filename = params[0];
@@ -118,19 +119,19 @@ Workload * Workload::New(string const & workload, int nodes,
     if(params.size() > 1) {
       limit = atoll(params[1].c_str());
       if(params.size() > 2) {
-	scale = atoi(params[2].c_str());
-	if(params.size() > 3) {
-	  region = atoi(params[3].c_str());
-	  if(params.size() > 4) {
-	    enforce_deps = atoi(params[4].c_str());
-	    if(params.size() > 5) {
-	      enforce_lats = atoi(params[5].c_str());
-	      if(params.size() > 6) {
-		size_offset = atoi(params[6].c_str());
-	      }
-	    }
-	  }
-	}
+        scale = atoi(params[2].c_str());
+        if(params.size() > 3) {
+          region = atoi(params[3].c_str());
+          if(params.size() > 4) {
+            enforce_deps = atoi(params[4].c_str());
+            if(params.size() > 5) {
+              enforce_lats = atoi(params[5].c_str());
+              if(params.size() > 6) {
+                size_offset = atoi(params[6].c_str());
+              }
+            }
+          }
+        }
       }
     }
     result = new NetraceWorkload(nodes, filename, channel_width, limit, scale, region, enforce_deps, enforce_lats, size_offset);

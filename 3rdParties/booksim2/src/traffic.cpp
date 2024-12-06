@@ -62,7 +62,7 @@ TrafficPattern * TrafficPattern::New(string const & pattern, int nodes,
     }
   }
   vector<string> params = tokenize_str(param_str);
-  
+  std::cout << "[traffic.cpp]:65 " << pattern << " " << pattern_name << std::endl;
   TrafficPattern * result = NULL;
   if(pattern_name == "bitcomp") {
     result = new BitCompTrafficPattern(nodes);

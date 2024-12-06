@@ -212,7 +212,7 @@ BookSimConfig::BookSimConfig( )
 
   AddStrField( "sim_type", "latency" );
 
-  AddStrField( "workload", "synthetic({0.1,1,bernoulli,uniform})" );
+  AddStrField( "workload", "synthetic({0.1,uniform,bernoulli,1})" );
 
   _int_map["warmup_periods"] = 3; // number of samples periods to "warm-up" the simulation
 
