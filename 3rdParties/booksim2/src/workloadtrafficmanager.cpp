@@ -39,11 +39,8 @@ WorkloadTrafficManager::WorkloadTrafficManager( const Configuration &config,
 
   vector<string> workload = config.GetStrArray("workload");
   workload.resize(_classes, workload.back());
-
   _workload.resize(_classes);
-  // for(int c = 0; c < _classes; ++c) {
-  //   std::cout << "[workloadtrafficmanager.cpp]:45 " << c << ":" << workload[c] << std::endl;
-  // }
+  
   for(int c = 0; c < _classes; ++c) {
     Workload * wl = Workload::New(workload[c], _nodes, &config);
     assert(wl);
@@ -102,23 +99,15 @@ bool WorkloadTrafficManager::_SingleSim( )
   if(_warmup_periods > 0) {
     
     cout << "Warming up..." << endl;
-    
     while(_time < _warmup_periods * _sample_period) {
-      
-      _Step();
-      
+      _Step(); 
       if((_time % _sample_period) == 0) {
-	UpdateStats();
-	DisplayStats();
+        UpdateStats();
+        DisplayStats();
       }
-
     }
-
     _ClearStats();
-    
-    cout << "Warmup ends after " << _warmup_periods * _sample_period
-	 << " cycles." << endl;
-    
+    cout << "Warmup ends after " << _warmup_periods * _sample_period << " cycles." << endl;
   }
 
   _sim_state = running;
