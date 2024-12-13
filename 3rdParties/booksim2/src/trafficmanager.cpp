@@ -1156,12 +1156,12 @@ bool TrafficManager::Run( )
       ++empty_steps;
 
       if ( empty_steps % 1000 == 0 ) {
-	_DisplayRemaining( ); 
+	      _DisplayRemaining( ); 
       }
       
       packets_left = false;
       for(int c = 0; c < _classes; ++c) {
-	packets_left |= !_total_in_flight_flits[c].empty();
+	      packets_left |= !_total_in_flight_flits[c].empty();
       }
     }
     //wait until all the credits are drained as well

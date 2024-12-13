@@ -1,0 +1,5 @@
+/Users/hongyi/Code/BiMap/3rdParties/booksim2/api/build/CMakeFiles/booksim2.dir
+/Users/hongyi/Code/BiMap/3rdParties/booksim2/api/build/CMakeFiles/edit_cache.dir
+/Users/hongyi/Code/BiMap/3rdParties/booksim2/api/build/CMakeFiles/rebuild_cache.dir
+/Users/hongyi/Code/BiMap/3rdParties/booksim2/api/build/pybind11/CMakeFiles/edit_cache.dir
+/Users/hongyi/Code/BiMap/3rdParties/booksim2/api/build/pybind11/CMakeFiles/rebuild_cache.dir

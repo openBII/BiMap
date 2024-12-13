@@ -239,9 +239,9 @@ bool ParseArgs(Configuration * cf, int argc, char * * argv)
       ifstream in(argv[i]);
       cout << "BEGIN Configuration File: " << argv[i] << endl;
       while (!in.eof()) {
-	char c;
-	in.get(c);
-	cout << c ;
+        char c;
+        in.get(c);
+        cout << c ;
       }
       cout << "END Configuration File: " << argv[i] << endl;
       rc = true;
