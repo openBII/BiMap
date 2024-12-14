@@ -30,5 +30,7 @@ docs/**/build
 *.log
 *.pdf
 
+# bookdim
+3rdParties/booksim2/api/build
 3rdParties/booksim2/src/booksim
 3rdParties/booksim2/src/netrace/util/trace_viewer

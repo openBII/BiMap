@@ -3,6 +3,7 @@ project(booksim2)
 
 add_subdirectory(pybind11)
 
+include_directories(./)
 include_directories(../src)
 include_directories(../src/allocators)
 include_directories(../src/arbiters)

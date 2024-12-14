@@ -32,16 +32,11 @@
 #include <map>
 #include <set>
 
-#include "module.hpp"
-#include "config_utils.hpp"
-#include "network.hpp"
-#include "flit.hpp"
-#include "buffer_state.hpp"
-#include "stats.hpp"
-#include "routefunc.hpp"
-#include "outputset.hpp"
+#include "top.hpp"
 
 class TrafficManager : public Module {
+
+  friend class booksim;
 
 protected:
 
