@@ -25,7 +25,7 @@ class BookSim2:
         
         # Init ...
         bsim2 = booksim2.booksim()
-        bsim2.prepare("3rdParties/booksim2/src/examples/mesh88_workload_api.config")
+        bsim2.prepare("3rdParties/booksim2/src/examples/mesh88_simulate.config")
 
         for i in range(10):
             
@@ -41,7 +41,7 @@ class BookSim2:
             if i == 1: bsim2.end()
             
             # Push Results
-            self.o_fifo.put("O-FIFO {}".format(i))
+            self.o_fifo.put("-> O-FIFO {}".format(i))
         
 if __name__ == "__main__":
     sim = BookSim2()

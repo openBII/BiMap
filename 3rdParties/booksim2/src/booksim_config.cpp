@@ -188,19 +188,16 @@ BookSimConfig::BookSimConfig( )
   AddStrField("injection_rate", ""); // workaraound to allow for vector specification
   
   _int_map["injection_rate_uses_flits"] = 0;
-
   AddStrField( "injection_process", "bernoulli" );
 
   _float_map["burst_alpha"] = 0.5; // burst interval
   _float_map["burst_beta"]  = 0.5; // burst length
   _float_map["burst_r1"] = -1.0; // burst rate
-
   AddStrField( "priority", "none" );  // message priorities
 
   _int_map["batch_size"] = 1000;
   AddStrField("batch_size", "");
   _int_map["batch_count"] = 1;
-
   _int_map["max_outstanding_requests"] = 0; // 0 = unlimited
   AddStrField("max_outstanding_requests", "");
 
@@ -211,17 +208,16 @@ BookSimConfig::BookSimConfig( )
   //   throughput - sustained throughput for a particular injection rate
 
   AddStrField( "sim_type", "latency" );
-
   AddStrField( "workload", "synthetic({0.1,uniform,bernoulli,1})" );
 
   _int_map["warmup_periods"] = 3; // number of samples periods to "warm-up" the simulation
-
   _int_map["sample_period"] = 1000; // how long between measurements
   _int_map["max_samples"]   = 10;   // maximum number of sample periods in a simulation
 
   // whether or not to measure statistics for a given traffic class
   _int_map["measure_stats"] = 1;
   AddStrField("measure_stats", ""); // workaround to allow for vector specification
+
   //whether to enable per pair statistics, caution N^2 memory usage
   _int_map["pair_stats"] = 0;
 

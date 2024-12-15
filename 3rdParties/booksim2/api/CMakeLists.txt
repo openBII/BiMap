@@ -25,6 +25,7 @@ set(sources ../src/config_utils.cpp
             ../src/steadystatetrafficmanager.cpp 
             ../src/batchtrafficmanager.cpp
             ../src/workloadtrafficmanager.cpp
+            ../src/simulatetrafficmanager.cpp
             ../src/buffer_state.cpp 
             ../src/stats.cpp
             ../src/credit.cpp

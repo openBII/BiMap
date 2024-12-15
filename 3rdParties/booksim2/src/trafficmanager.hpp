@@ -253,7 +253,10 @@ public:
   static TrafficManager * New(Configuration const & config, 
 			      vector<Network *> const & net);
 
-  bool Run( );
+  bool Run();
+  bool Run_Init();
+  bool Run_Until_Eject();
+  void Report();
 
   void UpdateStats();
   void DisplayStats(ostream & os = cout) const;

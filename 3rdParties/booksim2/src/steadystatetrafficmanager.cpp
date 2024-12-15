@@ -157,94 +157,85 @@ bool SteadyStateTrafficManager::_SingleSim( )
     
     for(int c = 0; c < _classes; ++c) {
       
-      if(_measure_stats[c] == 0) {
-	continue;
-      }
+      if(_measure_stats[c] == 0) continue;
 
       double cur_latency = _plat_stats[c]->Average( );
-
       int total_accepted_count;
       _ComputeStats( _accepted_flits[c], &total_accepted_count );
       double total_accepted_rate = (double)total_accepted_count / (double)(_time - _reset_time);
       double cur_accepted = total_accepted_rate / (double)_nodes;
-
       double latency_change = fabs((cur_latency - prev_latency[c]) / cur_latency);
       prev_latency[c] = cur_latency;
-
       double accepted_change = fabs((cur_accepted - prev_accepted[c]) / cur_accepted);
       prev_accepted[c] = cur_accepted;
-
       double latency = (double)_plat_stats[c]->Sum();
       double count = (double)_plat_stats[c]->NumSamples();
       
       map<int, Flit *>::const_iterator iter;
       for(iter = _total_in_flight_flits[c].begin(); 
-	  iter != _total_in_flight_flits[c].end(); 
-	  iter++) {
-	latency += (double)(_time - iter->second->ctime);
-	count++;
+          iter != _total_in_flight_flits[c].end(); 
+          iter++) {
+        latency += (double)(_time - iter->second->ctime);
+        count++;
       }
       
       if((lat_exc_class < 0) &&
-	 (_latency_thres[c] >= 0.0) &&
-	 ((latency / count) > _latency_thres[c])) {
-	lat_exc_class = c;
+        (_latency_thres[c] >= 0.0) &&
+        ((latency / count) > _latency_thres[c])) {
+        lat_exc_class = c;
       }
       
       cout << "class " << c << " latency change    = " << latency_change << endl;
       if(lat_chg_exc_class < 0) {
-	if((_sim_state == warming_up) &&
-	   (_warmup_threshold[c] >= 0.0) &&
-	   (latency_change > _warmup_threshold[c])) {
-	  lat_chg_exc_class = c;
-	} else if((_sim_state == running) &&
-		  (_stopping_threshold[c] >= 0.0) &&
-		  (latency_change > _stopping_threshold[c])) {
-	  lat_chg_exc_class = c;
-	}
+        if((_sim_state == warming_up) &&
+          (_warmup_threshold[c] >= 0.0) &&
+          (latency_change > _warmup_threshold[c])) {
+          lat_chg_exc_class = c;
+        } else if((_sim_state == running) &&
+            (_stopping_threshold[c] >= 0.0) &&
+            (latency_change > _stopping_threshold[c])) {
+          lat_chg_exc_class = c;
+        }
       }
       
       cout << "class " << c << " throughput change = " << accepted_change << endl;
       if(acc_chg_exc_class < 0) {
-	if((_sim_state == warming_up) &&
-	   (_acc_warmup_threshold[c] >= 0.0) &&
-	   (accepted_change > _acc_warmup_threshold[c])) {
-	  acc_chg_exc_class = c;
-	} else if((_sim_state == running) &&
-		  (_acc_stopping_threshold[c] >= 0.0) &&
-		  (accepted_change > _acc_stopping_threshold[c])) {
-	  acc_chg_exc_class = c;
-	}
+        if((_sim_state == warming_up) &&
+          (_acc_warmup_threshold[c] >= 0.0) &&
+          (accepted_change > _acc_warmup_threshold[c])) {
+          acc_chg_exc_class = c;
+        } else if((_sim_state == running) &&
+            (_acc_stopping_threshold[c] >= 0.0) &&
+            (accepted_change > _acc_stopping_threshold[c])) {
+          acc_chg_exc_class = c;
+        }
       }
-      
     }
     
     // Fail safe for latency mode, throughput will ust continue
     if ( _measure_latency && ( lat_exc_class >= 0 ) ) {
-      
       cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
       converged = 0; 
       _sim_state  = draining;
       _drain_time = _time;
       break;
-      
     }
     
     if ( _sim_state == warming_up ) {
       if ( ( _warmup_periods > 0 ) ? 
-	   ( total_phases + 1 >= _warmup_periods ) :
-	   ( ( !_measure_latency || ( lat_chg_exc_class < 0 ) ) &&
-	     ( acc_chg_exc_class < 0 ) ) ) {
-	cout << "Warmed up ..." <<  "Time used is " << _time << " cycles" <<endl;
-	clear_last = true;
-	_sim_state = running;
+          ( total_phases + 1 >= _warmup_periods ) :
+          ( ( !_measure_latency || ( lat_chg_exc_class < 0 ) ) &&
+            ( acc_chg_exc_class < 0 ) ) ) {
+        cout << "Warmed up ..." <<  "Time used is " << _time << " cycles" <<endl;
+        clear_last = true;
+        _sim_state = running;
       }
     } else if(_sim_state == running) {
       if ( ( !_measure_latency || ( lat_chg_exc_class < 0 ) ) &&
-	   ( acc_chg_exc_class < 0 ) ) {
-	++converged;
+	        ( acc_chg_exc_class < 0 ) ) {
+	      ++converged;
       } else {
-	converged = 0;
+	      converged = 0;
       }
     }
     ++total_phases;
@@ -260,49 +251,49 @@ bool SteadyStateTrafficManager::_SingleSim( )
       cout << "Draining all recorded packets ..." << endl;
       int empty_steps = 0;
       while( _PacketsOutstanding( ) ) { 
-	_Step( ); 
-	
-	++empty_steps;
-	
-	if ( empty_steps % 1000 == 0 ) {
-	  
-	  int lat_exc_class = -1;
-	  
-	  for(int c = 0; c < _classes; c++) {
+        _Step( ); 
+        
+        ++empty_steps;
+        
+        if ( empty_steps % 1000 == 0 ) {
+          
+          int lat_exc_class = -1;
+          
+          for(int c = 0; c < _classes; c++) {
+            
+            double threshold = _latency_thres[c];
+            
+            if(threshold < 0.0) {
+              continue;
+            }
 	    
-	    double threshold = _latency_thres[c];
+            double acc_latency = _plat_stats[c]->Sum();
+            double acc_count = (double)_plat_stats[c]->NumSamples();
+            
+            map<int, Flit *>::const_iterator iter;
+            for(iter = _total_in_flight_flits[c].begin(); 
+              iter != _total_in_flight_flits[c].end(); 
+              iter++) {
+                  acc_latency += (double)(_time - iter->second->ctime);
+                  acc_count++;
+            }
 	    
-	    if(threshold < 0.0) {
-	      continue;
-	    }
-	    
-	    double acc_latency = _plat_stats[c]->Sum();
-	    double acc_count = (double)_plat_stats[c]->NumSamples();
-	    
-	    map<int, Flit *>::const_iterator iter;
-	    for(iter = _total_in_flight_flits[c].begin(); 
-		iter != _total_in_flight_flits[c].end(); 
-		iter++) {
-	      acc_latency += (double)(_time - iter->second->ctime);
-	      acc_count++;
-	    }
-	    
-	    if((acc_latency / acc_count) > threshold) {
-	      lat_exc_class = c;
-	      break;
-	    }
-	  }
+            if((acc_latency / acc_count) > threshold) {
+              lat_exc_class = c;
+              break;
+            }
+          }
 	  
-	  if(lat_exc_class >= 0) {
-	    cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
-	    converged = 0; 
-	    _sim_state = warming_up;
-	    break;
-	  }
-	  
-	  _DisplayRemaining( ); 
-	  
-	}
+          if(lat_exc_class >= 0) {
+            cout << "Average latency for class " << lat_exc_class << " exceeded " << _latency_thres[lat_exc_class] << " cycles. Aborting simulation." << endl;
+            converged = 0; 
+            _sim_state = warming_up;
+            break;
+          }
+          
+          _DisplayRemaining( ); 
+          
+        }
       }
     }
   } else {

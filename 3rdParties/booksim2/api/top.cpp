@@ -58,7 +58,9 @@ void booksim::end()
 
 bool booksim::run()
 {
-    return trafficManager->Run();
+    trafficManager->Run_Until_Eject();
+    trafficManager->Report();
+    return true;
 }
 
 void booksim::prepare(char* config_file)
@@ -84,7 +86,8 @@ void booksim::prepare(char* config_file)
         this->net[i] = Network::New( config, name.str() );
     }
     assert(trafficManager == NULL);
-    trafficManager = TrafficManager::New(config, this->net) ;
+    trafficManager = TrafficManager::New(config, this->net);
+    trafficManager->Run_Init();
 }
 
 PYBIND11_MODULE(booksim2, m) {
