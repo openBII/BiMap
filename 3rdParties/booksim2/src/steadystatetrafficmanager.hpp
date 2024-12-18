@@ -61,6 +61,8 @@ protected:
   virtual void _ResetSim( );
 
   virtual bool _SingleSim( );
+  
+  virtual bool _SingleSim_noWarmup( );
 
   virtual string _OverallStatsHeaderCSV() const;
   virtual string _OverallClassStatsCSV(int c) const;

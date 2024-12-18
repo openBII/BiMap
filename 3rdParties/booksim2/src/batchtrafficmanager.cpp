@@ -95,6 +95,8 @@ void BatchTrafficManager::_ClearStats( )
   _batch_time->Clear();
 }
 
+bool BatchTrafficManager::_SingleSim_noWarmup( ) { return 0; }
+
 bool BatchTrafficManager::_SingleSim( )
 {
   int batch_index = 0;

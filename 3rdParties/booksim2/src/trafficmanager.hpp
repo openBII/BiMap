@@ -230,6 +230,7 @@ protected:
   void _ComputeStats( const vector<int> & stats, int *sum, int *min = NULL, int *max = NULL, int *min_pos = NULL, int *max_pos = NULL ) const;
 
   virtual bool _SingleSim( ) = 0;
+  virtual bool _SingleSim_noWarmup( ) = 0;
 
   void _DisplayRemaining( ostream & os = cout ) const;
   

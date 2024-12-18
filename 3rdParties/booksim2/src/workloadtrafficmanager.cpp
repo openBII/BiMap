@@ -92,6 +92,8 @@ void WorkloadTrafficManager::_ResetSim( )
   }
 }
 
+bool WorkloadTrafficManager::_SingleSim_noWarmup( ) { return 0; }
+
 bool WorkloadTrafficManager::_SingleSim( )
 {
   _sim_state = warming_up;

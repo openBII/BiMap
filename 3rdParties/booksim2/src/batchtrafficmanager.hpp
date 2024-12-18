@@ -55,7 +55,8 @@ protected:
   virtual int _IssuePacket( int source, int cl );
   virtual void _ClearStats( );
   virtual bool _SingleSim( );
-
+  virtual bool _SingleSim_noWarmup( );
+  
   virtual void _UpdateOverallStats( );
 
   virtual string _OverallStatsHeaderCSV() const;

@@ -33,9 +33,9 @@ SimulateTrafficManager::SimulateTrafficManager( const Configuration &config,
 						const vector<Network *> & net )
   : TrafficManager(config, net), _overall_runtime(0)
 {
-  _sample_period = config.GetInt( "sample_period" );
-  _max_samples    = config.GetInt( "max_samples" );
-  _warmup_periods = config.GetInt( "warmup_periods" );
+  _sample_period = config.GetInt( "sample_period" );    // Default: 1000
+  _max_samples    = config.GetInt( "max_samples" );     // Default: 10
+  _warmup_periods = config.GetInt( "warmup_periods" );  // Default: 3
 
   vector<string> workload = config.GetStrArray("workload");
   workload.resize(_classes, workload.back());
@@ -120,6 +120,26 @@ bool SimulateTrafficManager::_SingleSim( )
   }
   cout << "Completed measurements after " << _time << " cycles." << endl;
   _sim_state = draining;
+  _drain_time = _time;
+  return 1;
+}
+
+bool SimulateTrafficManager::_SingleSim_noWarmup( )
+{
+  _sim_state = running; // Running State
+  _ClearStats();
+  cout << "Beginning measurements..." << endl;
+  while(!_Completed() && 
+      ((_max_samples < 0) || 
+      (_time < (_max_samples) * _sample_period))) {
+    _Step();
+    if((_time % _sample_period) == 0) {
+      UpdateStats();
+      DisplayStats();
+    }
+  }
+  cout << "Completed measurements after " << _time << " cycles." << endl;
+  _sim_state = draining; // Draining State
   _drain_time = _time;
   return 1;
 }

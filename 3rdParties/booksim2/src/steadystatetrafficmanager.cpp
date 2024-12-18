@@ -117,6 +117,8 @@ void SteadyStateTrafficManager::_ResetSim( )
   }
 }
 
+bool SteadyStateTrafficManager::_SingleSim_noWarmup( ) { return 0; }
+
 bool SteadyStateTrafficManager::_SingleSim( )
 {
   // warm-up

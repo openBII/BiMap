@@ -666,6 +666,7 @@ int TrafficManager::_GeneratePacket( int source, int dest, int size, int cl, int
 
 void TrafficManager::_Step( )
 {
+  // Deadlock Detection
   bool flits_in_flight = false;
   for (int c = 0; c < _classes; ++c) {
     flits_in_flight |= !_total_in_flight_flits[c].empty();
@@ -680,6 +681,8 @@ void TrafficManager::_Step( )
   for ( int subnet = 0; subnet < _subnets; ++subnet ) {
     // For all nodes ...
     for ( int n = 0; n < _nodes; ++n ) {
+
+      // Flit Eject
       Flit* const f = _net[subnet]->ReadFlit( n );
       if (f) {
         if (f->watch) {
@@ -690,7 +693,7 @@ void TrafficManager::_Step( )
               << " from VC " << f->vc
               << "." << endl;
         }
-        flits[subnet].insert(make_pair(n, f));
+        flits[subnet].insert(make_pair(n, f)); // < node, flits >
         if ((_sim_state == warming_up) || (_sim_state == running)) {
           ++_accepted_flits[f->cl][n];
           if (f->tail) {
@@ -699,6 +702,7 @@ void TrafficManager::_Step( )
         }
       }
 
+      // Credit-Based Flow Control
       Credit * const c = _net[subnet]->ReadCredit( n );
       if ( c ) {
         #ifdef TRACK_FLOWS
@@ -719,15 +723,11 @@ void TrafficManager::_Step( )
   }
   
   // Inject
-  if ( !_empty_network ) {
-    _Inject();
-  }
+  if ( !_empty_network ) { _Inject(); }
 
-  // For all subnets ...
+  // Inject flits
   for(int subnet = 0; subnet < _subnets; ++subnet) {
-    // For all nodes ...
     for(int n = 0; n < _nodes; ++n) {
-
       Flit * f = NULL;
       BufferState * const dest_buf = _buf_states[n][subnet];
       int const last_class = _last_class[n][subnet];
@@ -924,6 +924,7 @@ void TrafficManager::_Step( )
     }
   }
 
+  // Inject Credit
   for (int subnet = 0; subnet < _subnets; ++subnet) {
     for (int n = 0; n < _nodes; ++n) {
       map<int, Flit *>::const_iterator iter = flits[subnet].find(n);
@@ -1100,7 +1101,8 @@ bool TrafficManager::Run_Init()
 
 bool TrafficManager::Run_Until_Eject()
 {
-  if (!_SingleSim()) {
+  
+  if (!_SingleSim_noWarmup()) {
     cout << "Simulation unstable, ending ..." << endl;
     return false;
   }
