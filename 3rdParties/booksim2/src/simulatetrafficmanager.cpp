@@ -86,7 +86,6 @@ void SimulateTrafficManager::_RetirePacket( Flit * head, Flit * tail )
 void SimulateTrafficManager::_ResetSim( )
 {
   TrafficManager::_ResetSim( );
-
   for(int c = 0; c < _classes; ++c) {
     _workload[c]->reset();
   }

@@ -18,6 +18,7 @@
 #include "routefunc.hpp"
 #include "outputset.hpp"
 #include "booksim_config.hpp"
+#include "lockfree_queue.hpp"
 
 class booksim
 {
@@ -25,10 +26,14 @@ private:
     int subnets;
     vector<Network *> net;
     BookSimConfig config;
+    LockFreePktQueue i_fifo;
+    LockFreePktQueue o_fifo;
 public:
     booksim(){}
     ~booksim(){}
-    void prepare(char* config_file);
+    void init(char* config_file);
+    void inject(int src, int dst, int t_inject);
+    int eject();
     bool run();
     void end();
 };

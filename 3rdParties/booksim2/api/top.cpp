@@ -5,6 +5,8 @@
 #include <sstream>
 #include <sys/time.h>
 #include <pybind11/pybind11.h>
+#include <thread>
+#include <unistd.h>
 
 #include "booksim.hpp"
 #include "routefunc.hpp"
@@ -19,12 +21,14 @@
 
 namespace py = pybind11;
 
-int add (int i, int j) { return i + j; }
-
 TrafficManager* trafficManager = NULL;
-int GetSimTime() { return trafficManager->getTime(); }
+int GetSimTime()
+{ 
+    return trafficManager->getTime(); 
+}
 class Stats;
-Stats * GetStats( const std::string & name ) {
+Stats * GetStats( const std::string & name )
+{
     Stats* test =  trafficManager->getStats(name);
     return test;
 }
@@ -45,6 +49,8 @@ ostream* gWatchOut;
 void booksim::end()
 {
     ///Power analysis
+    trafficManager->Report();
+    pthread_exit(nullptr); // Threads shutdown!
     for (int i = 0; i < this->subnets; ++i) {
         if (config.GetInt("sim_power") > 0) {
             Power_Module pnet(this->net[i], config);
@@ -58,12 +64,11 @@ void booksim::end()
 
 bool booksim::run()
 {
-    trafficManager->Run_Until_Eject();
-    trafficManager->Report();
+    trafficManager->TransRun();
     return true;
 }
 
-void booksim::prepare(char* config_file)
+void booksim::init(char* config_file)
 {
     // Initialize the Simulator
     config.ParseFile(config_file);
@@ -87,15 +92,38 @@ void booksim::prepare(char* config_file)
     }
     assert(trafficManager == NULL);
     trafficManager = TrafficManager::New(config, this->net);
-    trafficManager->Run_Init();
+    trafficManager->RunInit();
+
+    // Run the simulator with a seperate thread
+    std::thread sim_thread(&booksim::run, this);
+    sim_thread.detach();
+    std::cout << "Init end, simulation thread detach ..." << std::endl;
 }
 
-PYBIND11_MODULE(booksim2, m) {
-    m.doc() = "pybind11 example plugin";
-    m.def("add", &add, "A function which adds two numbers", py::arg("i"), py::arg("j"));
+void booksim::inject(int src, int dst, int t_inject)
+{
+    this->i_fifo.enqueue(src, dst, t_inject, -1);
+}
+
+int booksim::eject()
+{
+    return this->o_fifo.dequeue();
+}
+
+/////////////////////////////////////////////////////////////////////////////
+
+PYBIND11_MODULE(booksim2, m)
+{
+    m.doc() = "Booksim2 Python API (T-NoC Version)";
+    py::class_<LockFreePktQueue>(m, "LockFreePktQueue")
+        .def(py::init<>())
+        .def("enqueue", &LockFreePktQueue::enqueue)
+        .def("dequeue", &LockFreePktQueue::dequeue);
     py::class_<booksim>(m, "booksim")
         .def(py::init<>())
         .def("run", &booksim::run)
-        .def("prepare", &booksim::prepare)
+        .def("init", &booksim::init)
+        .def("inject", &booksim::inject)
+        .def("eject", &booksim::eject)
         .def("end", &booksim::end);
 }

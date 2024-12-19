@@ -1092,14 +1092,14 @@ void TrafficManager::_DisplayRemaining( ostream & os ) const
   }
 }
 
-bool TrafficManager::Run_Init()
+bool TrafficManager::RunInit()
 {
   _ResetSim( );
   _ClearStats( );
   return true;
 }
 
-bool TrafficManager::Run_Until_Eject()
+bool TrafficManager::TransRun()
 {
   
   if (!_SingleSim_noWarmup()) {

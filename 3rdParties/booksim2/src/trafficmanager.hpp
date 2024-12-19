@@ -167,28 +167,40 @@ protected:
 
   // ============ Simulation parameters ============ 
 
-  enum eSimState { warming_up, running, draining, done };
+  // Ini-Version { warming_up, running, draining, done }
+  enum eSimState { warming_up, running, draining, idle, fetch, undo, commit };
+  /*
+      * -> [warming_up] -> idle
+      - - - - - - - - - - - - - - - - - - - - - -
+      idle -> idle      [i-fifo is empty]
+      idle -> fetch     [i-fifo is not empty]
+      - - - - - - - - - - - - - - - - - - - - - -
+      fetch -> fetch    [i-fifo is not empty]
+      fetch -> running  [no confict]
+      fetch -> undo     [confict detected]
+      - - - - - - - - - - - - - - - - - - - - - -
+      undo -> running   [undo-log is cleared]
+      - - - - - - - - - - - - - - - - - - - - - -
+      running -> fetch  [no need to eject]
+      running -> commit [have pkts to eject]
+      - - - - - - - - - - - - - - - - - - - - - -
+      commit -> fetch   [judge whether to commit]
+   */
   eSimState _sim_state;
 
   int   _reset_time;
   int   _drain_time;
-
   int   _total_sims;
-
   int   _include_queuing;
-
-  vector<int> _measure_stats;
-  bool _pair_stats;
-
-  int _cur_id;
-  int _cur_pid;
-  int _time;
-
+  int   _cur_id;
+  int   _cur_pid;
+  int   _time;
+  bool  _pair_stats;
+  bool  _print_csv_results;
   set<int> _flits_to_watch;
   set<int> _packets_to_watch;
-
-  bool _print_csv_results;
-
+  vector<int> _measure_stats;
+  
   //flits to watch
   ostream * _stats_out;
 
@@ -214,60 +226,41 @@ protected:
 
   virtual void _RetireFlit( Flit *f, int dest );
   virtual void _RetirePacket( Flit * head, Flit * tail );
-
   virtual void _Inject() = 0;
-  
   void _Step( );
-
   virtual bool _PacketsOutstanding( ) const;
-  
   int _GeneratePacket( int source, int dest, int size, int cl, int time );
-
   virtual void _ResetSim( );
-
   virtual void _ClearStats( );
-
-  void _ComputeStats( const vector<int> & stats, int *sum, int *min = NULL, int *max = NULL, int *min_pos = NULL, int *max_pos = NULL ) const;
-
+  void _ComputeStats( const vector<int> & stats, int *sum, int *min = NULL, 
+                      int *max = NULL, int *min_pos = NULL, int *max_pos = NULL ) const;
   virtual bool _SingleSim( ) = 0;
   virtual bool _SingleSim_noWarmup( ) = 0;
-
   void _DisplayRemaining( ostream & os = cout ) const;
-  
   void _LoadWatchList(const string & filename);
-
   virtual void _UpdateOverallStats();
-
   virtual string _OverallStatsHeaderCSV() const;
   virtual string _OverallClassStatsCSV(int c) const;
-
   virtual void _DisplayClassStats( int c, ostream & os ) const ;
   virtual void _WriteClassStats( int c, ostream & os ) const ;
   virtual void _DisplayOverallClassStats( int c, ostream & os ) const ;
-
   TrafficManager( const Configuration &config, const vector<Network *> & net );
 
 public:
-
   virtual ~TrafficManager( );
-
   static TrafficManager * New(Configuration const & config, 
-			      vector<Network *> const & net);
-
+			                        vector<Network *> const & net);
   bool Run();
-  bool Run_Init();
-  bool Run_Until_Eject();
+  bool RunInit();
+  bool TransRun();
   void Report();
-
   void UpdateStats();
   void DisplayStats(ostream & os = cout) const;
   void WriteStats(ostream & os = cout) const;
   void DisplayOverallStats(ostream & os = cout) const;
   void DisplayOverallStatsCSV(ostream & os = cout) const;
-
   inline int getTime() { return _time;}
   Stats * getStats(const string & name) { return _stats[name]; }
-
 };
 
 template<class T>

@@ -12,6 +12,7 @@ editor = vim
 *.out
 *.log
 *.DS_Store
+*.vscode
 
 io_server.log
 rect1.png
