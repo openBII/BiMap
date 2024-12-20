@@ -235,7 +235,7 @@ protected:
   void _ComputeStats( const vector<int> & stats, int *sum, int *min = NULL, 
                       int *max = NULL, int *min_pos = NULL, int *max_pos = NULL ) const;
   virtual bool _SingleSim( ) = 0;
-  virtual bool _SingleSim_noWarmup( ) = 0;
+  virtual bool _SingleSim_Step( ) = 0;
   void _DisplayRemaining( ostream & os = cout ) const;
   void _LoadWatchList(const string & filename);
   virtual void _UpdateOverallStats();
@@ -250,9 +250,14 @@ public:
   virtual ~TrafficManager( );
   static TrafficManager * New(Configuration const & config, 
 			                        vector<Network *> const & net);
+  // - - - - - - - - - - - - - - -
   bool Run();
   bool RunInit();
-  bool TransRun();
+  bool RunAlways();
+  bool RunOnce();
+  bool RunDrain();
+  void RunReady();
+  // - - - - - - - - - - - - - - -
   void Report();
   void UpdateStats();
   void DisplayStats(ostream & os = cout) const;

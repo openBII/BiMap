@@ -123,23 +123,20 @@ bool SimulateTrafficManager::_SingleSim( )
   return 1;
 }
 
-bool SimulateTrafficManager::_SingleSim_noWarmup( )
+bool SimulateTrafficManager::_SingleSim_Step( )
 {
-  _sim_state = running; // Running State
-  _ClearStats();
-  cout << "Beginning measurements..." << endl;
+  cout << "Beginning measurements starting @" << _time << endl;
   while(!_Completed() && 
-      ((_max_samples < 0) || 
-      (_time < (_max_samples) * _sample_period))) {
+        ((_max_samples < 0) || (_time < (_max_samples) * _sample_period)))
+  {
     _Step();
-    if((_time % _sample_period) == 0) {
+    if ((_time % _sample_period) == 0) {
       UpdateStats();
       DisplayStats();
     }
+    if ((_time % 3000) == 0) break;
   }
-  cout << "Completed measurements after " << _time << " cycles." << endl;
-  _sim_state = draining; // Draining State
-  _drain_time = _time;
+  cout << "Beginning measurements ending @" << _time << endl;
   return 1;
 }
 

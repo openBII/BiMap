@@ -27,7 +27,7 @@ int GetSimTime()
     return trafficManager->getTime(); 
 }
 class Stats;
-Stats * GetStats( const std::string & name )
+Stats * GetStats(const std::string & name)
 {
     Stats* test =  trafficManager->getStats(name);
     return test;
@@ -35,9 +35,7 @@ Stats * GetStats( const std::string & name )
 
 /* printing activity factor */
 bool gPrintActivity;
-int gK; //radix
-int gN; //dimension
-int gC; //concentration
+int  gK, gN, gC;
 
 // generate nocviewer trace
 bool gTrace;
@@ -48,9 +46,14 @@ ostream* gWatchOut;
 
 void booksim::end()
 {
-    ///Power analysis
-    trafficManager->Report();
-    pthread_exit(nullptr); // Threads shutdown!
+    /// Analysis
+    if (this->sync) {
+        trafficManager->RunDrain();
+        trafficManager->Report();
+    } else {
+        trafficManager->Report();
+        pthread_exit(nullptr);
+    }
     for (int i = 0; i < this->subnets; ++i) {
         if (config.GetInt("sim_power") > 0) {
             Power_Module pnet(this->net[i], config);
@@ -62,15 +65,22 @@ void booksim::end()
     trafficManager = NULL;
 }
 
-bool booksim::run()
+bool booksim::run_async()
 {
-    trafficManager->TransRun();
+    trafficManager->RunAlways();
     return true;
 }
 
-void booksim::init(char* config_file)
+bool booksim::run_sync()
+{
+    trafficManager->RunOnce();
+    return true;
+}
+
+void booksim::init(char* config_file, bool sync)
 {
     // Initialize the Simulator
+    this->sync = sync;
     config.ParseFile(config_file);
     InitializeRoutingMap(config);
     gPrintActivity = (config.GetInt("print_activity") > 0);
@@ -95,9 +105,15 @@ void booksim::init(char* config_file)
     trafficManager->RunInit();
 
     // Run the simulator with a seperate thread
-    std::thread sim_thread(&booksim::run, this);
-    sim_thread.detach();
-    std::cout << "Init end, simulation thread detach ..." << std::endl;
+    if (!sync) {
+        // Async ...
+        std::thread sim_thread(&booksim::run_async, this);
+        sim_thread.detach();
+        std::cout << "Init end, simulation thread detach ..." << std::endl;
+    } else {
+        // Sync ...
+        trafficManager->RunReady();
+    }
 }
 
 void booksim::inject(int src, int dst, int t_inject)
@@ -121,7 +137,8 @@ PYBIND11_MODULE(booksim2, m)
         .def("dequeue", &LockFreePktQueue::dequeue);
     py::class_<booksim>(m, "booksim")
         .def(py::init<>())
-        .def("run", &booksim::run)
+        .def("run_async", &booksim::run_async)
+        .def("run_sync", &booksim::run_sync)
         .def("init", &booksim::init)
         .def("inject", &booksim::inject)
         .def("eject", &booksim::eject)

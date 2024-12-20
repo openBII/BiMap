@@ -480,7 +480,6 @@ TrafficManager::~TrafficManager( )
   Credit::FreeAll();
 }
 
-
 void TrafficManager::_RetireFlit( Flit *f, int dest )
 {
   _deadlock_timer = 0;
@@ -1099,10 +1098,60 @@ bool TrafficManager::RunInit()
   return true;
 }
 
-bool TrafficManager::TransRun()
+void TrafficManager::RunReady()
+{
+  _sim_state = running; // Running State
+  _ClearStats();
+}
+
+bool TrafficManager::RunOnce()
+{
+  bool valid = _SingleSim_Step();
+  if (!valid) cout << "Simulation unstable, ending ..." << endl;
+  return valid;
+}
+
+bool TrafficManager::RunDrain()
+{
+  // Draining State
+  cout << "Completed measurements after " << _time << " cycles." << endl;
+  _sim_state = draining;
+  _drain_time = _time;
+  
+  // Empty any remaining packets
+  cout << "Draining remaining packets ..." << endl;
+  _empty_network = true;
+  int empty_steps = 0;
+  bool packets_left = false;
+
+  for(int c = 0; c < _classes; ++c) {
+    packets_left |= !_total_in_flight_flits[c].empty();
+  }
+
+  while( packets_left ) { 
+    _Step(); 
+    ++empty_steps;
+    if ( empty_steps % 1000 == 0 ) {
+	    _DisplayRemaining( ); 
+    }
+    packets_left = false;
+    for(int c = 0; c < _classes; ++c) {
+      packets_left |= !_total_in_flight_flits[c].empty();
+    }
+  }
+
+  // wait until all the credits are drained as well
+  while(Credit::OutStanding() != 0) {
+    _Step();
+  }
+  _empty_network = false;
+  return true;
+}
+
+bool TrafficManager::RunAlways()
 {
   
-  if (!_SingleSim_noWarmup()) {
+  if (!_SingleSim_Step()) {
     cout << "Simulation unstable, ending ..." << endl;
     return false;
   }

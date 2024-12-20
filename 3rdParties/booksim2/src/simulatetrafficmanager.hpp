@@ -51,7 +51,7 @@ protected:
   virtual void _RetirePacket( Flit * head, Flit * tail );
   virtual void _ResetSim( );
   virtual bool _SingleSim( );
-  virtual bool _SingleSim_noWarmup( );
+  virtual bool _SingleSim_Step( );
 
   bool _Completed( );
 

@@ -8,32 +8,29 @@ class BookSim2:
     def __init__(self):
         self.gr = greenlet(self.task)
         self.dum = greenlet(self.dummy)
+        self.bsim2 = booksim2.booksim()
     
     def run(self): self.gr.switch()
     
     def dummy(self): ...
+    
+    def inject(self, src, dst, t_inject):
+        self.bsim2.inject(src, dst, t_inject)
         
     def task(self):
-        
         # Init ...
-        bsim2 = booksim2.booksim()
-        bsim2.init("3rdParties/booksim2/src/examples/mesh88_simulate.config")
-
+        self.bsim2.init("3rdParties/booksim2/src/examples/mesh88_simulate.config", True)
         for i in range(10):
-            
             # Push Memory
             self.dum.switch()
-            
             # Enject Round ...
-            print("Task: step", i)
-            if i == 1: 
-                print(input(), "-> Simulation End ...")
-                bsim2.end()
-            
-            # Enject API
-            bsim2.inject(0, 10, i)
+            print("\n[*] Task: step", i)
+            if i < 3: self.bsim2.run_sync()
+            elif i == 3: self.bsim2.end()
+            else: print("Execution End ...")
         
 if __name__ == "__main__":
     sim = BookSim2()
-    for i in range(3):
+    for i in range(6):
+        sim.inject(0, 10, 20)
         sim.run()

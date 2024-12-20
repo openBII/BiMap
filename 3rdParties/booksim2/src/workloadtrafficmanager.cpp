@@ -92,7 +92,7 @@ void WorkloadTrafficManager::_ResetSim( )
   }
 }
 
-bool WorkloadTrafficManager::_SingleSim_noWarmup( ) { return 0; }
+bool WorkloadTrafficManager::_SingleSim_Step( ) { return 0; }
 
 bool WorkloadTrafficManager::_SingleSim( )
 {

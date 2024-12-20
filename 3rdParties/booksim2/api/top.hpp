@@ -23,6 +23,7 @@
 class booksim
 {
 private:
+    bool sync;
     int subnets;
     vector<Network *> net;
     BookSimConfig config;
@@ -31,10 +32,11 @@ private:
 public:
     booksim(){}
     ~booksim(){}
-    void init(char* config_file);
+    void init(char* config_file, bool sync);
     void inject(int src, int dst, int t_inject);
     int eject();
-    bool run();
+    bool run_async();
+    bool run_sync();
     void end();
 };
 
