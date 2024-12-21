@@ -62,15 +62,15 @@ void WorkloadTrafficManager::_Inject( )
     while(!wl->empty()) {
       int const source = wl->source();
       if(_partial_packets[c][source].empty()) {
-	++_requests_outstanding[c][source];
-	++_packet_seq_no[c][source];
-	int const dest = wl->dest();
-	int const size = wl->size();
-	int const time = (_include_queuing == 1) ? wl->time() : _time;
-	int const pid = _GeneratePacket(source, dest, size, c, time);
-	wl->inject(pid);
+        ++_requests_outstanding[c][source];
+        ++_packet_seq_no[c][source];
+        int const dest = wl->dest();
+        int const size = wl->size();
+        int const time = (_include_queuing == 1) ? wl->time() : _time;
+        int const pid = _GeneratePacket(source, dest, size, c, time);
+        wl->inject(pid);
       } else {
-	wl->defer();
+	      wl->defer();
       }
     }
     wl->advanceTime();
@@ -92,7 +92,7 @@ void WorkloadTrafficManager::_ResetSim( )
   }
 }
 
-bool WorkloadTrafficManager::_SingleSim_Step( ) { return 0; }
+bool WorkloadTrafficManager::_SingleSim_Stage( ) { return 0; }
 
 bool WorkloadTrafficManager::_SingleSim( )
 {

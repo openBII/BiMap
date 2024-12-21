@@ -117,7 +117,7 @@ void SteadyStateTrafficManager::_ResetSim( )
   }
 }
 
-bool SteadyStateTrafficManager::_SingleSim_Step( ) { return 0; }
+bool SteadyStateTrafficManager::_SingleSim_Stage( ) { return 0; }
 
 bool SteadyStateTrafficManager::_SingleSim( )
 {

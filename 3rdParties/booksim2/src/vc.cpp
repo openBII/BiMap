@@ -156,26 +156,26 @@ void VC::SetOutput( int port, int vc )
 
 void VC::UpdatePriority()
 {
-  if(_buffer.empty()) return;
-  if(_pri_type == queue_length_based) {
+  if (_buffer.empty()) return;
+  if (_pri_type == queue_length_based) {
     _pri = _buffer.size();
-  } else if(_pri_type != none) {
+  } else if (_pri_type != none) {
     Flit * f = _buffer.front();
-    if((_pri_type != local_age_based) && _priority_donation) {
+    if ((_pri_type != local_age_based) && _priority_donation) {
       Flit * df = f;
       for(size_t i = 1; i < _buffer.size(); ++i) {
-	Flit * bf = _buffer[i];
-	if(bf->pri > df->pri) df = bf;
+        Flit * bf = _buffer[i];
+        if(bf->pri > df->pri) df = bf;
       }
       if((df != f) && (df->watch || f->watch)) {
-	*gWatchOut << GetSimTime() << " | " << FullName() << " | "
-		    << "Flit " << df->id
-		    << " donates priority to flit " << f->id
-		    << "." << endl;
+        *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+              << "Flit " << df->id
+              << " donates priority to flit " << f->id
+              << "." << endl;
       }
       f = df;
     }
-    if(f->watch)
+    if (f->watch)
       *gWatchOut << GetSimTime() << " | " << FullName() << " | "
 		  << "Flit " << f->id
 		  << " sets priority to " << f->pri

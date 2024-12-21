@@ -58,7 +58,7 @@ SimulateTrafficManager::~SimulateTrafficManager( )
 void SimulateTrafficManager::_Inject( )
 {
   for(int c = 0; c < _classes; ++c) {
-    Workload * const wl = _workload[c];
+    Workload * const wl = _workload[c]; // *-workload
     while(!wl->empty()) {
       int const source = wl->source();
       if(_partial_packets[c][source].empty()) {
@@ -73,7 +73,7 @@ void SimulateTrafficManager::_Inject( )
 	      wl->defer();
       }
     }
-    wl->advanceTime();
+    wl->advanceTime(); // _refill() in this ...
   }
 }
 
@@ -123,7 +123,7 @@ bool SimulateTrafficManager::_SingleSim( )
   return 1;
 }
 
-bool SimulateTrafficManager::_SingleSim_Step( )
+bool SimulateTrafficManager::_SingleSim_Stage( )
 {
   cout << "Beginning measurements starting @" << _time << endl;
   while(!_Completed() && 

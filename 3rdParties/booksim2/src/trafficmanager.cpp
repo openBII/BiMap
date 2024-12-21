@@ -59,11 +59,9 @@ TrafficManager* TrafficManager::New(Configuration const & config,
 TrafficManager::TrafficManager( const Configuration &config, const vector<Network *> & net )
   : Module( 0, "traffic_manager" ), _net(net), _empty_network(false), _deadlock_timer(0), _reset_time(0), _drain_time(-1), _cur_id(0), _cur_pid(0), _time(0)
 {
-
+  _vcs = config.GetInt("num_vcs");
   _nodes = _net[0]->NumNodes( );
   _routers = _net[0]->NumRouters( );
-
-  _vcs = config.GetInt("num_vcs");
   _subnets = config.GetInt("subnets");
  
   // ============ Message priorities ============ 
@@ -112,13 +110,13 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _classes = config.GetInt("classes");
 
   _subnet = config.GetIntArray("subnet"); 
-  if(_subnet.empty()) {
+  if (_subnet.empty()) {
     _subnet.push_back(config.GetInt("subnet"));
   }
   _subnet.resize(_classes, _subnet.back());
 
   _class_priority = config.GetIntArray("class_priority"); 
-  if(_class_priority.empty()) {
+  if (_class_priority.empty()) {
     _class_priority.push_back(config.GetInt("class_priority"));
   }
   _class_priority.resize(_classes, _class_priority.back());
@@ -181,7 +179,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _total_sims = config.GetInt( "sim_count" );
 
   _router.resize(_subnets);
-  for (int i=0; i < _subnets; ++i) {
+  for (int i = 0; i < _subnets; ++i) {
     _router[i] = _net[i]->GetRouters();
   }
 
@@ -189,7 +187,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   RandomSeed(config.GetInt("seed"));
 
   _measure_stats = config.GetIntArray( "measure_stats" );
-  if(_measure_stats.empty()) {
+  if (_measure_stats.empty()) {
     _measure_stats.push_back(config.GetInt("measure_stats"));
   }
   _measure_stats.resize(_classes, _measure_stats.back());
@@ -201,17 +199,17 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _deadlock_warn_timeout = config.GetInt( "deadlock_warn_timeout" );
 
   string watch_file = config.GetStr( "watch_file" );
-  if((watch_file != "") && (watch_file != "-")) {
+  if ((watch_file != "") && (watch_file != "-")) {
     _LoadWatchList(watch_file);
   }
 
   vector<int> watch_flits = config.GetIntArray("watch_flits");
-  for(size_t i = 0; i < watch_flits.size(); ++i) {
+  for (size_t i = 0; i < watch_flits.size(); ++i) {
     _flits_to_watch.insert(watch_flits[i]);
   }
   
   vector<int> watch_packets = config.GetIntArray("watch_packets");
-  for(size_t i = 0; i < watch_packets.size(); ++i) {
+  for (size_t i = 0; i < watch_packets.size(); ++i) {
     _packets_to_watch.insert(watch_packets[i]);
   }
 
@@ -315,7 +313,7 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
   _overall_avg_frag.resize(_classes, 0.0);
   _overall_max_frag.resize(_classes, 0.0);
 
-  if(_pair_stats){
+  if (_pair_stats) {
     _pair_plat.resize(_classes);
     _pair_nlat.resize(_classes);
     _pair_flat.resize(_classes);
@@ -383,12 +381,11 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _stats[tmp_name.str()] = _hop_stats[c];
     tmp_name.str("");
 
-    if(_pair_stats){
+    if (_pair_stats) {
       _pair_plat[c].resize(_nodes*_nodes);
       _pair_nlat[c].resize(_nodes*_nodes);
       _pair_flat[c].resize(_nodes*_nodes);
     }
-
     _sent_packets[c].resize(_nodes, 0);
     _accepted_packets[c].resize(_nodes, 0);
     _sent_flits[c].resize(_nodes, 0);
@@ -401,33 +398,29 @@ TrafficManager::TrafficManager( const Configuration &config, const vector<Networ
     _buffer_reserved_stalls[c].resize(_subnets*_routers, 0);
     _crossbar_conflict_stalls[c].resize(_subnets*_routers, 0);
 #endif
-    if(_pair_stats){
+    if (_pair_stats) {
       for ( int i = 0; i < _nodes; ++i ) {
-	for ( int j = 0; j < _nodes; ++j ) {
-	  tmp_name << "pair_plat_stat_" << c << "_" << i << "_" << j;
-	  _pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-	  _stats[tmp_name.str()] = _pair_plat[c][i*_nodes+j];
-	  tmp_name.str("");
-	  
-	  tmp_name << "pair_nlat_stat_" << c << "_" << i << "_" << j;
-	  _pair_nlat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-	  _stats[tmp_name.str()] = _pair_nlat[c][i*_nodes+j];
-	  tmp_name.str("");
-	  
-	tmp_name << "pair_flat_stat_" << c << "_" << i << "_" << j;
-	_pair_flat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
-	_stats[tmp_name.str()] = _pair_flat[c][i*_nodes+j];
-	tmp_name.str("");
-	}
+        for ( int j = 0; j < _nodes; ++j ) {
+          tmp_name << "pair_plat_stat_" << c << "_" << i << "_" << j;
+          _pair_plat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+          _stats[tmp_name.str()] = _pair_plat[c][i*_nodes+j];
+          tmp_name.str("");
+          
+          tmp_name << "pair_nlat_stat_" << c << "_" << i << "_" << j;
+          _pair_nlat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+          _stats[tmp_name.str()] = _pair_nlat[c][i*_nodes+j];
+          tmp_name.str("");
+          
+          tmp_name << "pair_flat_stat_" << c << "_" << i << "_" << j;
+          _pair_flat[c][i*_nodes+j] = new Stats( this, tmp_name.str( ), 1.0, 250 );
+          _stats[tmp_name.str()] = _pair_flat[c][i*_nodes+j];
+          tmp_name.str("");
+        }
       }
     }
   }
-
   _slowest_flit.resize(_classes, -1);
   _slowest_packet.resize(_classes, -1);
-
- 
-
 }
 
 TrafficManager::~TrafficManager( )
@@ -1106,7 +1099,7 @@ void TrafficManager::RunReady()
 
 bool TrafficManager::RunOnce()
 {
-  bool valid = _SingleSim_Step();
+  bool valid = _SingleSim_Stage();
   if (!valid) cout << "Simulation unstable, ending ..." << endl;
   return valid;
 }
@@ -1151,7 +1144,7 @@ bool TrafficManager::RunDrain()
 bool TrafficManager::RunAlways()
 {
   
-  if (!_SingleSim_Step()) {
+  if (!_SingleSim_Stage()) {
     cout << "Simulation unstable, ending ..." << endl;
     return false;
   }

@@ -95,7 +95,7 @@ void BatchTrafficManager::_ClearStats( )
   _batch_time->Clear();
 }
 
-bool BatchTrafficManager::_SingleSim_Step( ) { return 0; }
+bool BatchTrafficManager::_SingleSim_Stage( ) { return 0; }
 
 bool BatchTrafficManager::_SingleSim( )
 {

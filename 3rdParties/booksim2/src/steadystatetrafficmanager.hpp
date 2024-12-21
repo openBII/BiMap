@@ -62,7 +62,7 @@ protected:
 
   virtual bool _SingleSim( );
   
-  virtual bool _SingleSim_Step( );
+  virtual bool _SingleSim_Stage( );
 
   virtual string _OverallStatsHeaderCSV() const;
   virtual string _OverallClassStatsCSV(int c) const;

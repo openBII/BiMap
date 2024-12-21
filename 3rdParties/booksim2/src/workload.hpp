@@ -106,6 +106,52 @@ public:
   virtual void retire(int pid) {}
 };
 
+class OnlineWorkload : public Workload {
+protected:
+  unsigned long long int _time;
+  nt_context_t * _ctx;
+  nt_packet_t * _next_packet;
+  vector<queue<nt_packet_t *> > _ready_packets;
+  list<nt_packet_t *> _future_packets;
+  set<unsigned int> _check_packets;
+  map<unsigned int, nt_packet_t *> _stalled_packets;
+  map<int, nt_packet_t *> _in_flight_packets;
+  map<unsigned int, unsigned long long int> _response_eject_time;
+  vector<unsigned long long int> _last_response_eject_time;
+  unsigned int _channel_width;
+  unsigned int _size_offset;
+  unsigned int _region;
+  unsigned int _window_size;
+  unsigned int _scale;
+  unsigned long long int _count;
+  unsigned long long int _limit;
+  unsigned long long int _skip;
+  bool _enforce_deps;
+  bool _enforce_lats;
+  unsigned int _l2_tag_latency;
+  unsigned int _l2_data_latency;
+  unsigned int _mem_latency;
+  unsigned int _trace_net_delay;
+  void _refill();
+
+public:
+  OnlineWorkload(int nodes, string const & filename, 
+		  unsigned int channel_width, long long int limit = -1ll, 
+		  unsigned int scale = 1, int region = -1, 
+		  bool enforce_deps = true, bool enforce_lats = false, 
+		  unsigned int size_offset = 0);
+  virtual ~OnlineWorkload();
+  virtual void reset();
+  virtual void advanceTime();
+  virtual bool completed() const;
+  virtual int dest() const;
+  virtual int size() const;
+  virtual int time() const;
+  virtual void inject(int pid);
+  virtual void retire(int pid);
+  virtual void printStats(ostream & os) const;
+};
+
 class TraceWorkload : public Workload {
 
 protected:
@@ -157,32 +203,24 @@ class NetraceWorkload : public Workload {
 protected:
 
   unsigned long long int _time;
-
   nt_context_t * _ctx;
-
   nt_packet_t * _next_packet;
-
   vector<queue<nt_packet_t *> > _ready_packets;
   list<nt_packet_t *> _future_packets;
   set<unsigned int> _check_packets;
   map<unsigned int, nt_packet_t *> _stalled_packets;
   map<int, nt_packet_t *> _in_flight_packets;
-
   map<unsigned int, unsigned long long int> _response_eject_time;
   vector<unsigned long long int> _last_response_eject_time;
 
   unsigned int _channel_width;
   unsigned int _size_offset;
-
   unsigned int _region;
-
   unsigned int _window_size;
+  unsigned int _scale;
 
   unsigned long long int _count;
   unsigned long long int _limit;
-
-  unsigned int _scale;
-
   unsigned long long int _skip;
 
   bool _enforce_deps;
