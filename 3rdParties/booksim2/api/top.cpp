@@ -101,7 +101,7 @@ void booksim::init(char* config_file, bool sync)
         this->net[i] = Network::New( config, name.str() );
     }
     assert(trafficManager == NULL);
-    trafficManager = TrafficManager::New(config, this->net);
+    trafficManager = TrafficManager::New(config, this->net, this);
     trafficManager->RunInit();
 
     // Run the simulator with a seperate thread
@@ -116,14 +116,22 @@ void booksim::init(char* config_file, bool sync)
     }
 }
 
-void booksim::inject(int src, int dst, int t_inject)
+void booksim::inject(int src, int dst, int t_inject, int pkg_size)
 {
-    this->i_fifo.enqueue(src, dst, t_inject, -1);
+    this->i_fifo.enqueue(src, dst, t_inject, -1, pkg_size);
 }
 
 int booksim::eject()
 {
     return this->o_fifo.dequeue();
+}
+
+void booksim::eject_all_print()
+{
+    while (!this->o_fifo.is_empty()) {
+        pkt p = this->o_fifo.dequeue_pkt();
+        std::cout << "[*] time: " << p.t_inject << "-" << p.t_eject << " src: " << p.addr_src << " dst: " << p.addr_dst << std::endl;
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -140,6 +148,7 @@ PYBIND11_MODULE(booksim2, m)
         .def("run_async", &booksim::run_async)
         .def("run_sync", &booksim::run_sync)
         .def("init", &booksim::init)
+        .def("eject_all_print", &booksim::eject_all_print)
         .def("inject", &booksim::inject)
         .def("eject", &booksim::eject)
         .def("end", &booksim::end);

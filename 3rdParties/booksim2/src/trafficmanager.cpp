@@ -38,9 +38,9 @@
 #include "vc.hpp"
 
 TrafficManager* TrafficManager::New(Configuration const & config,
-				     vector<Network *> const & net)
+				     vector<Network *> const & net, booksim* bs_ptr)
 {
-  TrafficManager * result = NULL;
+  TrafficManager* result = NULL;
   string sim_type = config.GetStr("sim_type");
   if((sim_type == "latency") || (sim_type == "throughput")) {
     result = new SteadyStateTrafficManager(config, net);
@@ -49,7 +49,7 @@ TrafficManager* TrafficManager::New(Configuration const & config,
   } else if(sim_type == "workload") {
     result = new WorkloadTrafficManager(config, net);
   } else if(sim_type == "simulate") {
-    result = new SimulateTrafficManager(config, net);
+    result = new SimulateTrafficManager(config, net, bs_ptr);
   } else {
     cerr << "Unknown simulation type: " << sim_type << endl;
   } 
@@ -441,11 +441,11 @@ TrafficManager::~TrafficManager( )
 
     if(_pair_stats){
       for ( int i = 0; i < _nodes; ++i ) {
-	for ( int j = 0; j < _nodes; ++j ) {
-	  delete _pair_plat[c][i*_nodes+j];
-	  delete _pair_nlat[c][i*_nodes+j];
-	  delete _pair_flat[c][i*_nodes+j];
-	}
+        for ( int j = 0; j < _nodes; ++j ) {
+          delete _pair_plat[c][i*_nodes+j];
+          delete _pair_nlat[c][i*_nodes+j];
+          delete _pair_flat[c][i*_nodes+j];
+        }
       }
     }
   }
@@ -503,11 +503,12 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     Error( err.str( ) );
   }
   
-  if((_slowest_flit[f->cl] < 0) ||
-     (_flat_stats[f->cl]->Max() < (f->atime - f->itime)))
+  if ((_slowest_flit[f->cl] < 0) ||
+     (_flat_stats[f->cl]->Max() < (f->atime - f->itime))) {
     _slowest_flit[f->cl] = f->id;
+  }
   _flat_stats[f->cl]->AddSample( f->atime - f->itime);
-  if(_pair_stats){
+  if (_pair_stats) {
     _pair_flat[f->cl][f->src*_nodes+dest]->AddSample( f->atime - f->itime );
   }
       
@@ -525,14 +526,14 @@ void TrafficManager::_RetireFlit( Flit *f, int dest )
     }
     if ( f->watch ) { 
       *gWatchOut << GetSimTime() << " | "
-		 << "node" << dest << " | "
-		 << "Retiring packet " << head->pid 
-		 << " (plat = " << f->atime - head->ctime
-		 << ", nlat = " << f->atime - head->itime
-		 << ", frag = " << (f->atime - head->atime) - (f->id - head->id) // NB: In the spirit of solving problems using ugly hacks, we compute the packet length by taking advantage of the fact that the IDs of flits within a packet are contiguous.
-		 << ", src = " << head->src 
-		 << ", dest = " << head->dest
-		 << ")." << endl;
+        << "node" << dest << " | "
+        << "Retiring packet " << head->pid 
+        << " (plat = " << f->atime - head->ctime
+        << ", nlat = " << f->atime - head->itime
+        << ", frag = " << (f->atime - head->atime) - (f->id - head->id) // NB: In the spirit of solving problems using ugly hacks, we compute the packet length by taking advantage of the fact that the IDs of flits within a packet are contiguous.
+        << ", src = " << head->src 
+        << ", dest = " << head->dest
+        << ")." << endl;
     }
 
     _RetirePacket(head, f);

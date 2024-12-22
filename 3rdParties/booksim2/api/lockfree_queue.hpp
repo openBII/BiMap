@@ -1,3 +1,6 @@
+#ifndef __LOCKFREE_QUEUE_HPP__
+#define __LOCKFREE_QUEUE_HPP__
+
 #include <atomic>  
 #include <memory>  
   
@@ -68,17 +71,27 @@ struct pkt
     int addr_dst;   // Address of dst node
     int t_inject;   // Timestamp of injecting
     int t_eject;    // Timestamp of ejecting
+    int pkg_size;   // Size of packet
     pkt(){
         this->addr_src = -1;
         this->addr_dst = -1;
         this->t_inject = -1;
         this->t_eject  = -1;
+        this->pkg_size = 1;
     }
     pkt(int src, int dst, int t_i, int t_e){
         this->addr_src = src;
         this->addr_dst = dst;
         this->t_inject = t_i;
         this->t_eject  = t_e;
+        this->pkg_size = 1;
+    }
+    pkt(int src, int dst, int t_i, int t_e, int pkg_size){
+        this->addr_src = src;
+        this->addr_dst = dst;
+        this->t_inject = t_i;
+        this->t_eject  = t_e;
+        this->pkg_size = pkg_size;
     }
 };
 
@@ -104,9 +117,18 @@ public:
             delete toDelete;  
         }  
     }  
+
+    bool is_empty() {
+        Node* old_head = head.load();
+        if (old_head->next.load() == nullptr) {
+            return true;
+        } else {
+            return false;
+        }
+    }
   
-    bool enqueue(int src, int dst, int t_inject, int t_eject) {
-        pkt new_value(src, dst, t_inject, t_eject);
+    bool enqueue(int src, int dst, int t_inject, int t_eject, int pkg_size) {
+        pkt new_value(src, dst, t_inject, t_eject, pkg_size);
         Node* new_node = new Node(new_value);  
         while (true) {  
             Node* old_tail = tail.load();  
@@ -140,5 +162,24 @@ public:
                 }  
             }  
         }  
+    } 
+
+    pkt dequeue_pkt() {  
+        while (true) {  
+            Node* old_head = head.load();  
+            Node* next = old_head->next.load();  
+            if (old_head == head.load()) {  
+                if (next == nullptr) {
+                    pkt null_pkt;
+                    return null_pkt;
+                }  
+                if (head.compare_exchange_strong(old_head, next)) {  
+                    pkt value = *next->data;  
+                    return value;  
+                }  
+            }  
+        }  
     }  
 };
+
+#endif

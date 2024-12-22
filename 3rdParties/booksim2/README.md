@@ -10,7 +10,7 @@ make
 
 # Go back & test
 cd ../../../..
-python 3rdParties/booksim2/api/booksim_api.py
+python 3rdParties/booksim2/api/booksim_sync.py
 ```
 
 Example results:

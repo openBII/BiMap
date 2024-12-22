@@ -249,7 +249,7 @@ protected:
 public:
   virtual ~TrafficManager( );
   static TrafficManager * New(Configuration const & config, 
-			                        vector<Network *> const & net);
+			                        vector<Network *> const & net, booksim* bs_ptr);
   // - - - - - - - - - - - - - - -
   bool Run();
   bool RunInit();

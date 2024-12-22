@@ -30,7 +30,7 @@
 
 #include "workload.hpp"
 #include "random_utils.hpp"
-
+#include "lockfree_queue.hpp"
 // #define DEBUG_NETRACE
 
 Workload::Workload(int nodes) : _nodes(nodes)
@@ -44,7 +44,7 @@ Workload::~Workload()
 }
 
 Workload* Workload::New(string const & workload, int nodes,
-			 Configuration const * const config)
+			 Configuration const * const config, booksim* bs_ptr)
 {
   string workload_name;
   string param_str;
@@ -78,12 +78,10 @@ Workload* Workload::New(string const & workload, int nodes,
     rates.resize(sizes.size(), rates.back());
     result = new SyntheticWorkload(nodes, load, traffic, injection, sizes, rates, config);
   } else if (workload_name == "online") {
-    string const & filename = params[0];
-    vector<int> packet_sizes = vector<int>(5, 1); /* Dynamic Updates */
     int limit = -1;
-    int skip = 0;
     int scale = 1;
-    result = new OnlineWorkload(nodes, filename, packet_sizes, limit, skip, scale);
+    int skip = 0;
+    result = new OnlineWorkload(nodes, bs_ptr, limit, skip, scale);
   } else if(workload_name == "trace") {
     if(params.size() < 2) {
       cout << "Error: Missing parameter in trace workload definition: " << workload << endl;
@@ -991,46 +989,37 @@ void NetraceWorkload::printStats(ostream & os) const
 
 // OnlineWorkload ------------------------------------------
 
-OnlineWorkload::OnlineWorkload(int nodes, string const & filename, 
-			     vector<int> const & packet_sizes, 
-			     int limit, unsigned int skip, unsigned int scale)
-  : Workload(nodes), 
-    _packet_sizes(packet_sizes), _limit(limit), _scale(scale), _skip(skip)
+OnlineWorkload::OnlineWorkload(int nodes, booksim* bs_ptr, int limit, 
+                                unsigned int skip, unsigned int scale)
+  : Workload(nodes), _limit(limit), _scale(scale), _skip(skip)
 {
   _ready_packets.resize(nodes);
-  _trace = new ifstream(filename.c_str());
-  if(!_trace->is_open()) {
-    cerr << "Unable to open trace file: " << filename << endl;
-    exit(-1);
-  }
+  _bs_ptr = bs_ptr;
 }
 
-OnlineWorkload::~OnlineWorkload()
-{
-  if(_trace) {
-    if(_trace->is_open()) {
-      _trace->close();
-    }
-    delete _trace;
-  }
-}
+OnlineWorkload::~OnlineWorkload(){}
 
 void OnlineWorkload::_refill()
 {
   unsigned int time = _time;
-  while(((_limit < 0) || (_count < (unsigned int)_limit)) && !_trace->eof()) {
+  while(((_limit < 0) || (_count < (unsigned int)_limit)) && !_bs_ptr->i_fifo.is_empty()) {
     ++_count;
-    int delay, source, dest, type;
-    *_trace >> delay >> source >> dest >> type;
+    int delay, source, dest, size;
+    pkt head_pkt = _bs_ptr->i_fifo.dequeue_pkt();
+    cout << "[dequeue] " << head_pkt.t_inject << endl;
+    delay = head_pkt.t_inject;
+    source = head_pkt.addr_src;
+    dest = head_pkt.addr_dst;
+    size = head_pkt.pkg_size;
     assert(delay >= 0);
     assert((source >= 0) && (source < _nodes));
     assert((dest >= 0) && (dest < _nodes));
     time += (unsigned int)delay;
-    if (type >= 0) {
+    if (size >= 0) {
       _next_source = source;
       _next_packet.time = time;
       _next_packet.dest = dest;
-      _next_packet.type = type;
+      _next_packet.size = size;
       assert(time >= _time);
       if(time == _time) {
         if(_ready_packets[source].empty()) {
@@ -1050,13 +1039,14 @@ void OnlineWorkload::reset()
 {
   Workload::reset();
   _time = 0;
-  _trace->seekg(0);
   unsigned int count = 0;
-  while((count < _skip) && !_trace->eof()) {
+  while((count < _skip) && !_bs_ptr->i_fifo.is_empty()) {
     ++count;
-    int delay, source, dest, type;
-    *_trace >> delay >> source >> dest >> type;
-    cout << "[Reset] @" << _time << " " << delay << " " <<  source << " " << dest << " " << type << endl;
+    int delay, source, dest, size;
+    pkt head_pkt = _bs_ptr->i_fifo.dequeue_pkt();
+    delay = head_pkt.t_inject;
+    source = head_pkt.addr_src;
+    dest = head_pkt.addr_dst;
     assert(delay >= 0);
     assert((source >= 0) && (source < _nodes));
     assert((dest >= 0) && (dest < _nodes));
@@ -1089,8 +1079,7 @@ void OnlineWorkload::advanceTime()
 
 bool OnlineWorkload::completed() const
 {
-  return (_pending_nodes.empty() && _deferred_nodes.empty() && 
-	  (_next_source < 0));
+  return (_pending_nodes.empty() && _deferred_nodes.empty() && (_next_source < 0));
 }
 
 int OnlineWorkload::dest() const
@@ -1110,7 +1099,7 @@ int OnlineWorkload::size() const
   int const source = _pending_nodes.front();
   assert((source >= 0) && (source < _nodes));
   assert(!_ready_packets[source].empty());
-  int const size = _packet_sizes[_ready_packets[source].front().type];
+  int const size = _ready_packets[source].front().size;
   assert(size > 0);
   return size;
 }
@@ -1140,10 +1129,7 @@ void OnlineWorkload::inject(int pid)
   }
 }
 
-void OnlineWorkload::retire(int pid)
-{
-
-}
+void OnlineWorkload::retire(int pid) { }
 
 void OnlineWorkload::printStats(ostream & os) const
 {

@@ -37,6 +37,7 @@
 
 #include "injection.hpp"
 #include "traffic.hpp"
+#include "top.hpp"
 
 extern "C" {
 #include "netrace/netrace.h"
@@ -53,7 +54,7 @@ protected:
 public:
   virtual ~Workload();
   static Workload * New(string const & workload, int nodes, 
-			Configuration const * const config = NULL);
+			Configuration const * const config = NULL, booksim* bs_ptr = NULL);
   virtual void reset();
   virtual void advanceTime();
   virtual bool empty() const;
@@ -66,6 +67,7 @@ public:
   virtual void defer();
   virtual void retire(int pid) = 0;
   virtual void printStats(ostream & os) const;
+  virtual void refill() = 0;
 };
 
 class NullWorkload : public Workload {
@@ -77,6 +79,7 @@ public:
   virtual int time() const {return -1;}
   virtual void inject(int pid) {assert(false);}
   virtual void retire(int pid) {assert(false);}
+  virtual void refill() {};
 };
 
 class SyntheticWorkload : public Workload {
@@ -104,6 +107,7 @@ public:
   virtual int time() const;
   virtual void inject(int pid);
   virtual void retire(int pid) {}
+  virtual void refill() {};
 };
 
 class TraceWorkload : public Workload {
@@ -142,6 +146,7 @@ public:
   virtual void inject(int pid);
   virtual void retire(int pid);
   virtual void printStats(ostream & os) const;
+  virtual void refill() {};
 };
 
 class NetraceWorkload : public Workload {
@@ -197,23 +202,21 @@ public:
   virtual void inject(int pid);
   virtual void retire(int pid);
   virtual void printStats(ostream & os) const;
+  virtual void refill() {};
 };
 
 class OnlineWorkload : public Workload {
 
 protected:
-
   unsigned int _time;
-  vector<int> _packet_sizes;
   struct PacketInfo {
     unsigned int time;
     int dest;
-    int type;
+    int size;
   };
   int _next_source;
   PacketInfo _next_packet;
   vector<queue<PacketInfo> > _ready_packets;
-  ifstream * _trace;
   unsigned int _count;
   int _limit;
   unsigned int _scale;
@@ -221,9 +224,8 @@ protected:
   void _refill();
 
 public:
-
-  OnlineWorkload(int nodes, string const & filename, 
-		vector<int> const & packet_size, int limit = -1, 
+  booksim* _bs_ptr;
+  OnlineWorkload(int nodes, booksim* bs_ptr, int limit = -1, 
 		unsigned int skip = 0, unsigned int scale = 1);
   virtual ~OnlineWorkload();
   virtual void reset();
@@ -235,6 +237,7 @@ public:
   virtual void inject(int pid);
   virtual void retire(int pid);
   virtual void printStats(ostream & os) const;
+  virtual void refill() { _refill(); };
 };
 
 #endif

@@ -27,14 +27,15 @@ private:
     int subnets;
     vector<Network *> net;
     BookSimConfig config;
+public:
     LockFreePktQueue i_fifo;
     LockFreePktQueue o_fifo;
-public:
     booksim(){}
     ~booksim(){}
     void init(char* config_file, bool sync);
-    void inject(int src, int dst, int t_inject);
+    void inject(int src, int dst, int t_inject, int pkg_size);
     int eject();
+    void eject_all_print();
     bool run_async();
     bool run_sync();
     void end();

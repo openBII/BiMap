@@ -1,5 +1,3 @@
-// $Id$
-
 /*
  Copyright (c) 2007-2012, Trustees of The Leland Stanford Junior University
  All rights reserved.
@@ -34,6 +32,8 @@
 
 #include "trafficmanager.hpp"
 #include "workload.hpp"
+#include "top.hpp"
+// #define TRACK_EJECT
 
 class SimulateTrafficManager : public TrafficManager {
 
@@ -48,10 +48,10 @@ protected:
   int _overall_runtime;
 
   virtual void _Inject( );
-  virtual void _RetirePacket( Flit * head, Flit * tail );
+  virtual void _RetirePacket(Flit* head, Flit* tail);
   virtual void _ResetSim( );
   virtual bool _SingleSim( );
-  virtual bool _SingleSim_Stage( );
+  virtual bool _SingleSim_Stage();
 
   bool _Completed( );
 
@@ -64,10 +64,10 @@ protected:
   virtual void _DisplayOverallClassStats(int c, ostream & os) const;
 
 public:
-
-  SimulateTrafficManager( const Configuration &config, const vector<Network *> & net );
+  booksim* _bs_ptr;
+  SimulateTrafficManager( const Configuration &config, const vector<Network *> & net, booksim* bs_ptr );
   virtual ~SimulateTrafficManager( );
-
+  bool _StepSim( );
 };
 
 #endif
