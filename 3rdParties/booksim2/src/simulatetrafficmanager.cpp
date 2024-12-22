@@ -123,31 +123,43 @@ bool SimulateTrafficManager::_SingleSim( )
   return 1;
 }
 
+// Function to perform a single simulation stage
 bool SimulateTrafficManager::_SingleSim_Stage()
 {
+  // Print the start time of the measurements and whether the simulation is completed
   cout << "Beginning measurements starting @" << _time  << " " <<  _Completed() << endl;
-  bool force_execute = true;
-  while((!_Completed() || force_execute) && 
+  
+  // If the simulation is completed, refill the workload for each class that requires measurement
+  if (_Completed()) {
+    for (int c = 0; c < _classes; ++c) {
+      if (_measure_stats[c]) _workload[c]->refill();
+    }
+  }
+  
+  // Continue the simulation until it is completed or the maximum number of samples is reached
+  while(!_Completed() && 
         ((_max_samples < 0) || (_time < (_max_samples) * _sample_period)))
   {
-    if (force_execute) {
-      for (int c = 0; c < _classes; ++c) {
-        if (_measure_stats[c]) {
-          _workload[c]->refill();
-        }
-      }
-      force_execute = false;
-    }
+    // Perform a single step of the simulation and check if any flits were ejected
     bool ejected = _StepSim();
+    
+    // Update and display the simulation statistics at regular intervals
     if ((_time % _sample_period) == 0) {
       UpdateStats();
       DisplayStats();
     }
+    
+    // If any flits were ejected, break the loop
     if (ejected) break;
   }
+  
+  // Print the end time of the measurements
   cout << "Beginning measurements ending @" << _time << endl;
+  
+  // Return true to indicate that the simulation stage was completed
   return 1;
 }
+
 
 bool SimulateTrafficManager::_Completed( )
 {
@@ -242,7 +254,7 @@ bool SimulateTrafficManager::_StepSim( )
           if (f->tail) {
             ++_accepted_packets[f->cl][n];
             // Eject to Output FIFO
-            _bs_ptr->o_fifo.enqueue(f->src, f->dest, GetSimTime(), f->ctime, -1);
+            _bs_ptr->o_fifo.enqueue(f->src, f->dest, f->ctime, GetSimTime(), -1);
             ejected = true;
           }
         }
