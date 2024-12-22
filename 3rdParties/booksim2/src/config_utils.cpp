@@ -385,16 +385,15 @@ vector<int> tokenize_int(string const & data)
 
   size_t curr = start;
 
-  while(string::npos != (curr = data.find_first_of("{,}", curr))) {
-    
-    if(data[curr] == '{') {
+  while (string::npos != (curr = data.find_first_of("{,}", curr))) {
+    if (data[curr] == '{') {
       ++nested;
     } else if((data[curr] == '}') && nested) {
       --nested;
-    } else if(!nested) {
-      if(curr > start) {
-	string token = data.substr(start, curr - start);
-	values.push_back(atoi(token.c_str()));
+    } else if (!nested) {
+      if (curr > start) {
+        string token = data.substr(start, curr - start);
+        values.push_back(atoi(token.c_str()));
       }
       start = curr + 1;
     }

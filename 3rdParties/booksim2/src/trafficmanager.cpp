@@ -693,7 +693,6 @@ void TrafficManager::_Step( )
           }
         }
       }
-
       // Credit-Based Flow Control
       Credit * const c = _net[subnet]->ReadCredit( n );
       if ( c ) {
@@ -851,13 +850,13 @@ void TrafficManager::_Step( )
               assert(router);
               int in_channel = inject->GetSinkPort();
               _rf(router, f, in_channel, &f->la_route_set, false);
-              if(f->watch) {
+              if (f->watch) {
                 *gWatchOut << GetSimTime() << " | "
                     << "node" << n << " | "
                     << "Generating lookahead routing info for flit " << f->id
                     << "." << endl;
               }
-            } else if(f->watch) {
+            } else if (f->watch) {
               *gWatchOut << GetSimTime() << " | "
                 << "node" << n << " | "
                 << "Already generated lookahead routing info for flit " << f->id
@@ -945,9 +944,7 @@ void TrafficManager::_Step( )
   }
   ++_time;
   assert(_time);
-  if(gTrace){
-    cout << "TIME " << _time << endl;
-  }
+  if (gTrace) cout << "TIME " << _time << endl;
 }
   
 bool TrafficManager::_PacketsOutstanding( ) const

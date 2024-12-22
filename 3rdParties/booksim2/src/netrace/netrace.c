@@ -215,13 +215,13 @@ nt_packet_t* nt_read_packet( nt_context_t* ctx ) {
 	unsigned int i;
 	char strerr[180];
 	nt_packet_t* to_return = NULL;
-	if( ctx->input_tracefile != NULL ) {
+	if ( ctx->input_tracefile != NULL ) {
 		to_return = nt_packet_malloc();
-		if( (err = fread( to_return, 1, sizeof(struct nt_packet_pack), ctx->input_tracefile )) < 0 ) {
+		if ( (err = fread( to_return, 1, sizeof(struct nt_packet_pack), ctx->input_tracefile )) < 0 ) {
 			sprintf( strerr, "failed to read packet: err = %d", err );
 			nt_error( strerr );
 		}
-		if( err > 0 && err < sizeof(struct nt_packet_pack) ) {
+		if ( err > 0 && err < sizeof(struct nt_packet_pack) ) {
 			// Bad packet - end of file
 			nt_error( "unexpectedly reached end of trace file - perhaps corrupt" );
 		} else if( err == 0 ) {
@@ -230,7 +230,7 @@ nt_packet_t* nt_read_packet( nt_context_t* ctx ) {
 			to_return = NULL;
 			return to_return;
 		}
-		if( !ctx->dependencies_off ) {
+		if ( !ctx->dependencies_off ) {
 			// Track dependencies: add to_return to dependencies array
 			nt_dep_ref_node_t* node_ptr = nt_get_dependency_node( ctx, to_return->id );
 			if( node_ptr == NULL ) {
@@ -240,15 +240,15 @@ nt_packet_t* nt_read_packet( nt_context_t* ctx ) {
 		}
 		ctx->num_active_packets++;
 		ctx->latest_active_packet_cycle = to_return->cycle;
-		if( to_return->num_deps == 0 ) {
+		if ( to_return->num_deps == 0 ) {
 			to_return->deps = NULL;
 		} else {
 			to_return->deps = nt_dependency_malloc( to_return->num_deps );
-			if( (err = fread( to_return->deps, sizeof(nt_dependency_t), to_return->num_deps, ctx->input_tracefile )) < 0 ) {
+			if ( (err = fread( to_return->deps, sizeof(nt_dependency_t), to_return->num_deps, ctx->input_tracefile )) < 0 ) {
 				sprintf( strerr, "failed to read dependencies: err = %d", err );
 				nt_error( strerr );
 			}
-			if( !ctx->dependencies_off ) {
+			if ( !ctx->dependencies_off ) {
 				// Track dependencies: add to_return downward dependencies to array
 				for( i = 0; i < to_return->num_deps; i++ ) {
 					unsigned int dep_id = to_return->deps[i];
@@ -497,7 +497,6 @@ void nt_print_header( nt_context_t* ctx, nt_header_t* header ) {
 	unsigned int i;
 	if( header != NULL ) {
 		printf( "NT_TRACEFILE---------------------\n" );
-
 		printf( "  Benchmark: %s\n", header->benchmark_name );
 		printf( "  Magic Correct? %s\n", (header->nt_magic == NT_MAGIC) ? "TRUE" : "FALSE" );
 		printf( "  Tracefile Version: v%1.1f\n", header->version );
