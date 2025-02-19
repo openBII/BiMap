@@ -1,5 +1,5 @@
 from src.simulator.resource_simulator.config.matrix_config import ComputeChipletConfig
-from src.simulator.resource_simulator.st_model.space_matrix.core_factory import CoreFactory
+from src.simulator.resource_simulator.st_model.space_matrix.core_factory import CoreFactory, HybridCoreFactory
 from src.simulator.resource_simulator.st_model.space_matrix.factory import Factory
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
 from src.simulator.resource_simulator.st_model.space_point.communication_point import SharedMemoryCommunicationPoint, CommunicationPoint
@@ -10,12 +10,15 @@ from src.simulator.resource_simulator.st_model.st_coord import Coord
 
 class ComputeChipletFactory(Factory):
     @staticmethod
-    def create_matrix(config: ComputeChipletConfig) -> STMatrix:
+    def create_matrix(config: ComputeChipletConfig, type: str) -> STMatrix:
         chiplet = STMatrix(dim=2, space_level=2)
         size_x, size_y = config.size
         for i in range(size_x):
             for j in range(size_y):
-                core = CoreFactory.create_matrix(config.core)
+                if type == "hybrid":
+                    core = HybridCoreFactory.create_matrix(config.core)
+                else:
+                    core = CoreFactory.create_matrix(config.core)
                 chiplet.add_element(coord=Coord((i, j)), element=core)
 
         if hasattr(config, "shared_memory"):

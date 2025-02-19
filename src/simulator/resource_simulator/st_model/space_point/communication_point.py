@@ -7,7 +7,7 @@ from src.simulator.resource_simulator.st_model.hop import Hop
 from src.simulator.resource_simulator.st_model.tick import Tick
 from src.simulator.resource_simulator.st_model.st_point import STPoint
 from src.simulator.resource_simulator.evaluation_model.communication_evaluator import CommunicationEvaluator, SharedMemoryCommunicationEvaluator, CoreCommunicationEvaluator, NetworkParameterDict
-from src.simulator.resource_simulator.config.communication_config import CoreCommunicationConfig, CommunicationConfig
+from src.simulator.resource_simulator.config.communication_config import CoreCommunicationConfig, CommunicationConfig, HybridCoreCommunicationConfig
 
 
 class CommunicationPoint(STPoint):
@@ -130,4 +130,27 @@ class SharedMemoryCommunicationPoint(CommunicationPoint):
                                                        config.size,
                                                        latency=self.latency)
         self.set_evaluator(evaluator)
+
+
+class HybridCoreCommunicationPoint(CommunicationPoint):
+    def __init__(self, config: HybridCoreCommunicationConfig):
+        super().__init__(config)
+        evaluator = CommunicationEvaluator(self.bandwidth,
+                                           config.process_node)
+        self.set_evaluator(evaluator)
      
+    def config_handler(self, config: HybridCoreCommunicationConfig):
+        bandwidth_dict = NetworkParameterDict()
+        bandwidth_dict[Hop(Coord(0), Coord(1))] = config.sram_bandwidth
+        bandwidth_dict[Hop(Coord(3), Coord(1))] = config.dram_bandwidth
+        bandwidth_dict[Hop(Coord(4), Coord(1))] = config.flash_bandwidth
+        bandwidth_dict[Hop(Coord(1), Coord(0))] = config.sram_bandwidth
+        bandwidth_dict[Hop(Coord(1), Coord(3))] = config.dram_bandwidth
+        bandwidth_dict[Hop(Coord(1), Coord(4))] = config.flash_bandwidth
+        bandwidth_dict[Hop(Coord(0), Coord(5))] = config.flash_bandwidth
+        bandwidth_dict[Hop(Coord(3), Coord(5))] = config.flash_bandwidth
+        bandwidth_dict[Hop(Coord(4), Coord(5))] = config.flash_bandwidth
+        bandwidth_dict[Hop(Coord(5), Coord(0))] = config.flash_bandwidth
+        bandwidth_dict[Hop(Coord(5), Coord(3))] = config.flash_bandwidth
+        bandwidth_dict[Hop(Coord(5), Coord(4))] = config.flash_bandwidth
+        return bandwidth_dict, config.latency

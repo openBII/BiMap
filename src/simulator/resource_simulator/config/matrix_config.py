@@ -46,6 +46,19 @@ class CoreConfig(Config):
             self.register_file = self.config["register_file"]
 
 
+class HybridCoreConfig(Config):
+    def __init__(self, config, process_node = None):
+        super().__init__(config, process_node)
+
+    def handler(self):
+        self.network = self.config["network"]
+        self.mac_array = self.config["mac_array"]
+        self.vector_unit = self.config["vector_unit"]
+        self.local_memory = self.config["local_memory"]
+        self.dram = self.config["dram"]
+        self.flash = self.config["flash"]
+
+
 class ComputeChipletConfig(Config):
     def __init__(self, config, process_node = None):
         super().__init__(config, process_node)
@@ -58,12 +71,35 @@ class ComputeChipletConfig(Config):
             self.shared_memory = self.config["shared_memory"]
 
 
+class HybridComputeChipletConfig(Config):
+    def __init__(self, config, process_node = None):
+        super().__init__(config, process_node)
+
+    def handler(self):
+        self.core = HybridCoreConfig(self.config["core"], self.process_node)
+        self.size = self.config["size"]
+        self.network = self.config["network"]
+        if "shared_memory" in self.config:
+            self.shared_memory = self.config["shared_memory"]
+
+
 class PackageConfig(Config):
     def __init__(self, config, process_node = None):
         super().__init__(config, process_node)
 
     def handler(self):
         self.chiplet = ComputeChipletConfig(self.config["chiplet"],
+                                            self.process_node)
+        self.size = self.config["size"]
+        self.network = self.config["network"]
+
+
+class HybridPackageConfig(Config):
+    def __init__(self, config, process_node = None):
+        super().__init__(config, process_node)
+
+    def handler(self):
+        self.chiplet = HybridComputeChipletConfig(self.config["chiplet"],
                                             self.process_node)
         self.size = self.config["size"]
         self.network = self.config["network"]
@@ -96,6 +132,10 @@ class BoardConfig(Config):
                                                 self.process_node)
         self.DRAM = self.config["DRAM"]
         self.network = self.config["network"]
+
+
+class HybridBoardConfig(Config):
+    pass
 
 
 class ServerConfig(Config):

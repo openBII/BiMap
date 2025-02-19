@@ -14,6 +14,16 @@ class CommunicationConfig:
         self.process_node = process_node
 
 
+class HybridCoreCommunicationConfig(CommunicationConfig):
+    def __init__(self, sram_bandwidth: float, dram_bandwidth: float, 
+                 flash_bandwidth: float, process_node: int, latency: float = 0):
+        super().__init__(process_node=process_node)
+        self.sram_bandwidth = sram_bandwidth
+        self.dram_bandwidth = dram_bandwidth
+        self.flash_bandwidth = flash_bandwidth
+        self.latency = latency
+
+
 class CoreCommunicationConfig(CommunicationConfig):
     def __init__(self, buffer2array_input: float, 
                  buffer2array_weight: float, 

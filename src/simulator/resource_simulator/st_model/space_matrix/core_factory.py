@@ -1,11 +1,11 @@
-from src.simulator.resource_simulator.config.matrix_config import CoreConfig
+from src.simulator.resource_simulator.config.matrix_config import CoreConfig, HybridCoreConfig
 from src.simulator.resource_simulator.st_model.space_matrix.factory import Factory
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
-from src.simulator.resource_simulator.st_model.space_point.communication_point import CoreCommunicationPoint
+from src.simulator.resource_simulator.st_model.space_point.communication_point import CoreCommunicationPoint, HybridCoreCommunicationPoint
 from src.simulator.resource_simulator.st_model.space_point.computation_point import MACArrayPoint, VectorPoint
 from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint, RegisterFilePoint
 from src.simulator.resource_simulator.config.computation_config import ComputationConfig, ComputationInfo
-from src.simulator.resource_simulator.config.communication_config import CommunicationConfig
+from src.simulator.resource_simulator.config.communication_config import CommunicationConfig, HybridCoreCommunicationConfig
 from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.resource_simulator.st_model.st_coord import Coord
 
@@ -85,6 +85,71 @@ class CoreFactory(Factory):
                 config.register_file["num_ports"], 
                 config.process_node)
             core.add_element(coord=Coord(4), element=register_file)
+
+        return core
+    
+
+class HybridCoreFactory(Factory):
+    """
+    Factory class for creating Core objects
+    """
+
+    @staticmethod
+    def create_matrix(config: HybridCoreConfig) -> STMatrix:
+        core = STMatrix(dim=1, space_level=1)
+
+        communication_config = HybridCoreCommunicationConfig(
+            config.network["sram_bandwidth"],
+            config.network["dram_bandwidth"],
+            config.network["flash_bandwidth"],
+            process_node=config.process_node
+        )
+        communication_network = HybridCoreCommunicationPoint(communication_config)
+        core.add_communication_network(communication_network)
+
+        mac_array_config = ComputationConfig()
+        mac_array_config.process_node = config.process_node
+        if 'fp16' in config.mac_array:
+            mac_array_config[Precision.FLOAT_16] = ComputationInfo(
+                parallelism=config.mac_array['fp16']['parallelism'],
+                latency=config.mac_array['fp16']['latency'])
+        if 'fp32' in config.mac_array:
+            mac_array_config[Precision.FLOAT_32] = ComputationInfo(
+                parallelism=config.mac_array['fp32']['parallelism'],
+                latency=config.mac_array['fp32']['latency'])
+        mac_array_config.local_memory_latency = config.local_memory["latency"]
+        mac_array_config.local_memory_bandwidth = config.local_memory["bandwidth"]
+        mac_array = MACArrayPoint(mac_array_config)
+        core.add_element(coord=Coord(1), element=mac_array)
+
+        vector_unit_config = ComputationConfig()
+        vector_unit_config.process_node = config.process_node
+        if 'fp16' in config.vector_unit:
+            vector_unit_config[Precision.FLOAT_16] = ComputationInfo(
+                parallelism=config.vector_unit['fp16']['parallelism'],
+                latency=config.vector_unit['fp16']['latency']
+            )
+        if 'fp32' in config.vector_unit:
+            vector_unit_config[Precision.FLOAT_32] = ComputationInfo(
+                parallelism=config.vector_unit['fp32']['parallelism'],
+                latency=config.vector_unit['fp32']['latency']
+            )
+        vector_unit_config.local_memory_latency = config.local_memory["latency"]
+        vector_unit_config.local_memory_bandwidth = config.local_memory["bandwidth"]
+        vector_unit = VectorPoint(vector_unit_config)
+        core.add_element(coord=Coord(2), element=vector_unit)
+
+        sram_point = MemoryPoint(config.local_memory['capacity'],
+                                 config.process_node)
+        core.add_element(coord=Coord(0), element=sram_point)
+
+        dram_point = MemoryPoint(config.dram['capacity'],
+                                 config.process_node)
+        core.add_element(coord=Coord(3), element=dram_point)
+
+        flash_point = MemoryPoint(config.flash['capacity'],
+                                  config.process_node)
+        core.add_element(coord=Coord(4), element=flash_point)
 
         return core
 
