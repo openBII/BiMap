@@ -10,7 +10,7 @@ from src.simulator.resource_simulator.st_model.st_coord import Coord
 
 class ComputeChipletFactory(Factory):
     @staticmethod
-    def create_matrix(config: ComputeChipletConfig, type: str) -> STMatrix:
+    def create_matrix(config: ComputeChipletConfig, type: str = None) -> STMatrix:
         chiplet = STMatrix(dim=2, space_level=2)
         size_x, size_y = config.size
         for i in range(size_x):
