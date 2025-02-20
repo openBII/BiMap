@@ -31,9 +31,11 @@ task_graph = TaskGraph()
 # create_mlcoord(    (0, 0),      (0, 0),        3)
 device_dict = {
     "sram": 0,
-    "core": 1,
+    "mac_array": 1,
+    "vec": 2,
     "dram": 3,
-    "flash": 4
+    "flash": 4,
+    "router": 5
 }
 
 # Input
@@ -43,118 +45,187 @@ _, trm_input = create_input(task_graph, Shape(nr=trm_qkv_len), Precision.INT_8, 
 q_output, task_q_dict = create_mlp(task_graph, trm_input, Shape(nf=trm_qkv_len, nr=trm_qkv_len), \
                                  cur_precision, True)
 
-# K
-# k_output, task_k_dict = create_mlp(task_graph, trm_input, Shape(nf=trm_qkv_len, nr=trm_qkv_len), \
-#                                  cur_precision, True)
-
-# V
-# v_output, task_v_dict = create_mlp(task_graph, trm_input, Shape(nf=trm_qkv_len, nr=trm_qkv_len), \
-#                                  cur_precision, True)
-
-# Q K
-# qk_output, task_qk_dict = create_mlp(task_graph, q_output, Shape(nf=trm_context_len, nr=trm_qkv_len), \
-#                                  Precision.INT_8, True)
-
-# (QK^T) V
-# qkv_output, task_qkv_dict = create_mlp(task_graph, qk_output, Shape(nf=trm_qkv_len, nr=trm_context_len), \
-#                                  Precision.INT_8, True)
-
-# O
-# o_output, task_o_dict = create_mlp(task_graph, qkv_output, Shape(nf=trm_qkv_len, nr=trm_qkv_len), \
-#                                  cur_precision, True)
-
-# FFN (Up & Gate)
-# ffn1_output, task_ffn1_dict = create_mlp(task_graph, o_output, 
-#                               Shape(nr=o_output.shape.nf, nf=2 * trm_ffn_len),
-#                               cur_precision, None)
-
-# FFN (Down)
-# ffn2_output, task_ffn2_dict = create_mlp(task_graph, qkv_output, 
-#                               Shape(nr=qkv_output.shape.nf, nf=trm_ffn_len),
-#                               cur_precision, None)
-
-# Visualize
-STDraw.draw_graph(task_graph, out_path='temp/mapped_mlp.task.html',
-                  width='1920px', height='1080px')
-
 # type(task_q_dict["weight"]) = StaticTaskBlock
 print("Model Shape Info (y、x、f<o-channel>、r<i-channel>、ky、kx)")
 print("[trm_input]", "I", trm_input.id)
 print("[task_q_dict]", "C", task_q_dict["compute"].id, "O", task_q_dict["output"].id, "W", task_q_dict["weight"].id)
-# print("[task_k_dict]", "C", task_k_dict["compute"].id, "O", task_k_dict["output"].id, "W", task_k_dict["weight"].id)
-# print("[task_v_dict]", "C", task_v_dict["compute"].id, "O", task_v_dict["output"].id, "W", task_v_dict["weight"].id)
-# print("[task_o_dict]", "C", task_o_dict["compute"].id, "O", task_o_dict["output"].id, "W", task_o_dict["weight"].id)
-# print("[task_qk_dict]", "C", task_qk_dict["compute"].id, "O", task_qk_dict["output"].id, "W", task_qk_dict["weight"].id)
-# print("[task_qkv_dict]", "C", task_qkv_dict["compute"].id, "O", task_qkv_dict["output"].id, "W", task_qkv_dict["weight"].id)
-# print("[task_ffn1_dict]", "C", task_ffn1_dict["compute"].id, "O", task_ffn1_dict["output"].id, "W", task_ffn1_dict["weight"].id)
-# print("[task_ffn2_dict]", "C", task_ffn2_dict["compute"].id, "O", task_ffn2_dict["output"].id, "W", task_ffn2_dict["weight"].id)
 
 # Construct a hardware
 config = HybridPackageConfig("top/hybrid_package.toml")
 package = HybridPackageFactory.create_matrix(config)
-pe_x = config.chiplet.core.mac_array["int8"]["parallelism"][0]
-pe_y = config.chiplet.core.mac_array["int8"]["parallelism"][1]
-pe_t = config.chiplet.core.mac_array["int8"]["latency"]
-print("[Chiplet Number]", config.size, "[Cores/Chiplet]", config.chiplet.size, "[PEs/Core]", pe_x, pe_y, pe_t)
+chip_x = config.chiplet.size[0]
+chip_y = config.chiplet.size[1]
+print("[Chiplet Number]", config.size, "[Cores/Chiplet]", config.chiplet.size)
 
 # Construct a simulation environment
 st_env = STEnv(task_graph, package)
+split_num = 4
+core_x = config.chiplet.size[0]
+core_y = config.chiplet.size[1]
 
 # Graph Transformation
-# task_q_splt_dict = st_env.split_mlp(split_inputs=[trm_input], weight=task_q_dict["weight"], \
-#                              compute=task_q_dict["compute"], output=task_q_dict["output"], \
-#                              split_vector=SplitVector(nf=(task_q_dict["compute"].shape.nf // pe_x), \
-#                                                       nr=(task_q_dict["compute"].shape.nr // pe_y)))
-# print("[task_q_splt_dict]")
-# for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
-#     print(sub_q_key, len(sub_q_val_list), sub_q_val_list[0].shape, sub_q_val_list[0].id)
+task_q_splt_dict = st_env.split_mlp(split_inputs=[trm_input], weight=task_q_dict["weight"], \
+                                    compute=task_q_dict["compute"], output=task_q_dict["output"], \
+                                    split_vector=SplitVector(nf=split_num))
 
-dram_coord = create_mlcoord((0, 0), (0, 0), device_dict["dram"])
-st_env.put_in(dram_coord, task_q_dict["weight"].id)
+split_weights = st_env.split_task(task_q_dict["weight"].id, SplitVector(nf=split_num), True)
+st_env.connect_tasks(split_weights, task_q_splt_dict["weight"])
+task_q_dict["weight"].disable()
 
-flash_coord = create_mlcoord((0, 0), (0, 0), device_dict["flash"])
-st_env.put_in(flash_coord, trm_input.id)
 
-sram_coord = create_mlcoord((0, 0), (0, 0), device_dict["sram"])
-st_env.put_in(sram_coord, task_q_dict["output"].id)
+print("[trm_input]", trm_input.output_edges[0].in_task, trm_input.output_edges[0].out_task, trm_input.output_edges[0].is_enable()) # Q
 
-mac_array_coord = create_mlcoord((0, 0), (0, 0), device_dict["core"])
-st_env.put_in(mac_array_coord, task_q_dict["compute"].id)
+# Visualize
+STDraw.draw_graph(task_graph, out_path='temp/mapped_q.task.html',
+                  width='1920px', height='1080px')
 
-# router_0_0_coord = create_mlcoord((0, 0), (0, 0), 5)
+print("[trm_input]", len(trm_input.output_edges))
+print("[task_q_splt_dict]")
+for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
+    print(sub_q_key, len(sub_q_val_list), sub_q_val_list[0].shape, sub_q_val_list[0].id)
 
-# Edges
-# env.auto_edge_map()
-print("[trm_input]", trm_input.output_edges[0].in_task, trm_input.output_edges[0].out_task) # V
-# print("[trm_input]", trm_input.output_edges[1].in_task, trm_input.output_edges[1].out_task) # K
-# print("[trm_input]", trm_input.output_edges[2].in_task, trm_input.output_edges[2].out_task) # Q
+# Map Node
+mac_array_coord_q = []
+flash_coord_q = []
+sram_coord_q = []
+dram_w_coord_q = []
+dram_i_coord_q = []
 
-st_env.map_edge(trm_input.output_edges[0], [flash_coord, mac_array_coord])
-st_env.map_edge(task_q_dict["weight"].output_edge, [dram_coord, mac_array_coord])
-st_env.map_edge(task_q_dict["compute"].output_edge, [mac_array_coord, sram_coord])
+for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
+    if sub_q_key == "compute":
+
+        for splict_id in range(len(sub_q_val_list)):
+            chip_pos = (0, 0)
+            core_pos = (splict_id // core_x, splict_id % core_x)
+            mac_array_coord_q.append(create_mlcoord(chip_pos, core_pos, device_dict["mac_array"]))
+            st_env.put_in(mac_array_coord_q[-1], sub_q_val_list[splict_id].id)
+            print("mac_array", sub_q_val_list[splict_id].id)
+            
+    elif sub_q_key == "weight":
+
+        for splict_id in range(len(sub_q_val_list)):
+            chip_pos = (0, 0)
+            core_pos = (splict_id // core_x, splict_id % core_x)
+            dram_w_coord_q.append(create_mlcoord(chip_pos, core_pos, device_dict["dram"]))
+            st_env.put_in(dram_w_coord_q[-1], sub_q_val_list[splict_id].id)
+            print("dram_w", sub_q_val_list[splict_id].id)
+
+    elif sub_q_key == "input":
+
+        for splict_id in range(len(sub_q_val_list)):
+            chip_pos = (0, 0)
+            core_pos = (splict_id // core_x, splict_id % core_x)
+            dram_i_coord_q.append(create_mlcoord(chip_pos, core_pos, device_dict["dram"])) 
+            st_env.put_in(dram_i_coord_q[-1], sub_q_val_list[splict_id].id)
+            print("dram_i", sub_q_val_list[splict_id].id)
+
+    elif sub_q_key == "mlp_output":
+
+        for splict_id in range(len(sub_q_val_list)):
+            chip_pos = (0, 0)
+            core_pos = (splict_id // core_x, splict_id % core_x)
+            flash_coord_q.append(create_mlcoord(chip_pos, core_pos, device_dict["flash"]))
+            st_env.put_in(flash_coord_q[-1], sub_q_val_list[splict_id].id)
+            print("flash", sub_q_val_list[splict_id].id)
+
+    else:
+        pass
+
+# Map Edge
+for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
+    if sub_q_key == "compute":
+
+        for splict_id in range(len(sub_q_val_list)):
+            st_env.map_edge(sub_q_val_list[splict_id].output_edge, [mac_array_coord_q[splict_id], flash_coord_q[splict_id]])
+
+    elif sub_q_key == "weight":
+
+        for splict_id in range(len(sub_q_val_list)):
+            st_env.map_edge(sub_q_val_list[splict_id].output_edge, [dram_w_coord_q[splict_id], mac_array_coord_q[splict_id]])
+
+    elif sub_q_key == "input":
+        
+        splict_id = 0
+        map_edge_num = 0
+        select_edge = [sub_q_val_list[0].output_edges[0],
+                       sub_q_val_list[0].output_edges[1],
+                       sub_q_val_list[0].output_edges[2],
+                       sub_q_val_list[0].output_edges[3]]
+
+        for out_edge in select_edge:
+            # Input Path
+            # Input (0,0)  --> (0,0)(0,0) mac
+            #               -> (0,0)(0,1) mac
+            #               -> (0,0)(0,2) mac
+            #               -> (0,0)(0,3) mac
+            src_router = create_mlcoord((0,0), (0,0), device_dict["router"])
+            dst_pos = (splict_id // core_x, splict_id % core_x)
+            dst_core = create_mlcoord((0,0), dst_pos)
+            dst_router = create_mlcoord((0,0), dst_pos, device_dict["router"])
+
+            if splict_id == 0:
+                st_env.map_edge(out_edge, [dram_i_coord_q[0], mac_array_coord_q[splict_id]])
+            else:
+                st_env.map_edge(out_edge, [dram_i_coord_q[0], src_router, dst_core, dst_router, mac_array_coord_q[splict_id]])
+            
+            splict_id += 1
 
 st_env.simulate()
 st_env.show_overall_time()
-
 exit()
 
-# Example Core
-dram_coord = create_mlcoord((0, 0), (0, 0), device_dict["dram"])
-st_env.put_in(dram_coord, task_q_dict["weight"].id)
+# --------------------------------------------------
 
-flash_coord = create_mlcoord((0, 0), (1, 0), device_dict["flash"])
-st_env.put_in(flash_coord, trm_input.id)
+dram_input_q = create_mlcoord((0, 0), (0, 0), device_dict["flash"])
+st_env.put_in(dram_input_q, trm_input.id)
 
-mac_array_coord = create_mlcoord((1, 0), (0, 0), device_dict["core"])
-st_env.put_in(mac_array_coord, task_q_dict["compute"].id)
+dram_coord_q = create_mlcoord((0, 0), (0, 1), device_dict["dram"])
+st_env.put_in(dram_coord_q, task_q_dict["weight"].id)
 
-sram_coord = create_mlcoord((1, 1), (0, 0), device_dict["sram"])
-st_env.put_in(sram_coord, task_q_dict["output"].id)
+sram_coord_q = create_mlcoord((0, 0), (0, 1), device_dict["sram"])
+st_env.put_in(sram_coord_q, task_q_dict["output"].id)
 
-router_coord = create_mlcoord((0, 0), (1, 0), 5)
-core_coord = create_mlcoord((0, 0), (15, 0))
-chiplet_coord = create_mlcoord((1, 0))
+mac_array_coord_q = create_mlcoord((0, 0), (0, 1), device_dict["mac_array"])
+st_env.put_in(mac_array_coord_q, task_q_dict["compute"].id)
 
-st_env.map_edge(trm_input.output_edge, [flash_coord,  router_coord, core_coord, \
-                                        chiplet_coord, create_mlcoord((1, 0), (0, 0)), \
-                                        create_mlcoord((1, 0), (0, 0), 5), mac_array_coord])
+# Map Edges
+
+print("[trm_input]", trm_input.output_edges[0].in_task, trm_input.output_edges[0].out_task, trm_input.output_edges[0].is_enable()) # Q
+
+# I->Q: Remote
+src_router = create_mlcoord((0, 0), (0,0), device_dict["router"])
+dst_core = create_mlcoord((0, 0), (0, 1))
+dst_router = create_mlcoord((0, 0), (0, 1), device_dict["router"])
+
+st_env.map_edge(trm_input.output_edges[0], [dram_input_q, src_router, dst_core, dst_router, mac_array_coord_q])
+st_env.map_edge(task_q_dict["weight"].output_edge, [dram_coord_q, mac_array_coord_q])
+st_env.map_edge(task_q_dict["compute"].output_edge, [mac_array_coord_q, sram_coord_q])
+
+st_env.simulate()
+st_env.show_overall_time()
+exit()
+# --------------------------------------------------
+
+dram_input_q = create_mlcoord((0, 0), (0, 0), device_dict["flash"])
+st_env.put_in(dram_input_q, trm_input.id)
+
+dram_coord_q = create_mlcoord((0, 0), (0, 0), device_dict["dram"])
+st_env.put_in(dram_coord_q, task_q_dict["weight"].id)
+
+sram_coord_q = create_mlcoord((0, 0), (0, 0), device_dict["sram"])
+st_env.put_in(sram_coord_q, task_q_dict["output"].id)
+
+mac_array_coord_q = create_mlcoord((0, 0), (0, 0), device_dict["mac_array"])
+st_env.put_in(mac_array_coord_q, task_q_dict["compute"].id)
+
+# Map Edges
+
+print("[trm_input]", trm_input.output_edges[0].in_task, trm_input.output_edges[0].out_task, trm_input.output_edges[0].is_enable()) # Q
+
+# I->Q: Local
+st_env.map_edge(trm_input.output_edges[0], [dram_input_q, mac_array_coord_q])
+st_env.map_edge(task_q_dict["weight"].output_edge, [dram_coord_q, mac_array_coord_q])
+st_env.map_edge(task_q_dict["compute"].output_edge, [mac_array_coord_q, sram_coord_q])
+
+st_env.simulate()
+st_env.show_overall_time()
