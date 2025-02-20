@@ -16,19 +16,19 @@ bandwidth = 16
 latency = 0
 
 [chiplet.core.network]
-sram_bandwidth = 1
-dram_bandwidth = 2
-flash_bandwidth = 3
+sram_bandwidth = 256
+dram_bandwidth = 128
+flash_bandwidth = 136
 
 [chiplet.core.mac_array]  # for mixed-precision, [[mac_array]] for multiple units
-[chiplet.core.mac_array.fp16]
+[chiplet.core.mac_array.int8]
 parallelism = [32, 32]
 latency = 64
 
 [chiplet.core.vector_unit]
-[chiplet.core.vector_unit.fp16]
+[chiplet.core.vector_unit.int8]
 parallelism = 128
-[chiplet.core.vector_unit.fp16.latency]
+[chiplet.core.vector_unit.int8.latency]
 relu = 1  # latency for different operations
 softmax = 9
 add = 1

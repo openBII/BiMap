@@ -283,7 +283,8 @@ class CommunicationEvaluator(Evaluator):
             min_end_time = float('inf')  # 当前轮次评估中最先结束的edge
             for key_edge, neighbor_edges in overlap_groups.items():
                 num_edges = len(neighbor_edges)
-                real_bandwidth = self.bandwidth / num_edges
+                # FIXME
+                real_bandwidth = self.get_bandwidth(self.edge_map[key_edge][0]) / num_edges
                 latency = self.latency * len(self.edge_map[key_edge])
 
                 if key_edge in self.recorder:
@@ -306,7 +307,8 @@ class CommunicationEvaluator(Evaluator):
             edges_cannot_proceed = set()
             for key_edge, neighbor_edges in overlap_groups.items():
                 num_edges = len(neighbor_edges)
-                real_bandwidth = self.bandwidth / num_edges
+                # FIXME
+                real_bandwidth = self.get_bandwidth(self.edge_map[key_edge][0]) / num_edges
                 latency = self.latency * len(self.edge_map[key_edge])
 
                 record = self.recorder[key_edge]
@@ -526,6 +528,17 @@ class SharedMemoryCommunicationEvaluator(CommunicationEvaluator):
                 self.append_hop(edge, iteration, Hop(self.arbitrator_coord, self.shared_memory_coord, link_id))
                 self.append_hop(edge, iteration, Hop(self.shared_memory_coord, self.arbitrator_coord, link_id))
                 self.append_hop(edge, iteration, Hop(self.arbitrator_coord, dst, link_id))
+
+
+class HybridCoreCommunicationEvaluator(CommunicationEvaluator):
+    def __init__(self, bandwidth: float, process_node: ProcessNode, 
+                 mode: EvaluationMode = EvaluationMode.STATIC, 
+                 size: Tuple[int] = None, latency: float = 0) -> None:
+        super().__init__(bandwidth, process_node, mode, size, latency)
+
+    def generate_hops(self, edge: Edge, iteration: int, src: Coord, dst: Coord, 
+                      link_id: int):
+        self.append_hop(edge, iteration, Hop(src, dst, link_id))
 
 
 if __name__ == "__main__":
