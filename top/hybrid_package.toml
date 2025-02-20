@@ -8,7 +8,7 @@ bandwidth = 1024
 latency = 0
 
 [chiplet]
-size = [16, 8]
+size = [8, 8]
 
 [chiplet.network]
 topology = "mesh"
@@ -24,19 +24,28 @@ flash_bandwidth = 136
 [chiplet.core.mac_array.int8]
 parallelism = [32, 32]
 latency = 64
+[chiplet.core.mac_array.uint4]
+parallelism = [32, 64]
+latency = 64
 
 [chiplet.core.vector_unit]
 [chiplet.core.vector_unit.int8]
 parallelism = 128
+[chiplet.core.vector_unit.uint4]
+parallelism = 256
 [chiplet.core.vector_unit.int8.latency]
+relu = 1  # latency for different operations
+softmax = 9
+add = 1
+[chiplet.core.vector_unit.uint4.latency]
 relu = 1  # latency for different operations
 softmax = 9
 add = 1
 
 [chiplet.core.local_memory]
 capacity = 2560  # KB, 512
-latency = 0
-bandwidth = 0
+latency = 1
+bandwidth = 64
 
 [chiplet.core.dram]
 capacity = 2560  # KB, 512

@@ -152,6 +152,7 @@ class HybridCoreCommunicationPoint(CommunicationPoint):
         bandwidth_dict[Hop(Coord(3), Coord(5))] = config.flash_bandwidth
         bandwidth_dict[Hop(Coord(4), Coord(5))] = config.flash_bandwidth
         bandwidth_dict[Hop(Coord(5), Coord(0))] = config.flash_bandwidth
+        bandwidth_dict[Hop(Coord(5), Coord(1))] = config.flash_bandwidth
         bandwidth_dict[Hop(Coord(5), Coord(3))] = config.flash_bandwidth
         bandwidth_dict[Hop(Coord(5), Coord(4))] = config.flash_bandwidth
         bandwidth_dict[Hop(Coord(3), Coord(0))] = config.dram_bandwidth

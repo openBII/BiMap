@@ -42,6 +42,7 @@ device_dict = {
 _, trm_input = create_input(task_graph, Shape(nr=trm_qkv_len), Precision.INT_8, True)
 
 # Q
+# TODO: Cross Chiplet...
 q_output, task_q_dict = create_mlp(task_graph, trm_input, Shape(nf=trm_qkv_len, nr=trm_qkv_len), \
                                  cur_precision, True)
 
@@ -59,7 +60,7 @@ print("[Chiplet Number]", config.size, "[Cores/Chiplet]", config.chiplet.size)
 
 # Construct a simulation environment
 st_env = STEnv(task_graph, package)
-split_num = 4
+split_num = 64
 core_x = config.chiplet.size[0]
 core_y = config.chiplet.size[1]
 
@@ -71,7 +72,6 @@ task_q_splt_dict = st_env.split_mlp(split_inputs=[trm_input], weight=task_q_dict
 split_weights = st_env.split_task(task_q_dict["weight"].id, SplitVector(nf=split_num), True)
 st_env.connect_tasks(split_weights, task_q_splt_dict["weight"])
 task_q_dict["weight"].disable()
-
 
 print("[trm_input]", trm_input.output_edges[0].in_task, trm_input.output_edges[0].out_task, trm_input.output_edges[0].is_enable()) # Q
 
@@ -88,10 +88,19 @@ for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
 mac_array_coord_q = []
 flash_coord_q = []
 sram_coord_q = []
+
 dram_w_coord_q = []
+sram_w_coord_q = []
 dram_i_coord_q = []
 
+for splict_id in range(len(split_weights)):
+    chip_pos = (0, 0)
+    core_pos = (splict_id // core_x, splict_id % core_x)
+    dram_w_coord_q.append(create_mlcoord(chip_pos, core_pos, device_dict["dram"]))
+    st_env.put_in(dram_w_coord_q[-1], split_weights[splict_id].id)
+
 for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
+
     if sub_q_key == "compute":
 
         for splict_id in range(len(sub_q_val_list)):
@@ -106,8 +115,8 @@ for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
         for splict_id in range(len(sub_q_val_list)):
             chip_pos = (0, 0)
             core_pos = (splict_id // core_x, splict_id % core_x)
-            dram_w_coord_q.append(create_mlcoord(chip_pos, core_pos, device_dict["dram"]))
-            st_env.put_in(dram_w_coord_q[-1], sub_q_val_list[splict_id].id)
+            sram_w_coord_q.append(create_mlcoord(chip_pos, core_pos, device_dict["sram"]))
+            st_env.put_in(sram_w_coord_q[-1], sub_q_val_list[splict_id].id)
             print("dram_w", sub_q_val_list[splict_id].id)
 
     elif sub_q_key == "input":
@@ -129,10 +138,12 @@ for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
             print("flash", sub_q_val_list[splict_id].id)
 
     else:
+
         pass
 
 # Map Edge
 for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
+
     if sub_q_key == "compute":
 
         for splict_id in range(len(sub_q_val_list)):
@@ -141,23 +152,28 @@ for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
     elif sub_q_key == "weight":
 
         for splict_id in range(len(sub_q_val_list)):
-            st_env.map_edge(sub_q_val_list[splict_id].output_edge, [dram_w_coord_q[splict_id], mac_array_coord_q[splict_id]])
+
+            # DRAM -> SRAM
+            st_env.map_edge(split_weights[splict_id].output_edge, [dram_w_coord_q[splict_id], sram_w_coord_q[splict_id]])
+
+            # SRAM -> MAC Array
+            st_env.map_edge(sub_q_val_list[splict_id].output_edge, [sram_w_coord_q[splict_id], mac_array_coord_q[splict_id]])
 
     elif sub_q_key == "input":
         
         splict_id = 0
         map_edge_num = 0
-        select_edge = [sub_q_val_list[0].output_edges[0],
-                       sub_q_val_list[0].output_edges[1],
-                       sub_q_val_list[0].output_edges[2],
-                       sub_q_val_list[0].output_edges[3]]
+        select_edge = []
+
+        for i in range(split_num):
+            select_edge.append(sub_q_val_list[0].output_edges[i])
 
         for out_edge in select_edge:
             # Input Path
-            # Input (0,0)  --> (0,0)(0,0) mac
-            #               -> (0,0)(0,1) mac
-            #               -> (0,0)(0,2) mac
-            #               -> (0,0)(0,3) mac
+            # Input (0,0)  ---> (0,0)(0,0) mac
+            #               +-> (0,0)(0,1) mac
+            #               +-> (0,0)(0,2) mac
+            #               +-> (0,0)(0,3) mac
             src_router = create_mlcoord((0,0), (0,0), device_dict["router"])
             dst_pos = (splict_id // core_x, splict_id % core_x)
             dst_core = create_mlcoord((0,0), dst_pos)
@@ -204,6 +220,7 @@ st_env.map_edge(task_q_dict["compute"].output_edge, [mac_array_coord_q, sram_coo
 st_env.simulate()
 st_env.show_overall_time()
 exit()
+
 # --------------------------------------------------
 
 dram_input_q = create_mlcoord((0, 0), (0, 0), device_dict["flash"])
@@ -229,3 +246,26 @@ st_env.map_edge(task_q_dict["compute"].output_edge, [mac_array_coord_q, sram_coo
 
 st_env.simulate()
 st_env.show_overall_time()
+
+# --------------------------------------------------
+
+# Example Core
+# dram_coord = create_mlcoord((0, 0), (0, 0), device_dict["dram"])
+# st_env.put_in(dram_coord, task_q_dict["weight"].id)
+
+# flash_coord = create_mlcoord((0, 0), (1, 0), device_dict["flash"])
+# st_env.put_in(flash_coord, trm_input.id)
+
+# mac_array_coord = create_mlcoord((1, 0), (0, 0), device_dict["mac_array"])
+# st_env.put_in(mac_array_coord, task_q_dict["compute"].id)
+
+# sram_coord = create_mlcoord((1, 1), (0, 0), device_dict["sram"])
+# st_env.put_in(sram_coord, task_q_dict["output"].id)
+
+# router_coord = create_mlcoord((0, 0), (1, 0), 5)
+# core_coord = create_mlcoord((0, 0), (15, 0))
+# chiplet_coord = create_mlcoord((1, 0))
+
+# st_env.map_edge(trm_input.output_edge, [flash_coord,  router_coord, core_coord, \
+#                                         chiplet_coord, create_mlcoord((1, 0), (0, 0)), \
+#                                         create_mlcoord((1, 0), (0, 0), 5), mac_array_coord])

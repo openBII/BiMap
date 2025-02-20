@@ -168,10 +168,108 @@ class VectorUnitEvaluator(ComputationEvaluator):
         return area
     
 
+class HybridPrecisionMACArrayEvaluator(ComputationEvaluator):
+    def __init__(self, config: ComputationConfig,
+                 mode: EvaluationMode = EvaluationMode.STATIC) -> None:
+        super().__init__(config, mode)
+
+    def eval_by_model(self, task: CTaskBlock):
+        
+        in_precision = task.in_precision
+        precision = Precision.UINT_4 if (Precision.UINT_4 in in_precision) else min(in_precision)
+        assert precision in self.config, "[HyPrecMACArrayEvaluator] Config not support {:s}".format(precision.name)
+        computation_info = self.config[precision]
+        if task.task_type == TaskBlockType.CVM:
+            if task.shape.token == 1:
+                num_tiles = math.ceil(
+                    task.shape.volume / math.prod(computation_info.parallelism))
+                num_data = (computation_info.parallelism[0] + 1) * computation_info.parallelism[1]
+                one_time_latency = 2 * self.config.local_memory_latency + computation_info.latency * max(1, math.ceil(num_data * 2 / self.config.local_memory_bandwidth))
+                result = num_tiles * one_time_latency
+            
+                print("[C-Eval] Task", task.id, "P:", task.precision, "S:", task.shape, "with", result, "cycles")
+                return result
+            else:
+                if computation_info.parallelism[0] == computation_info.parallelism[1]:
+                    length = computation_info.parallelism[0]
+                    num_tiles = math.ceil(task.shape.volume / length**3)
+                    one_time_latency = 2 * self.config.local_memory_latency + computation_info.latency * max(1, math.ceil(2 * length / self.config.local_memory_bandwidth))
+                    if len(computation_info.parallelism) == 3:
+                        result = num_tiles * one_time_latency / computation_info.parallelism[2]
+                    else:
+                        result = num_tiles * one_time_latency
+
+                    print("[C-Eval] Task", task.id, "P:", task.precision, "S:", task.shape, "with", result, "cycles")
+                    return result
+                else:
+                    num_tiles = math.ceil(
+                        task.shape.volume / 
+                        math.prod(computation_info.parallelism))
+                    num_data = ((computation_info.parallelism[0] + 1) * 
+                                computation_info.parallelism[1])
+                    one_time_latency = (
+                        2 * self.config.local_memory_latency + 
+                        computation_info.latency * 
+                        max(1, math.ceil(num_data * 
+                                         Precision.get_bytes(precision) / 
+                                         self.config.local_memory_bandwidth)))
+                    
+                    if len(computation_info.parallelism) == 3:
+                        result = (num_tiles * one_time_latency / 
+                                computation_info.parallelism[2])
+                    else:
+                        result = num_tiles * one_time_latency
+                    
+                    print("[C-Eval] Task", task.id, "P:", task.precision, "S:", task.shape, "with", result, "cycles")
+                    return result
+        else:
+            raise NotImplementedError
+        
+    def eval_area(self):
+        # area = 0
+        # for _, size in self.config:
+        #     area += math.prod(size) * 0.0007
+        # return area
+        area = 0
+        transistor_density_mil_mm2, _ = find_logic_sram_transistor_density(
+            self.process_node.value)
+        num_registers = 0
+        for precision, computation_info in self.config:
+            parallelism = computation_info.parallelism
+            if precision == Precision.FLOAT_16:
+                area += calc_systolic_array_area_mm2(
+                    parallelism[0], parallelism[1], 'fp16', 
+                    transistor_density_mil_mm2)
+                num_registers += parallelism[0] * 3
+            elif precision == Precision.FLOAT_32:
+                area += calc_systolic_array_area_mm2(
+                    parallelism[0], parallelism[1], 'fp32', 
+                    transistor_density_mil_mm2)
+                num_registers += parallelism[0] * 6
+            elif precision == Precision.FLOAT_64:
+                area += calc_systolic_array_area_mm2(
+                    parallelism[0], parallelism[1], 'fp64', 
+                    transistor_density_mil_mm2)
+                num_registers += parallelism[0] * 12
+            elif precision == Precision.INT_8:
+                area += calc_systolic_array_area_mm2(
+                    parallelism[0], parallelism[1], 'int8', 
+                    transistor_density_mil_mm2)
+                num_registers += parallelism[0] * 1
+            elif precision == Precision.UINT_4:
+                area += calc_systolic_array_area_mm2(
+                    parallelism[0], parallelism[1], 'uint4', 
+                    transistor_density_mil_mm2)
+                num_registers += parallelism[0] * 0.5
+
+        area += calc_reg_file_area(
+            1, num_registers, 16, 4,  # 2读2写
+            transistor_density_mil_mm2)
+        
+        return area
+    
 if __name__ == "__main__":
     from src.simulator.resource_simulator.evaluation_model.area.process_node import ProcessNode
-
-
     config = ComputationConfig()
     config.dict[Precision.FLOAT_16] = ComputationInfo((83, 83), 256)
     config.process_node = ProcessNode.SEVEN

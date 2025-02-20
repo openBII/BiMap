@@ -2,7 +2,7 @@ from src.simulator.resource_simulator.sync.sync_table import SyncTable
 from src.simulator.task_rabbit.task_model.ctask_block import CTaskBlock
 from src.simulator.resource_simulator.st_model.st_point import STPoint
 from src.simulator.resource_simulator.evaluation_model.recorder import ComputationRecorder
-from src.simulator.resource_simulator.evaluation_model.computation_evaluator import ComputationEvaluator, MACArrayEvaluator, VectorUnitEvaluator
+from src.simulator.resource_simulator.evaluation_model.computation_evaluator import ComputationEvaluator, MACArrayEvaluator, VectorUnitEvaluator, HybridPrecisionMACArrayEvaluator
 from src.simulator.resource_simulator.config.computation_config import ComputationConfig
 
 
@@ -64,6 +64,11 @@ class MACArrayPoint(ComputationPoint):
         evaluator = MACArrayEvaluator(config)
         self.set_evaluator(evaluator)
 
+class HybridPrecisionMACArrayPoint(ComputationPoint):
+    def __init__(self, config: ComputationConfig):
+        super().__init__(config)
+        evaluator = HybridPrecisionMACArrayEvaluator(config)
+        self.set_evaluator(evaluator)
 
 class VectorPoint(ComputationPoint):
     def __init__(self, config: ComputationConfig):
