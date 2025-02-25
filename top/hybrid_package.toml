@@ -1,6 +1,6 @@
 process_node = 7
 
-size = [2, 2]
+size = [1, 1]
 
 [network]
 topology = "mesh"
@@ -13,20 +13,24 @@ size = [8, 8]
 [chiplet.network]
 topology = "mesh"
 bandwidth = 16
-latency = 0
+latency = 2
 
-[chiplet.core.network]
-sram_bandwidth = 256
-dram_bandwidth = 128
-flash_bandwidth = 136
+[chiplet.core.network] 
+# GB/s
+sram_bandwidth = 65536
+dram_bandwidth = 64
+flash_bandwidth = 2.125 # per core (shared to each core) = 136 GB/s (Global)
+
+noc_bandwidth = 128 # Global
+nop_bandwidth = 48 # Global
 
 [chiplet.core.mac_array]  # for mixed-precision, [[mac_array]] for multiple units
 [chiplet.core.mac_array.int8]
 parallelism = [32, 32]
-latency = 64
+latency = 2
 [chiplet.core.mac_array.uint4]
-parallelism = [32, 64]
-latency = 64
+parallelism = [32, 32]
+latency = 1
 
 [chiplet.core.vector_unit]
 [chiplet.core.vector_unit.int8]
@@ -45,7 +49,7 @@ add = 1
 [chiplet.core.local_memory]
 capacity = 2560  # KB, 512
 latency = 1
-bandwidth = 64
+bandwidth = 512
 
 [chiplet.core.dram]
 capacity = 2560  # KB, 512

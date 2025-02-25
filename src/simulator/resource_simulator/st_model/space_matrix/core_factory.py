@@ -103,6 +103,8 @@ class HybridCoreFactory(Factory):
             config.network["sram_bandwidth"],
             config.network["dram_bandwidth"],
             config.network["flash_bandwidth"],
+            config.network["noc_bandwidth"],
+            config.network["nop_bandwidth"],
             process_node=config.process_node
         )
         communication_network = HybridCoreCommunicationPoint(communication_config)

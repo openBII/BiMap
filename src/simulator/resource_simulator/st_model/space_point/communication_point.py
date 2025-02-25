@@ -140,30 +140,44 @@ class HybridCoreCommunicationPoint(CommunicationPoint):
         self.set_evaluator(evaluator)
      
     def config_handler(self, config: HybridCoreCommunicationConfig):
+        
         bandwidth_dict = NetworkParameterDict()
-        # Memory -> Mac Array
+        
+        # "sram": 0 -> ?
         bandwidth_dict[Hop(Coord(0), Coord(1))] = config.sram_bandwidth
-        bandwidth_dict[Hop(Coord(3), Coord(1))] = config.dram_bandwidth
-        bandwidth_dict[Hop(Coord(4), Coord(1))] = config.flash_bandwidth
+        bandwidth_dict[Hop(Coord(0), Coord(2))] = config.sram_bandwidth
+        bandwidth_dict[Hop(Coord(0), Coord(3))] = config.dram_bandwidth
+        bandwidth_dict[Hop(Coord(0), Coord(4))] = config.flash_bandwidth
+        bandwidth_dict[Hop(Coord(0), Coord(5))] = config.noc_bandwidth
+        
+        # "mac_array": 1 -> ?
         bandwidth_dict[Hop(Coord(1), Coord(0))] = config.sram_bandwidth
         bandwidth_dict[Hop(Coord(1), Coord(3))] = config.dram_bandwidth
         bandwidth_dict[Hop(Coord(1), Coord(4))] = config.flash_bandwidth
-        bandwidth_dict[Hop(Coord(0), Coord(5))] = config.flash_bandwidth
-        bandwidth_dict[Hop(Coord(3), Coord(5))] = config.flash_bandwidth
-        bandwidth_dict[Hop(Coord(4), Coord(5))] = config.flash_bandwidth
-        bandwidth_dict[Hop(Coord(5), Coord(0))] = config.flash_bandwidth
-        bandwidth_dict[Hop(Coord(5), Coord(1))] = config.flash_bandwidth
-        bandwidth_dict[Hop(Coord(5), Coord(3))] = config.flash_bandwidth
-        bandwidth_dict[Hop(Coord(5), Coord(4))] = config.flash_bandwidth
-        bandwidth_dict[Hop(Coord(3), Coord(0))] = config.dram_bandwidth
-        bandwidth_dict[Hop(Coord(0), Coord(3))] = config.dram_bandwidth
-        bandwidth_dict[Hop(Coord(4), Coord(0))] = config.flash_bandwidth
-        bandwidth_dict[Hop(Coord(0), Coord(4))] = config.flash_bandwidth
-        # Memory -> Vector Unit
-        bandwidth_dict[Hop(Coord(0), Coord(2))] = config.sram_bandwidth
-        bandwidth_dict[Hop(Coord(3), Coord(2))] = config.dram_bandwidth
-        bandwidth_dict[Hop(Coord(4), Coord(2))] = config.flash_bandwidth
+
+        # "vec": 2 -> ?
         bandwidth_dict[Hop(Coord(2), Coord(0))] = config.sram_bandwidth
         bandwidth_dict[Hop(Coord(2), Coord(3))] = config.dram_bandwidth
         bandwidth_dict[Hop(Coord(2), Coord(4))] = config.flash_bandwidth
+
+        # "dram": 3 -> ?
+        bandwidth_dict[Hop(Coord(3), Coord(0))] = config.dram_bandwidth
+        bandwidth_dict[Hop(Coord(3), Coord(1))] = config.dram_bandwidth
+        bandwidth_dict[Hop(Coord(3), Coord(2))] = config.dram_bandwidth
+        bandwidth_dict[Hop(Coord(3), Coord(5))] = config.noc_bandwidth
+
+        # "flash": 4 -> ?
+        bandwidth_dict[Hop(Coord(4), Coord(1))] = config.flash_bandwidth
+        bandwidth_dict[Hop(Coord(4), Coord(2))] = config.flash_bandwidth
+        bandwidth_dict[Hop(Coord(4), Coord(5))] = config.noc_bandwidth
+        bandwidth_dict[Hop(Coord(4), Coord(0))] = config.flash_bandwidth
+
+        # "router": 5 -> ?
+        bandwidth_dict[Hop(Coord(5), Coord(0))] = config.noc_bandwidth
+        bandwidth_dict[Hop(Coord(5), Coord(1))] = config.noc_bandwidth
+        bandwidth_dict[Hop(Coord(5), Coord(2))] = config.noc_bandwidth
+        bandwidth_dict[Hop(Coord(5), Coord(3))] = config.noc_bandwidth
+        bandwidth_dict[Hop(Coord(5), Coord(4))] = config.noc_bandwidth
+
+        # Memory -> Vector Unit
         return bandwidth_dict, config.latency

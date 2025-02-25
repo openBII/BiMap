@@ -279,6 +279,7 @@ class CommunicationEvaluator(Evaluator):
                 second_min_start_time = float('inf')
             # 判断边之间是否会发生重合
             overlap_groups = create_overlap_groups(min_edges, self.edge_map)
+            
             # 分组进行评估
             min_end_time = float('inf')  # 当前轮次评估中最先结束的edge
             for key_edge, neighbor_edges in overlap_groups.items():
@@ -294,17 +295,24 @@ class CommunicationEvaluator(Evaluator):
                     start_time = min_start_time
                     last_percent = 0
                 duration = key_edge[0].flux * (1 - last_percent) / real_bandwidth
+                print("[Comm-Eval]", duration, "sel", self.edge_map[key_edge][0], "original bw", self.get_bandwidth(self.edge_map[key_edge][0]), "num_edges", num_edges, "flux", key_edge[0].flux, "real bw" , real_bandwidth)
+                
                 end_time = min_start_time + duration
                 if last_percent == 0:
                     end_time += latency
                 if end_time < min_end_time:
                     min_end_time = end_time
                 self.recorder.update(key_edge, CommunicationRecord(start_time, end_time, last_percent))
+            
+            # Calcaulate Deadline
             if extern_deadline is not None:
                 deadline = min(min_end_time, second_min_start_time, extern_deadline)
             else:
                 deadline = min(min_end_time, second_min_start_time)
+            
             edges_cannot_proceed = set()
+
+
             for key_edge, neighbor_edges in overlap_groups.items():
                 num_edges = len(neighbor_edges)
                 # FIXME
@@ -335,6 +343,7 @@ class CommunicationEvaluator(Evaluator):
             if self.all_edges_reach_deadline(edge_heap, extern_deadline,
                                              edges_cannot_proceed):
                 break
+
         if extern_deadline is None:
             self.recorder.recorder_time = recorder
         else:
@@ -538,6 +547,7 @@ class HybridCoreCommunicationEvaluator(CommunicationEvaluator):
 
     def generate_hops(self, edge: Edge, iteration: int, src: Coord, dst: Coord, 
                       link_id: int):
+        # TODO: Take NoC & NoP Bandwidth into Consideration
         self.append_hop(edge, iteration, Hop(src, dst, link_id))
 
 

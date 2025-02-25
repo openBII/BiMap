@@ -184,10 +184,12 @@ class HybridPrecisionMACArrayEvaluator(ComputationEvaluator):
                 num_tiles = math.ceil(
                     task.shape.volume / math.prod(computation_info.parallelism))
                 num_data = (computation_info.parallelism[0] + 1) * computation_info.parallelism[1]
-                one_time_latency = 2 * self.config.local_memory_latency + computation_info.latency * max(1, math.ceil(num_data * 2 / self.config.local_memory_bandwidth))
+                one_time_latency = 2 * self.config.local_memory_latency + \
+                                    computation_info.latency * max(1, math.ceil(num_data * 2 / self.config.local_memory_bandwidth))
                 result = num_tiles * one_time_latency
             
-                print("[C-Eval] Task", task.id, "P:", task.precision, "S:", task.shape, "with", result, "cycles")
+                print("[Comp-Eval] Task", task.id, "P:", task.precision, "S:", task.shape, "Tiles:", num_tiles, "one_time_latency", one_time_latency, "with", result, "<0>")
+                print("[Comp-Eval] Task", "Load Memory Latency:", 2 * self.config.local_memory_latency, "Execution:", computation_info.latency * max(1, math.ceil(num_data * 2 / self.config.local_memory_bandwidth)))
                 return result
             else:
                 if computation_info.parallelism[0] == computation_info.parallelism[1]:
@@ -199,7 +201,7 @@ class HybridPrecisionMACArrayEvaluator(ComputationEvaluator):
                     else:
                         result = num_tiles * one_time_latency
 
-                    print("[C-Eval] Task", task.id, "P:", task.precision, "S:", task.shape, "with", result, "cycles")
+                    # print("[Comp-Eval] Task", task.id, "P:", task.precision, "S:", task.shape, "Tiles:", num_tiles, "one_time_latency", one_time_latency, "with", result, "<1>")
                     return result
                 else:
                     num_tiles = math.ceil(
@@ -220,7 +222,7 @@ class HybridPrecisionMACArrayEvaluator(ComputationEvaluator):
                     else:
                         result = num_tiles * one_time_latency
                     
-                    print("[C-Eval] Task", task.id, "P:", task.precision, "S:", task.shape, "with", result, "cycles")
+                    # print("[Comp-Eval] Task", task.id, "P:", task.precision, "S:", task.shape, "Tiles:", num_tiles, "one_time_latency", one_time_latency, "with", result, "<2>")
                     return result
         else:
             raise NotImplementedError

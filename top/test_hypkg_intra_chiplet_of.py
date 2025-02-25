@@ -21,7 +21,7 @@ trm_head = 32
 trm_qkv_len = 4096
 trm_ffn_len = 11008
 trm_output_size = 1024
-cur_precision = Precision.UINT_4
+cur_precision = Precision.INT_8
 
 # Construct a task graph
 task_graph = TaskGraph()
@@ -42,7 +42,6 @@ device_dict = {
 _, trm_input = create_input(task_graph, Shape(nr=trm_qkv_len), Precision.INT_8, True)
 
 # Q
-# TODO: Cross Chiplet...
 q_output, task_q_dict = create_mlp(task_graph, trm_input, Shape(nf=trm_qkv_len, nr=trm_qkv_len), \
                                  cur_precision, True)
 
@@ -61,6 +60,7 @@ print("[Chiplet Number]", config.size, "[Cores/Chiplet]", config.chiplet.size)
 # Construct a simulation environment
 st_env = STEnv(task_graph, package)
 split_num = 64
+
 core_x = config.chiplet.size[0]
 core_y = config.chiplet.size[1]
 
@@ -98,6 +98,7 @@ for splict_id in range(len(split_weights)):
     core_pos = (splict_id // core_x, splict_id % core_x)
     dram_w_coord_q.append(create_mlcoord(chip_pos, core_pos, device_dict["dram"]))
     st_env.put_in(dram_w_coord_q[-1], split_weights[splict_id].id)
+    print("dram_w", split_weights[splict_id].id)
 
 for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
 
@@ -117,14 +118,14 @@ for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
             core_pos = (splict_id // core_x, splict_id % core_x)
             sram_w_coord_q.append(create_mlcoord(chip_pos, core_pos, device_dict["sram"]))
             st_env.put_in(sram_w_coord_q[-1], sub_q_val_list[splict_id].id)
-            print("dram_w", sub_q_val_list[splict_id].id)
+            print("sram_w", sub_q_val_list[splict_id].id)
 
     elif sub_q_key == "input":
 
         for splict_id in range(len(sub_q_val_list)):
             chip_pos = (0, 0)
             core_pos = (splict_id // core_x, splict_id % core_x)
-            dram_i_coord_q.append(create_mlcoord(chip_pos, core_pos, device_dict["dram"])) 
+            dram_i_coord_q.append(create_mlcoord(chip_pos, core_pos, device_dict["sram"])) 
             st_env.put_in(dram_i_coord_q[-1], sub_q_val_list[splict_id].id)
             print("dram_i", sub_q_val_list[splict_id].id)
 
@@ -170,23 +171,26 @@ for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
 
         for out_edge in select_edge:
             # Input Path
-            # Input (0,0)  ---> (0,0)(0,0) mac
-            #               +-> (0,0)(0,1) mac
-            #               +-> (0,0)(0,2) mac
-            #               +-> (0,0)(0,3) mac
             src_router = create_mlcoord((0,0), (0,0), device_dict["router"])
             dst_pos = (splict_id // core_x, splict_id % core_x)
             dst_core = create_mlcoord((0,0), dst_pos)
             dst_router = create_mlcoord((0,0), dst_pos, device_dict["router"])
 
+
+            # st_env.map_edge(out_edge, send_pth)
+            # print("[input]", splict_id, "[Before map_edge]", out_edge.is_enable(), out_edge._edge_id)
+            
             if splict_id == 0:
                 st_env.map_edge(out_edge, [dram_i_coord_q[0], mac_array_coord_q[splict_id]])
             else:
                 st_env.map_edge(out_edge, [dram_i_coord_q[0], src_router, dst_core, dst_router, mac_array_coord_q[splict_id]])
             
+            # print("[input]", splict_id, "[After map_edge]", out_edge.is_enable(), out_edge._edge_id)
+            
             splict_id += 1
 
 st_env.simulate()
+print("---------------------------")
 st_env.show_overall_time()
 exit()
 
