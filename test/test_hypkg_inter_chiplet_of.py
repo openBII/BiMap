@@ -17,11 +17,11 @@ from src.simulator.resource_simulator.st_model.space_matrix.package_factory impo
 
 # Parameter
 trm_context_len = 8 * 1024
-trm_head = 32
+trm_head = 16
 trm_qkv_len = 4096
 trm_ffn_len = 11008
 trm_output_size = 1024
-cur_precision = Precision.UINT_4
+cur_precision = Precision.INT_8
 
 # Construct a task graph
 task_graph = TaskGraph()
@@ -53,7 +53,7 @@ q_output, task_q_dict = create_mlp(task_graph, trm_input, Shape(nf=trm_qkv_len, 
 #                         "W", task_q_dict["weight"].id)
 
 # Construct a hardware
-config = HybridPackageConfig("top/hybrid_package.toml")
+config = HybridPackageConfig("top/hybrid_package_2x2.toml")
 package = HybridPackageFactory.create_matrix(config)
 print("[Chiplet Number]", config.size, "[Cores/Chiplet]", config.chiplet.size)
 
@@ -203,7 +203,7 @@ for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
 
         for i in range(split_num):
             select_edge.append(sub_q_val_list[0].output_edges[i])
-            print("[sel]", select_edge[-1].is_enable(), select_edge[-1]._edge_id)
+            # print("[sel]", select_edge[-1].is_enable(), select_edge[-1]._edge_id)
 
         for out_edge in select_edge:
             # Input Path
@@ -295,9 +295,9 @@ for sub_q_key, sub_q_val_list in task_q_splt_dict.items():
 
             send_pth.append(mac_array_coord_q[splict_id])
 
-            print("[input]", splict_id, "[Before map_edge]", out_edge.is_enable(), out_edge._edge_id)
+            # print("[input]", splict_id, "[Before map_edge]", out_edge.is_enable(), out_edge._edge_id)
             st_env.map_edge(out_edge, send_pth)
-            print("[input]", splict_id, "[After map_edge]", out_edge.is_enable(), out_edge._edge_id)
+            # print("[input]", splict_id, "[After map_edge]", out_edge.is_enable(), out_edge._edge_id)
             
             splict_id += 1
 

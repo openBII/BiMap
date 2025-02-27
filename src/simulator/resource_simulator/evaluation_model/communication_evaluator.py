@@ -295,7 +295,7 @@ class CommunicationEvaluator(Evaluator):
                     start_time = min_start_time
                     last_percent = 0
                 duration = key_edge[0].flux * (1 - last_percent) / real_bandwidth
-                print("[Comm-Eval]", duration, "sel", self.edge_map[key_edge][0], "original bw", self.get_bandwidth(self.edge_map[key_edge][0]), "num_edges", num_edges, "flux", key_edge[0].flux, "real bw" , real_bandwidth)
+                # print("[Comm-Eval]", duration, "sel", self.edge_map[key_edge][0], "original bw", self.get_bandwidth(self.edge_map[key_edge][0]), "num_edges", num_edges, "flux", key_edge[0].flux, "real bw" , real_bandwidth)
                 
                 end_time = min_start_time + duration
                 if last_percent == 0:

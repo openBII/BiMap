@@ -188,8 +188,8 @@ class HybridPrecisionMACArrayEvaluator(ComputationEvaluator):
                                     computation_info.latency * max(1, math.ceil(num_data * 2 / self.config.local_memory_bandwidth))
                 result = num_tiles * one_time_latency
             
-                print("[Comp-Eval] Task", task.id, "P:", task.precision, "S:", task.shape, "Tiles:", num_tiles, "one_time_latency", one_time_latency, "with", result, "<0>")
-                print("[Comp-Eval] Task", "Load Memory Latency:", 2 * self.config.local_memory_latency, "Execution:", computation_info.latency * max(1, math.ceil(num_data * 2 / self.config.local_memory_bandwidth)))
+                # print("[Comp-Eval] Task", task.id, "P:", task.precision, "S:", task.shape, "Tiles:", num_tiles, "one_time_latency", one_time_latency, "with", result, "<0>")
+                # print("[Comp-Eval] Task", "Load Memory Latency:", 2 * self.config.local_memory_latency, "Execution:", computation_info.latency * max(1, math.ceil(num_data * 2 / self.config.local_memory_bandwidth)))
                 return result
             else:
                 if computation_info.parallelism[0] == computation_info.parallelism[1]:
