@@ -7,7 +7,7 @@ from src.simulator.task_rabbit.task_model.task_block_type import TaskBlockType
 from src.simulator.resource_simulator.evaluation_model.area.cost_model import calc_systolic_array_area_mm2, find_logic_sram_transistor_density
 from src.simulator.resource_simulator.evaluation_model.area.cost_model import calc_vector_area_mm2
 from src.simulator.resource_simulator.evaluation_model.area.cost_model import calc_reg_file_area
-
+from ext.mnsim2.api import PIM_Compute_API
 
 class ComputationEvaluator(Evaluator):
     def __init__(self, config: ComputationConfig,
@@ -172,6 +172,16 @@ class HybridPrecisionMACArrayEvaluator(ComputationEvaluator):
     def __init__(self, config: ComputationConfig,
                  mode: EvaluationMode = EvaluationMode.STATIC) -> None:
         super().__init__(config, mode)
+    
+    def eval_by_execution(self, task: CTaskBlock):
+        # FIXME: unit is ns
+        in_precision = task.in_precision
+        precision = Precision.UINT_4 if (Precision.UINT_4 in in_precision) else min(in_precision)
+        computation_info = self.config[precision]
+        parallelism = computation_info.parallelism
+        latency_ns = PIM_Compute_API(nf=task.shape.nf, nr=task.shape.nr, xbar_size=(parallelism[0] * parallelism[1]))
+        print("[eval_by_execution] Shape:", task.shape, "Latency:", latency_ns, "ns")
+        return latency_ns
 
     def eval_by_model(self, task: CTaskBlock):
         

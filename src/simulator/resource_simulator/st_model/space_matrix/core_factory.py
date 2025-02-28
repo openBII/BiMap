@@ -1,6 +1,7 @@
 from src.simulator.resource_simulator.config.matrix_config import CoreConfig, HybridCoreConfig
 from src.simulator.resource_simulator.st_model.space_matrix.factory import Factory
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
+from src.simulator.resource_simulator.evaluation_model.evaluator import EvaluationMode
 from src.simulator.resource_simulator.st_model.space_point.communication_point import CoreCommunicationPoint, HybridCoreCommunicationPoint
 from src.simulator.resource_simulator.st_model.space_point.computation_point import MACArrayPoint, VectorPoint, HybridPrecisionMACArrayPoint
 from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint, RegisterFilePoint
@@ -131,7 +132,7 @@ class HybridCoreFactory(Factory):
                 latency=config.mac_array['uint4']['latency'])
         mac_array_config.local_memory_latency = config.local_memory["latency"]
         mac_array_config.local_memory_bandwidth = config.local_memory["bandwidth"]
-        mac_array = HybridPrecisionMACArrayPoint(mac_array_config)
+        mac_array = HybridPrecisionMACArrayPoint(mac_array_config, EvaluationMode.STATIC)
         core.add_element(coord=Coord(1), element=mac_array)
 
         vector_unit_config = ComputationConfig()
