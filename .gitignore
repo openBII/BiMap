@@ -12,6 +12,7 @@ editor = vim
 *.out
 *.log
 *.DS_Store
+*.vscode
 
 io_server.log
 rect1.png
@@ -23,3 +24,14 @@ build/clock_simulator
 docs/**/build
 
 **/temp/
+
+# Latex-Related
+*.aux
+*.toc
+*.log
+*.pdf
+
+# bookdim
+3rdParties/booksim2/api/build
+3rdParties/booksim2/src/booksim
+3rdParties/booksim2/src/netrace/util/trace_viewer
