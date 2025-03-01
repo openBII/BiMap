@@ -3,7 +3,7 @@ sys.path.append("ext/booksim2/api/build")
 from greenlet import greenlet
 import booksim2
 
-class BookSim2:
+class BookSim2Async:
     
     def __init__(self):
         self.gr = greenlet(self.task)
@@ -30,7 +30,7 @@ class BookSim2:
                 self.bsim2.end()
         
 if __name__ == "__main__":
-    sim = BookSim2()
+    sim = BookSim2Async()
     for i in range(3):
         sim.inject(0, 10, 20)
         sim.run()

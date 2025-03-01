@@ -3,7 +3,7 @@ sys.path.append("ext/booksim2/api/build")
 from greenlet import greenlet
 import booksim2
 
-class BookSim2:
+class BookSim2Sync:
     
     def __init__(self, max_round = 20):
         self.max_round = max_round
@@ -34,7 +34,7 @@ class BookSim2:
             if self.end or i + 1 >= self.max_round: self.bsim2.end()
         
 if __name__ == "__main__":
-    sim = BookSim2()
+    sim = BookSim2Sync()
     # ----------------------------------------
     sim.inject(0, 10, 20)       # 0 + 0 = 0
     sim.inject(10, 3, 26)       # 0 + 10 = 10
