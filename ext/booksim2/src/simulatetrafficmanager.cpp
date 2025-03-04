@@ -127,7 +127,7 @@ bool SimulateTrafficManager::_SingleSim( )
 bool SimulateTrafficManager::_SingleSim_Stage()
 {
   // Print the start time of the measurements and whether the simulation is completed
-  cout << "Beginning measurements starting @" << _time  << " " <<  _Completed() << endl;
+  cout << "Measurements starting @" << _time  << " " <<  _Completed() << endl;
   
   // If the simulation is completed, refill the workload for each class that requires measurement
   if (_Completed()) {
@@ -154,7 +154,7 @@ bool SimulateTrafficManager::_SingleSim_Stage()
   }
   
   // Print the end time of the measurements
-  cout << "Beginning measurements ending @" << _time << endl;
+  cout << "Measurements ending @" << _time << endl;
   
   // Return true to indicate that the simulation stage was completed
   return 1;

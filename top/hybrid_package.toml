@@ -4,7 +4,7 @@ size = [1, 1]
 
 [network]
 topology = "mesh"
-bandwidth = 1024
+bandwidth = 16
 latency = 0
 
 [chiplet]
@@ -21,8 +21,8 @@ sram_bandwidth = 65536
 dram_bandwidth = 64
 flash_bandwidth = 2.125 # per core (shared to each core) = 136 GB/s (Global)
 
-noc_bandwidth = 128 # Global
-nop_bandwidth = 48 # Global
+noc_bandwidth = 16 # Global
+nop_bandwidth = 16 # Global
 
 [chiplet.core.mac_array]  # for mixed-precision, [[mac_array]] for multiple units
 [chiplet.core.mac_array.int8]

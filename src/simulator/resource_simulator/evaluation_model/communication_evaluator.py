@@ -6,6 +6,7 @@ from src.simulator.resource_simulator.st_model.hop import Hop, HopDict
 import heapq
 import math
 from src.simulator.resource_simulator.evaluation_model.recorder import CommunicationRecorder, CommunicationRecord
+from src.simulator.resource_simulator.evaluation_model.recorder import BookSimCommRecorder, BooksimCommunicationRecord
 from src.simulator.resource_simulator.evaluation_model.evaluator import Evaluator, EvaluationMode
 from queue import PriorityQueue
 from src.simulator.resource_simulator.evaluation_model.utils import create_overlap_groups
@@ -41,7 +42,6 @@ class CommunicationEvaluator(Evaluator):
         self.latency = latency
         self.size = size
         self.edge_map: Dict[Tuple[Edge, int], List[Hop]] = {}
-        # results: {(Edge, iteration, Hop): CommunicationRecord}
         self.recorder = CommunicationRecorder()
         self._latency_dict: Dict[Edge, float] = {}
 
@@ -240,12 +240,21 @@ class CommunicationEvaluator(Evaluator):
         - finished_edges: [Edge]
         - finish_time: float
         '''
+        
+        print("\n[eval_by_model]", self.__class__.__name__)
+        print("[edge_heap]", edge_heap.queue)
+        for egde_item in edge_heap.queue:
+            start_time = egde_item[0]
+            edge = egde_item[1]
+            if edge in self.recorder.recorder_time.keys():
+                print("-> [old]", start_time, edge, self.edge_map[edge])
+            else:
+                print("-> [new]", start_time, edge, self.edge_map[edge])
+                    
         finished_edges: List[Tuple[Edge, int]] = []
         if extern_deadline is None:
             recorder = self.copy_recorder()
-        # print(self.recorder)
-        # import time
-        # time.sleep(0.1)
+        
         while len(finished_edges) == 0:  # 每次评估一个hop
             # if self.all_edges_reach_deadline(edge_heap, extern_deadline):
             #     break
@@ -353,150 +362,6 @@ class CommunicationEvaluator(Evaluator):
                 finish_time = extern_deadline
         return finished_edges, finish_time
 
-    # def eval_by_model(self, edge_heap: List[Tuple[int, Tuple[Edge, int]]], extern_deadline: float = None) -> Tuple[List[Edge], int]:
-    #     '''
-    #     Pseudo-code:
-    #     while not SOME_EDGE_FINISHED:
-    #         找到所有最先开始的边, 记录到min_edges中  O(nlogn)
-    #         找到第二先开始的边, 记录second_min_start_time O(logn)
-    #         for edge in min_edges:  O(n)
-    #             获取edge的第一个hop
-    #             将edge加入hop_dict[hop]对应的列表中, 相当于对所有edge按第一个hop分组
-    #         for hop in hop_dict:
-    #             for edge in hop_dict[hop]:
-                    
-
-    #     Args:
-    #     - edge_heap: Heap[(start time, (Edge, iteration))]
-
-    #     Returns:
-    #     - finished_edges: [Edge]
-    #     - finish_time: float
-    #     '''
-    #     finished_edges: List[Tuple[Edge, int]] = []
-    #     if extern_deadline is None:
-    #         recorder = self.copy_recorder()
-    #     # print(self.recorder)
-    #     # import time
-    #     # time.sleep(0.1)
-    #     while len(finished_edges) == 0:  # 每次评估一个hop
-    #         # if self.all_edges_reach_deadline(edge_heap, extern_deadline):
-    #         #     break
-    #         # min_start_time, min_edge = heapq.heappop(edge_heap)  # 最先可以开始的边
-    #         min_start_time, min_edge = edge_heap.get()
-    #         if extern_deadline is not None:
-    #             if min_start_time > extern_deadline:
-    #                 # heapq.heappush(edge_heap, (min_start_time, min_edge))
-    #                 edge_heap.put((min_start_time, min_edge))
-    #                 return [], extern_deadline
-    #         # if len(edge_heap) != 0:
-    #         #     second_min_start_time, second_min_edge = heapq.heappop(edge_heap)  # 第二先可以开始的边
-    #         if not edge_heap.empty():
-    #             second_min_start_time, second_min_edge = edge_heap.get()  # 第二先可以开始的边
-    #         else:
-    #             second_min_start_time = float('inf')
-    #             second_min_edge = None
-    #         min_edges = [min_edge]  # 所有同一时间且最先开始的边
-    #         while second_min_start_time == min_start_time:
-    #             min_edges.append(second_min_edge)
-    #             # if len(edge_heap) != 0:
-    #             #    second_min_start_time, second_min_edge = heapq.heappop(edge_heap)
-    #             if not edge_heap.empty():
-    #                 second_min_start_time, second_min_edge = edge_heap.get()
-    #             else:
-    #                 break
-    #         if second_min_start_time != min_start_time and second_min_edge is not None:
-    #             # heapq.heappush(edge_heap, (second_min_start_time, second_min_edge))
-    #             edge_heap.put((second_min_start_time, second_min_edge))
-    #         else:
-    #             second_min_start_time = float('inf')
-    #         # 判断边之间是否会发生重合
-    #         # 对找到的最先开始的边根据第一个Hop是否重合进行分组
-    #         hop_dict = HopDict()
-    #         for edge in min_edges:
-    #             first_hop = self.edge_map[edge].pop(0)
-    #             if not first_hop in hop_dict:
-    #                 hop_dict[first_hop] = [edge]
-    #             else:
-    #                 hop_dict[first_hop].append(edge)
-    #         # 分组进行评估
-    #         min_end_time = float('inf')  # 当前轮次评估中最先结束的Hop
-    #         for hop in hop_dict:
-    #             edges = hop_dict[hop]
-    #             num_edges = len(edges)
-    #             real_bandwidth = self.get_bandwidth(hop) / num_edges
-    #             latency = self.get_hop_latency(hop)
-    #             for edge in edges:
-    #                 if (*edge, hop) in self.recorder:
-    #                     start_time = self.recorder[(*edge, hop)].start_time
-    #                     last_percent = self.recorder[(*edge, hop)].percent
-    #                 else:
-    #                     start_time = min_start_time
-    #                     last_percent = 0
-    #                 duration = edge[0].flux * (1 - last_percent) / real_bandwidth
-    #                 end_time = min_start_time + duration
-    #                 if last_percent == 0:
-    #                     end_time += latency
-    #                 if end_time < min_end_time:
-    #                     min_end_time = end_time
-    #                 # print(end_time)
-    #                 # print((end_time, last_percent))
-    #                 self.recorder.update((*edge, hop), CommunicationRecord(start_time, end_time, last_percent))
-    #                 # if end_time == 73928:
-    #                 #     print((end_time, last_percent, duration, min_start_time, extern_deadline))
-    #                 # if end_time == 73828:
-    #                 #     print((end_time, last_percent, duration, min_start_time, ))
-    #         # deadline = min_end_time if min_end_time < second_min_start_time else second_min_start_time
-    #         if extern_deadline is not None:
-    #             deadline = min(min_end_time, second_min_start_time, extern_deadline)
-    #         else:
-    #             deadline = min(min_end_time, second_min_start_time)
-    #         edges_cannot_proceed = set()
-    #         for hop in hop_dict:
-    #             edges = hop_dict[hop]
-    #             num_edges = len(edges)
-    #             real_bandwidth = self.get_bandwidth(hop) / num_edges
-    #             latency = self.get_hop_latency(hop)
-    #             for edge in edges:
-    #                 record = self.recorder[(*edge, hop)]
-    #                 if record.end_time > deadline:
-    #                     if (deadline - latency <= min_start_time and
-    #                         record.percent == 0):
-    #                         record.end_time = min_start_time
-    #                         record.percent = 0
-    #                         edges_cannot_proceed.add(edge)
-    #                     else:
-    #                         record.end_time = deadline
-    #                         if record.percent == 0:
-    #                             record.percent += (deadline - min_start_time - latency) * real_bandwidth / edge[0].flux
-    #                         else:
-    #                             record.percent += (deadline - min_start_time) * real_bandwidth / edge[0].flux
-    #                     # 未处理完的hop需要放回到edge_map
-    #                     self.edge_map[edge].insert(0, hop)
-    #                 else:  # 当前hop处理完成
-    #                     record.percent = 1
-    #                 # 真正的评估结果
-    #                 self.recorder.update((*edge, hop), record)
-    #                 if record.percent == 1 and len(self.edge_map[edge]) == 0:  # 某edge评估结束
-    #                     finished_edges.append(edge)
-    #                     # 评估的结束时间
-    #                     finish_time = record.end_time
-    #                 else:
-    #                     # 将未完成的边重新加入堆中
-    #                     # heapq.heappush(edge_heap, (record.end_time, edge))
-    #                     edge_heap.put((record.end_time, edge))
-    #         if self.all_edges_reach_deadline(edge_heap, extern_deadline,
-    #                                          edges_cannot_proceed):
-    #             break
-    #     if extern_deadline is None:
-    #         self.recorder.recorder_time = recorder
-    #     else:
-    #         if len(finished_edges) != 0:
-    #             assert finish_time == extern_deadline
-    #         else:
-    #             finish_time = extern_deadline
-    #     return finished_edges, finish_time
-
 
 class CoreCommunicationEvaluator(CommunicationEvaluator):
     def __init__(self, bandwidth: float,
@@ -550,57 +415,113 @@ class HybridCoreCommunicationEvaluator(CommunicationEvaluator):
         # TODO: Take NoC & NoP Bandwidth into Consideration
         self.append_hop(edge, iteration, Hop(src, dst, link_id))
 
+
 class BookSimCommunicationEvaluator(CommunicationEvaluator):
+        
     def __init__(self, bandwidth: float, process_node: ProcessNode, 
-                 mode: EvaluationMode = EvaluationMode.DYNAMIC, 
+                 mode: EvaluationMode, 
                  size: Tuple[int] = None, latency: float = 0) -> None:
         super().__init__(bandwidth, process_node, mode, size, latency)
         self.noc_simulator = BookSim2Sync()
-
-    def generate_hops(self, edge: Edge, iteration: int, src: Coord, dst: Coord, 
-                      link_id: int):
-        # TODO: Take NoC & NoP Bandwidth into Consideration
-        self.append_hop(edge, iteration, Hop(src, dst, link_id))
+        self.router_task = []
     
+    def copy_booksim_recorder(self):
+        recorder = {}
+        for key in self.recorder.recorder_time:
+            record = self.recorder.recorder_time[key]
+            recorder[key] = BooksimCommunicationRecord(record.start_time, record.end_time, record.recv_pkts, record.goal_pkts)
+        return recorder
     
     def eval_by_execution(self, edge_heap: PriorityQueue, 
                       extern_deadline: float = None) -> Tuple[List[Edge], int]:
-
+        
+        # Function Definition and Initialization
+        finished_edges: List[Tuple[Edge, int]] = []
+        finish_time = 0
+        if extern_deadline is None:
+            recorder = self.copy_booksim_recorder()
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        
         # FIXME: Implement BookSim Communication Simulator
         # FIXME: Modify the following code
         
-        # Step 1. Function Definition and Initialization
-        finished_edges: List[Tuple[Edge, int]] = []
-        if extern_deadline is None:
-            recorder = self.copy_recorder()
+        print("\n[eval_by_execution]", self.__class__.__name__)
+        print("[edge_heap]", edge_heap.queue)
+        for egde_item in edge_heap.queue:
+            start_time = egde_item[0]
+            edge = egde_item[1]
+            if edge in self.recorder.recorder_time.keys():
+                print("-> [old]", start_time, edge, self.edge_map[edge])
+            else:
+                print("-> [new]", start_time, edge, self.edge_map[edge])
+                src_idx = self.edge_map[edge][0].src[0] * 8 + self.edge_map[edge][0].src[1]
+                dst_idx = self.edge_map[edge][-1].dst[0] * 8 + self.edge_map[edge][-1].dst[1]
+                pkt_size = edge[0].flux
+                print("-> [e2e]", src_idx, dst_idx, pkt_size)
+                
+                # FIXME: To give correct flit_num / flit_size
+                
+                # for i in range(flit_num):
+                #     self.noc_simulator.inject(0, src_idx, dst_idx, flit_size)
         
-        # Step 2. Main Loop
-        # - The loop continues until at least one edge has completed 
-        #   its communication task.
-        # - It retrieves the edge with the earliest start time 
-        #   from the priority queue.
-        # - If the start time of this edge exceeds the external deadline, 
-        #   it puts the edge back into the queue and returns an empty list 
-        #   and the external deadline.
-        while len(finished_edges) == 0:
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        if extern_deadline is None:
+            self.recorder.recorder_time = recorder
+        else:
+            if len(finished_edges) != 0:
+                assert finish_time == extern_deadline
+            else:
+                finish_time = extern_deadline
+        return finished_edges, finish_time
+    
+    def eval_by_model(self, edge_heap: PriorityQueue, 
+                      extern_deadline: float = None) -> Tuple[List[Edge], int]:
+        
+        # Function Definition and Initialization
+        finished_edges: List[Tuple[Edge, int]] = []
+        finish_time = 0
+        if extern_deadline is None:
+            recorder = self.copy_booksim_recorder()
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - -
+        
+        print("\n[eval_by_model]", self.__class__.__name__)
+        print("[edge_heap]", edge_heap.queue)
+        for egde_item in edge_heap.queue:
+            start_time = egde_item[0]
+            edge = egde_item[1]
+            if edge in self.recorder.recorder_time.keys():
+                print("-> [old]", start_time, edge, self.edge_map[edge])
+            else:
+                print("-> [new]", start_time, edge, self.edge_map[edge])
+                src_idx = self.edge_map[edge][0].src[0] * 8 + self.edge_map[edge][0].src[1]
+                dst_idx = self.edge_map[edge][-1].dst[0] * 8 + self.edge_map[edge][-1].dst[1]
+                pkt_size = edge[0].flux
+                print("-> [e2e]", src_idx, dst_idx, pkt_size)
+        
+        # -----------------------------------------------
+        #
+        # while True:
+        #     self.noc_simulator.run_step()
+        #     # One Edge Finished
+        #     if edge_is_finished():
+        #         update(recorder)
+        #         break
+        #
+        # ------- Saves Record-Related Logic ------------
+        
+        while len(finished_edges) == 0:  # 每次评估一个hop
             min_start_time, min_edge = edge_heap.get()
             if extern_deadline is not None:
                 if min_start_time > extern_deadline:
+                    # heapq.heappush(edge_heap, (min_start_time, min_edge))
                     edge_heap.put((min_start_time, min_edge))
                     return [], extern_deadline
-            
-            # Step 3. Handling Edges with the Same Start Time
-            # - It retrieves the edge with the second earliest start time.
-            # - It groups all edges with the same earliest start time 
-            #   into the `min_edges` list.
-            # - If the second earliest start time is different from 
-            #   the earliest start time, it puts the second edge back into the queue.
             if not edge_heap.empty():
-                second_min_start_time, second_min_edge = edge_heap.get()
+                second_min_start_time, second_min_edge = edge_heap.get()  # 第二先可以开始的边
             else:
                 second_min_start_time = float('inf')
                 second_min_edge = None
-            min_edges = [min_edge]
+            min_edges = [min_edge]  # 所有同一时间且最先开始的边
             while second_min_start_time == min_start_time:
                 min_edges.append(second_min_edge)
                 if not edge_heap.empty():
@@ -611,85 +532,73 @@ class BookSimCommunicationEvaluator(CommunicationEvaluator):
                 edge_heap.put((second_min_start_time, second_min_edge))
             else:
                 second_min_start_time = float('inf')
-                
-            # Step 4. Grouping Overlapping Edges:
             overlap_groups = create_overlap_groups(min_edges, self.edge_map)
             
-            # Step 5. Evaluating Each Group of Overlapping Edges
-            min_end_time = float('inf')
+            min_end_time = float('inf')  # 当前轮次评估中最先结束的edge
             for key_edge, neighbor_edges in overlap_groups.items():
                 num_edges = len(neighbor_edges)
-                
-                # To Modify - - - - - - - - - - - - - - - - - - -
+                # FIXME
                 real_bandwidth = self.get_bandwidth(self.edge_map[key_edge][0]) / num_edges
                 latency = self.latency * len(self.edge_map[key_edge])
-                # - - - - - - - - - - - - - - - - - - - - - - - -
-                
+
                 if key_edge in self.recorder:
                     start_time = self.recorder[key_edge].start_time
-                    last_percent = self.recorder[key_edge].percent
+                    last_percent = self.recorder[key_edge].recv_pkts / self.recorder[key_edge].goal_pkts
                 else:
                     start_time = min_start_time
                     last_percent = 0
                 duration = key_edge[0].flux * (1 - last_percent) / real_bandwidth
-                # print("[Comm-Eval]", duration, "sel", self.edge_map[key_edge][0], "original bw", self.get_bandwidth(self.edge_map[key_edge][0]), "num_edges", num_edges, "flux", key_edge[0].flux, "real bw" , real_bandwidth)
                 
                 end_time = min_start_time + duration
                 if last_percent == 0:
                     end_time += latency
                 if end_time < min_end_time:
                     min_end_time = end_time
-                self.recorder.update(key_edge, CommunicationRecord(start_time, end_time, last_percent))
+                
+                if key_edge in self.recorder:
+                    recv_pkt = last_percent * self.recorder[key_edge].goal_pkts
+                    goal_pkt = self.recorder[key_edge].goal_pkts
+                else:
+                    recv_pkt = 0
+                    goal_pkt = key_edge[0].flux
+                self.recorder.update(key_edge, BooksimCommunicationRecord(start_time, end_time, recv_pkt, goal_pkt))
             
-            # Step 6. Calcaulate Deadline
+            # Calcaulate Deadline
             if extern_deadline is not None:
                 deadline = min(min_end_time, second_min_start_time, extern_deadline)
             else:
                 deadline = min(min_end_time, second_min_start_time)
             
-            # Step 7. Handling Edges That Cannot Proceed
-            # - It iterates through each group of overlapping edges again.
-            # - If the end time of an edge exceeds the deadline, 
-            #   it adjusts the end time and the percentage of completion for 
-            #   the edge and puts it back into the queue.
-            # - If the end time of an edge is within the deadline, 
-            #   it marks the edge as completed and adds it to 
-            #   the `finished_edges` list.
             edges_cannot_proceed = set()
             for key_edge, neighbor_edges in overlap_groups.items():
                 num_edges = len(neighbor_edges)
-                
-                # To Modify - - - - - - - - - - - - - - - - - - -
                 real_bandwidth = self.get_bandwidth(self.edge_map[key_edge][0]) / num_edges
                 latency = self.latency * len(self.edge_map[key_edge])
-                # - - - - - - - - - - - - - - - - - - - - - - - -
-                
                 record = self.recorder[key_edge]
                 if record.end_time > deadline:
                     if (deadline - latency <= min_start_time and
-                        record.percent == 0):
+                        record.recv_pkts == 0):
                         record.end_time = min_start_time
-                        record.percent = 0
+                        record.recv_pkts = 0
+                        record.goal_pkts = key_edge[0].flux
                         edges_cannot_proceed.add(key_edge)
                     else:
                         record.end_time = deadline
-                        if record.percent == 0:
-                            record.percent += (deadline - min_start_time - latency) * real_bandwidth / key_edge[0].flux
+                        if record.recv_pkts == 0:
+                            record.recv_pkts += (deadline - min_start_time - latency) * real_bandwidth
                         else:
-                            record.percent += (deadline - min_start_time) * real_bandwidth / key_edge[0].flux
+                            record.recv_pkts += (deadline - min_start_time) * real_bandwidth
                     edge_heap.put((record.end_time, key_edge))
                 else:
-                    record.percent = 1
+                    record.recv_pkts = record.goal_pkts
                     finished_edges.append(key_edge)
                     finish_time = record.end_time
                 self.recorder.update(key_edge, record)
-            
-            # Step 8. Checking if All Edges Have Reached the Deadline
             if self.all_edges_reach_deadline(edge_heap, extern_deadline,
                                              edges_cannot_proceed):
                 break
         
-        # Step 9. Finalizing the Results
+        # - - - - - - - - - - - - - - - - - - - - - - - - - - -
         if extern_deadline is None:
             self.recorder.recorder_time = recorder
         else:

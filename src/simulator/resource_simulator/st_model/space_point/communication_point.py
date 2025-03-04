@@ -6,9 +6,10 @@ from src.simulator.resource_simulator.st_model.st_coord import MLCoord, Coord
 from src.simulator.resource_simulator.st_model.hop import Hop
 from src.simulator.resource_simulator.st_model.tick import Tick
 from src.simulator.resource_simulator.st_model.st_point import STPoint
-from src.simulator.resource_simulator.evaluation_model.communication_evaluator import CommunicationEvaluator, HybridCoreCommunicationEvaluator, SharedMemoryCommunicationEvaluator, CoreCommunicationEvaluator, NetworkParameterDict
+from src.simulator.resource_simulator.evaluation_model.communication_evaluator import CommunicationEvaluator, HybridCoreCommunicationEvaluator, SharedMemoryCommunicationEvaluator
+from src.simulator.resource_simulator.evaluation_model.communication_evaluator import CoreCommunicationEvaluator, NetworkParameterDict, BookSimCommunicationEvaluator
 from src.simulator.resource_simulator.config.communication_config import CoreCommunicationConfig, CommunicationConfig, HybridCoreCommunicationConfig
-
+from src.simulator.resource_simulator.evaluation_model.evaluator import Evaluator, EvaluationMode
 
 class CommunicationPoint(STPoint):
     def __init__(self, config: CommunicationConfig):
@@ -181,3 +182,14 @@ class HybridCoreCommunicationPoint(CommunicationPoint):
 
         # Memory -> Vector Unit
         return bandwidth_dict, config.latency
+
+class BookSimCoreCommunicationPoint(CommunicationPoint):
+    def __init__(self, config: CommunicationConfig):
+        super().__init__(config)
+        # FIXME: Set EvaluationMode.STATIC for debugging
+        evaluator = BookSimCommunicationEvaluator(self.bandwidth, 
+                                                    process_node=config.process_node,
+                                                    mode=EvaluationMode.STATIC,
+                                                    size=config.size,
+                                                    latency=self.latency)
+        self.set_evaluator(evaluator)

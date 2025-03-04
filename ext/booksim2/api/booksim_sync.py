@@ -5,7 +5,7 @@ import booksim2
 
 class BookSim2Sync:
     
-    def __init__(self, max_round = 20):
+    def __init__(self, max_round = 20000):
         self.max_round = max_round
         self.gr = greenlet(self.task)
         self.dum = greenlet(self.dummy)
@@ -36,20 +36,21 @@ class BookSim2Sync:
 if __name__ == "__main__":
     sim = BookSim2Sync()
     # ----------------------------------------
-    sim.inject(0, 10, 20)       # 0 + 0 = 0
-    sim.inject(10, 3, 26)       # 0 + 10 = 10
-    sim.inject(11, 3, 28)       # 10 + 11 = 21
-    sim.inject(12, 5, 32)       # 21 + 12 = 33
+    sim.inject(0, 10, 20) # Stat from the last end (0)
+    sim.inject(0, 3, 26) # 3
+    sim.inject(0, 3, 28) # 13
+    sim.inject(0, 4, 32) # 24
     for i in range(5): sim.run_step()
     # ----------------------------------------
-    sim.inject(1112, 5, 32, 3)  # 33 + 1112 = 1145
+    sim.inject(0, 5, 32, 3) # Stat from the last end (79)
+    sim.inject(0, 5, 32, 3) # Stat from the last end (79)
     for i in range(1): sim.run_step()
     # ----------------------------------------
-    sim.inject(2112, 6, 43, 1)  # 1145 + 2112 = 3246
-    sim.inject(1000, 24, 54, 1) # 3246 + 1000 = 4246
+    sim.inject(0, 6, 43, 1) # Stat from the last end (1236)
+    sim.inject(0, 24, 54, 1) # 1236 + 2112 = 3348
     for i in range(2): sim.run_step()
     # ----------------------------------------
-    sim.inject(2000, 24, 54, 1) # 4246 + 2000 = 6246
+    sim.inject(0, 24, 54, 1) # Stat from the last end (4391)
     for i in range(2): sim.run_step()
     # ----------------------------------------
     sim.run_step(end=True) # End

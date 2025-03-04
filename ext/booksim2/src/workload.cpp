@@ -1006,7 +1006,7 @@ void OnlineWorkload::_refill()
     ++_count;
     int delay, source, dest, size;
     pkt head_pkt = _bs_ptr->i_fifo.dequeue_pkt();
-    cout << "[dequeue] " << head_pkt.t_inject << endl;
+    cout << "[refill] " << head_pkt.t_inject << "@" << _time << endl;
     delay = head_pkt.t_inject;
     source = head_pkt.addr_src;
     dest = head_pkt.addr_dst;

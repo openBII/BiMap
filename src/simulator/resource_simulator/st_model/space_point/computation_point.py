@@ -66,7 +66,7 @@ class MACArrayPoint(ComputationPoint):
         self.set_evaluator(evaluator)
 
 class HybridPrecisionMACArrayPoint(ComputationPoint):
-    def __init__(self, config: ComputationConfig, mode = EvaluationMode.STATIC):
+    def __init__(self, config: ComputationConfig, mode: EvaluationMode):
         super().__init__(config)
         evaluator = HybridPrecisionMACArrayEvaluator(config=config, mode=mode)
         self.set_evaluator(evaluator)

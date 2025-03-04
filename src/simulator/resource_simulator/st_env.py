@@ -27,7 +27,7 @@ from src.simulator.resource_simulator.scheduler import Scheduler
 from src.simulator.task_rabbit.task_model.input_type import InputType
 from src.simulator.task_rabbit.task_model.edge import Edge
 from src.simulator.resource_simulator.st_model.hop import Hop
-from src.simulator.resource_simulator.evaluation_model.recorder import CommunicationRecord, Record
+from src.simulator.resource_simulator.evaluation_model.recorder import Record
 from src.simulator.task_rabbit.task_model.vtask_block import VTaskBlock
 from src.simulator.resource_simulator.sync.sync_table import SyncTable
 from src.simulator.task_rabbit.task_model.id_generator import IDGenerator
@@ -39,7 +39,8 @@ from src.simulator.task_rabbit.task_model.precision import Precision
 from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint, DRAMPoint
 from src.simulator.resource_simulator.state.call import Call
 from src.simulator.task_rabbit.task_model.transformer import AttentionType
-
+from src.simulator.resource_simulator.evaluation_model.recorder import CommunicationRecorder, CommunicationRecord
+from src.simulator.resource_simulator.evaluation_model.recorder import BookSimCommRecorder, BooksimCommunicationRecord
 
 class LoopInfo:
     def __init__(self, start: int, end: int, num: int, 
@@ -172,10 +173,8 @@ class STEnv():
         else:
             space_matrix = self.st_matrix.get_element(container_coord)
         recorder = space_matrix.communication_networks[network_id].evaluator.recorder
-        # time_dict: Dict[Hop, CommunicationRecord] = {}
         for key, record in recorder:
             if key[0] == edge and key[1] == iteration:
-                # time_dict[key[2]] = record
                 return container_coord, network_id, record
     
     def show_overall_time(self, tick_num: int = 1):
@@ -195,7 +194,10 @@ class STEnv():
                             #     assert time_dict[hop].percent == 1, "Unfinished edge"
                             #     print("From Task {:d} to {:d} Network {:s} Hop {:s}: [{:2f}, {:2f}]".format(edge.in_task.id, edge.out_task.id, repr(container_coord) + '.' + str(network_id), repr(hop), time_dict[hop].start_time, time_dict[hop].end_time))
                             container_coord, network_id, record = self.get_edge_time(edge, iteration)
-                            assert record.percent == 1, "Unfinished edge"
+                            if isinstance(record, BooksimCommunicationRecord):
+                                assert record.recv_pkts >= record.goal_pkts, "Unfinished edge {} < {}".format(record.recv_pkts, record.goal_pkts)
+                            else:
+                                assert record.percent == 1, "Unfinished edge"
                             print("From Task {:d} to {:d} Network {:s}: [{:2f}, {:2f}]".format(edge.in_task.id, edge.out_task.id, repr(container_coord) + '.' + str(network_id), record.start_time, record.end_time))
                             if isinstance(edge.out_task, VTaskBlock):
                                 edge = edge.out_task.output_edges[0]

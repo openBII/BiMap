@@ -1,8 +1,8 @@
 from src.simulator.resource_simulator.config.matrix_config import ComputeChipletConfig
-from src.simulator.resource_simulator.st_model.space_matrix.core_factory import CoreFactory, HybridCoreFactory
+from src.simulator.resource_simulator.st_model.space_matrix.core_factory import CoreFactory, HybridCoreFactory, CompAirCoreFactory
 from src.simulator.resource_simulator.st_model.space_matrix.factory import Factory
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
-from src.simulator.resource_simulator.st_model.space_point.communication_point import SharedMemoryCommunicationPoint, CommunicationPoint
+from src.simulator.resource_simulator.st_model.space_point.communication_point import SharedMemoryCommunicationPoint, CommunicationPoint, BookSimCoreCommunicationPoint
 from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint
 from src.simulator.resource_simulator.config.communication_config import CommunicationConfig
 from src.simulator.resource_simulator.st_model.st_coord import Coord
@@ -17,6 +17,8 @@ class ComputeChipletFactory(Factory):
             for j in range(size_y):
                 if type == "hybrid":
                     core = HybridCoreFactory.create_matrix(config.core)
+                elif type == "compair":
+                    core = CompAirCoreFactory.create_matrix(config.core)
                 else:
                     core = CoreFactory.create_matrix(config.core)
                 chiplet.add_element(coord=Coord((i, j)), element=core)
@@ -47,7 +49,8 @@ class ComputeChipletFactory(Factory):
                 size=(size_x, size_y),
                 latency=config.network["latency"]
             )
-            communication_network = CommunicationPoint(communication_config)
+            communication_network = BookSimCoreCommunicationPoint(communication_config)
+            # communication_network = CommunicationPoint(communication_config)
         else:
             raise NotImplementedError
         chiplet.add_communication_network(communication_network)

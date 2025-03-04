@@ -88,6 +88,16 @@ class CommunicationRecord:
         return "[" + str(self.start_time) + "," + str(self.end_time) + "," + \
                str(self.percent) + "]"
 
+class BooksimCommunicationRecord:
+    def __init__(self, start_time: float = 0, end_time: float = 0, recv_pkts: int = 0, goal_pkts: int = 0) -> None:
+        self.start_time = start_time
+        self.end_time = end_time
+        self.recv_pkts = recv_pkts
+        self.goal_pkts = goal_pkts
+
+    def __repr__(self) -> str:
+        return "[" + str(self.start_time) + "," + str(self.end_time) + "," + \
+                str(self.recv_pkts) + "/" + str(self.goal_pkts) + "]"
 
 class CommunicationRecorder(Recorder):
     def __init__(self, slot=1):
@@ -164,3 +174,46 @@ class RouterRecorder(Recorder):
         
         self.max_time = allow_time + time_duration
         
+class BookSimCommRecorder(Recorder):
+    def __init__(self, slot=1):
+        super().__init__(slot)
+        self.recorder_time: Dict[Tuple[Edge, int], BooksimCommunicationRecord] = {}
+
+    def __repr__(self):
+        recorder = ""
+        for key in self.recorder_time:
+            record = "(Edge: " + repr(key[0]) + " Iter: " + str(key[1]) + ") " + \
+                     repr(self.recorder_time[key]) + "\n"
+            recorder += record
+        return recorder
+
+    def __iter__(self):
+        self._iter_keys = iter(self.recorder_time.keys())
+        return self
+
+    def __next__(self):
+        try:
+            key = next(self._iter_keys)
+            return key, self.recorder_time[key]
+        except StopIteration:
+            raise StopIteration
+
+    def __contains__(self, key):
+        return key in self.recorder_time
+    
+    def __getitem__(self, key):
+        return self.recorder_time[key]
+    
+    def update(self, key, value: BooksimCommunicationRecord):
+        self.recorder_time.update({key: value})
+
+    def correct_time(self, tick: Tick, time: float):
+        assert time >= 0
+        start_time = float("inf")
+        for key in self.recorder_time:
+            if key[0] == tick.edge and key[1] == tick.iteration:
+                self.recorder_time[key].start_time += time
+                self.recorder_time[key].end_time += time
+                if start_time > self.recorder_time[key].start_time:
+                    start_time = self.recorder_time[key].start_time
+        tick.start_callback(tick.task_id, tick.iteration, start_time)
