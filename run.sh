@@ -1,0 +1,1 @@
+python -u test/test_booksim_simple.py > test_booksim_simple_record.log

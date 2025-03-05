@@ -447,150 +447,223 @@ class BookSimCommunicationEvaluator(CommunicationEvaluator):
     
     def eval_by_execution(self, edge_heap: PriorityQueue, 
                       extern_deadline: float = None) -> Tuple[List[Edge], int]:
-        
-        """ HINT:
+        """ 
+        HINT:
             Because of the edge design of MLDSE, we need to first pre-execute a simulation 
                 to get the expected performance before giving the real performance. 
             In this process, (extern_deadline is None) marks the first pre-simulation process.
         """
         # Function Definition and Initialization
+        # List to store the finished edges and their iterations
         finished_edges: List[Tuple[Edge, int]] = []
+        # Variable to store the finish time of the simulation
         finish_time = 0
+        # If extern_deadline is None, it's the pre-simulation phase, so copy the BookSim recorder
         if extern_deadline is None:
             recorder = self.copy_booksim_recorder()
         else:
             recorder = None
         # - - - - - - - - - - - - - - - - - - - - - - - - - - -
         
+        # Print debugging information
         print("\n[eval_by_execution]", self.__class__.__name__, os.getpid())
         print("[edge_heap_init]", edge_heap.queue, "[recoder_init]", recorder)
         
         # Flits Injection
+        # Iterate through each edge in the edge heap
         for egde_item in edge_heap.queue:
+            # Extract the start time of the edge
             start_time = egde_item[0]
+            # Extract the edge itself
             edge = egde_item[1]
+            # Check if the edge is already recorded
             if edge in self.recorder.recorder_time.keys():
-                # The edge is recorded
-                # print("-> [old]", start_time, "-", extern_deadline, edge, self.edge_map[edge])
+                # The edge is recorded, skip
                 pass
+            # Check if it's the pre-simulation phase and the edge is new
             elif extern_deadline is None: 
                 # The edge is new and can inject, but not record
-                # print("-> [new]", start_time, "-", extern_deadline, edge, self.edge_map[edge])
-                # Inject (HINT: Edge-grained Sending Now!)
+                # Calculate the source index
                 src_idx = self.edge_map[edge][0].src[0] * 8 + self.edge_map[edge][0].src[1]
+                # Calculate the destination index
                 dst_idx = self.edge_map[edge][-1].dst[0] * 8 + self.edge_map[edge][-1].dst[1]
+                # Get the packet size
                 pkt_size = edge[0].flux
+                # Get the NoC bandwidth
                 noc_bandwidth = self.get_bandwidth(self.edge_map[edge][0])
+                # Calculate the number of flits
                 flit_num = math.ceil(pkt_size / noc_bandwidth)
+                # Inject each flit into the NoC simulator
                 for flit_idx in range(flit_num):
+                    # Inject (HINT: Edge-grained Sending Now!)
                     self.noc_simulator.inject(1, src_idx, dst_idx, 1)
-                    # Print for Debugging
-                    # if flit_idx == 0 or flit_idx == flit_num - 1:
-                    #     print("-> [e2e] [{}]".format(flit_idx), src_idx, "->", dst_idx, pkt_size)
                 # Update State & Recoder
+                # Set the NoC time offset if it's not set
                 if self.noc_time_offset == -1: self.noc_time_offset = start_time
+                # Update the mapping from source-destination pair to edge
                 self.src_dst_2_edge_map.update({(src_idx, dst_idx): edge})
             else:
                 # Record the edge
-                # print("-> [ejected]", start_time, "-", extern_deadline, edge, self.edge_map[edge])
+                # Calculate the source index (FIXME: edge_x = 8 is fixed now)
                 src_idx = self.edge_map[edge][0].src[0] * 8 + self.edge_map[edge][0].src[1]
+                # Calculate the destination index (FIXME: edge_x = 8 is fixed now)
                 dst_idx = self.edge_map[edge][-1].dst[0] * 8 + self.edge_map[edge][-1].dst[1]
+                # Get the packet size
                 pkt_size = edge[0].flux
+                # Get the NoC bandwidth
                 noc_bandwidth = self.get_bandwidth(self.edge_map[edge][0])
+                # Calculate the number of flits
                 flit_num = math.ceil(pkt_size / noc_bandwidth)
+                # Update the recorder with the edge information
                 self.recorder.update(edge, BooksimCommunicationRecord(start_time, extern_deadline, 0, flit_num)) # -1 marks uncommitted edge
                 
         # Fake Simulation to obtain the estimated final_time
+        # If it's the pre-simulation phase
         if extern_deadline is None:
+            # Run the NoC simulator ahead to get all the ejection information
             eject_info = self.noc_simulator.run_ahead()
-            # print("-> [eject_info]", eject_info)
             
+            # Group the ejection information into packets
             grounped_pkg_list = self.info_to_list(eject_info)
+            # Dictionary to store the end time of each packet
             end_time_list = {}
+            # Iterate through each packet in the grouped list
             for [t_i, t_e, src, dst] in grounped_pkg_list:
+                # If the source-destination pair is not in the end time list
                 if (src, dst) not in end_time_list.keys():
+                    # Add the end time of the packet to the list
                     end_time_list.update({(src, dst): t_e + self.noc_time_offset})
                 else:
+                    # Update the end time of the packet to the maximum value
                     end_time_list.update({(src, dst): max(end_time_list[(src, dst)], t_e + self.noc_time_offset)})
             
             # print("-> [end_time_list]", end_time_list)
             # print("-> [src_dst_2_edge_map]", self.src_dst_2_edge_map)
             
+            # Initialize the minimum edge time to a large value
             min_edge_time = 1e24
+            # Variable to store the minimum edge
             min_edge = None
+            # Iterate through each source-destination pair and its end time
             for (src, dst), edge_time in end_time_list.items():
+                # If the edge time is less than the minimum edge time
                 if edge_time < min_edge_time:
+                    # Update the minimum edge time
                     min_edge_time = edge_time
+                    # Update the minimum edge
                     min_edge = self.src_dst_2_edge_map[(src, dst)]
             
+            # Set the finished edges to the minimum edge
             finished_edges = [min_edge]
+            # Set the finish time to the minimum edge time
             finish_time = min_edge_time
         
         # Real Simulation
+        # While there is a deadline
         while extern_deadline != None:
             
             # Process Unconmitted Pkts
+            # Copy the uncommitted packets from the previous step
             last_noc_uncommitted_pkts = copy.deepcopy(self.noc_uncommitted_pkts)
+            # Clear the uncommitted packets list
             self.noc_uncommitted_pkts = []
+            # Iterate through each uncommitted packet
             for [t_i, t_e, src, dst] in last_noc_uncommitted_pkts:
+                # If the end time of the packet is after the deadline
                 if t_e + self.noc_time_offset > extern_deadline:
+                    # Add the packet to the uncommitted packets list
                     self.noc_uncommitted_pkts.append([t_i, t_e, src, dst])
                 else:
-                    # print([t_i, t_e, src, dst], "executed @", t_e + self.noc_time_offset)
+                    # Get the mapped edge from the source-destination pair
                     mapped_edge = self.src_dst_2_edge_map[(src, dst)]
+                    # Get the record of the mapped edge
                     mapped_record = self.recorder.recorder_time[mapped_edge]
+                    # Increment the received packets count
                     mapped_record.recv_pkts += 1
+                    # If the received packets count equals the goal packets count
                     if mapped_record.recv_pkts == mapped_record.goal_pkts:
+                        # Add the mapped edge to the finished edges list
                         finished_edges.append(mapped_edge)
+                        # Update the finish time to the maximum of the current finish time and the end time of the packet
                         finish_time = max(t_e + self.noc_time_offset, finish_time)
+                        # Update the recorder with the new information
                         self.recorder.update(mapped_edge, BooksimCommunicationRecord(t_i, finish_time, mapped_record.recv_pkts, mapped_record.goal_pkts))
                     
+            # If there are still uncommitted packets, break the loop
             if len(self.noc_uncommitted_pkts) > 0: break
             
             # Next Execute & Get Unsaved Pkts
+            # Run the NoC simulator for one step
             self.noc_simulator.run_step()
+            # Get the ejection information from the simulator
             eject_info = self.noc_simulator.info
             
             # Extract all the number from the str eject_info
+            # Group the ejection information into packets
             grounped_pkg_list = self.info_to_list(eject_info)
             
             # State Update
+            # Iterate through each packet in the grouped list
             for [t_i, t_e, src, dst] in grounped_pkg_list:
+                # If the end time of the packet is after the deadline
                 if t_e + self.noc_time_offset > extern_deadline:
                     # Need to run in the next round
+                    # Add the packet to the uncommitted packets list
                     self.noc_uncommitted_pkts.append([t_i, t_e, src, dst])
                 else:
                     # Received a packet [Valid]
                     # print([t_i, t_e, src, dst], "executed @", t_e + self.noc_time_offset)
+                    # Get the mapped edge from the source-destination pair
                     mapped_edge = self.src_dst_2_edge_map[(src, dst)]
+                    # Get the record of the mapped edge
                     mapped_record = self.recorder.recorder_time[mapped_edge]
+                    # Increment the received packets count
                     mapped_record.recv_pkts += 1
+                    # If the received packets count equals the goal packets count
                     if mapped_record.recv_pkts == mapped_record.goal_pkts:
+                        # Add the mapped edge to the finished edges list
                         finished_edges.append(mapped_edge)
+                        # Update the finish time to the maximum of the current finish time and the end time of the packet
                         finish_time = max(t_e + self.noc_time_offset, finish_time)
+                        # Update the recorder with the new information
                         self.recorder.update(mapped_edge, BooksimCommunicationRecord(t_i, finish_time, mapped_record.recv_pkts, mapped_record.goal_pkts))
             
             # Logging cached pkts
+            # If there are still uncommitted packets
             if len(self.noc_uncommitted_pkts) != 0:
                 # print("[Cached Pkts]", self.noc_uncommitted_pkts)
+                # Break the loop
                 break
             
             # check if all the recorder are done
+            # Flag to indicate if all records are done
             end = True
+            # Iterate through each edge and its record in the recorder
             for key_edge_i, record_i in self.recorder.recorder_time.items():
-                if record_i.recv_pkts != record_i.goal_pkts: end = False
+                # If the received packets count does not equal the goal packets count
+                if record_i.recv_pkts != record_i.goal_pkts: 
+                    # Set the end flag to False
+                    end = False
             
+            # If all records are done, break the loop
             if end: break
             
         # - - - - - - - - - - - - - - - - - - - - - - - - - - -
         
+        # Get the total number of edges in the edge heap
         total_edge = len(edge_heap.queue)
+        # Iterate through each edge in the edge heap
         for i in range(total_edge):
+            # Get the next edge from the edge heap
             _, lst_edge = edge_heap.get()
+            # If the edge is not in the finished edges list
             if lst_edge not in finished_edges:
+                # Put the edge back into the edge heap with the finish time
                 edge_heap.put((finish_time, lst_edge))
         
+        # If it's the pre-simulation phase
         if extern_deadline is None:
+            # Restore the recorder to the original state
             self.recorder.recorder_time = recorder
         else:
             if len(finished_edges) != 0:
@@ -598,11 +671,13 @@ class BookSimCommunicationEvaluator(CommunicationEvaluator):
             else:
                 finish_time = extern_deadline
         
+        # Print debugging information
         print("[record]", self.recorder.recorder_time)
         print("[finished_edges]", finished_edges)
         print("[finish_time]", finish_time)
         print("[edge_heap]", edge_heap.queue)
         
+        # Return the finished edges and the finish time
         return finished_edges, finish_time
     
     def eval_by_model(self, edge_heap: PriorityQueue, 
