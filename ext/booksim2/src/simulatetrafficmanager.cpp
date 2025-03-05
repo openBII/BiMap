@@ -127,8 +127,9 @@ bool SimulateTrafficManager::_SingleSim( )
 bool SimulateTrafficManager::_SingleSim_Stage()
 {
   // Print the start time of the measurements and whether the simulation is completed
+#ifdef TRACK_EJECT
   cout << "Measurements starting @" << _time  << " " <<  _Completed() << endl;
-  
+#endif
   // If the simulation is completed, refill the workload for each class that requires measurement
   if (_Completed()) {
     for (int c = 0; c < _classes; ++c) {
@@ -154,8 +155,10 @@ bool SimulateTrafficManager::_SingleSim_Stage()
   }
   
   // Print the end time of the measurements
+#ifdef TRACK_EJECT
   cout << "Measurements ending @" << _time << endl;
-  
+#endif
+
   // Return true to indicate that the simulation stage was completed
   return 1;
 }

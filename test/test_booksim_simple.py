@@ -41,7 +41,8 @@ q_output, task_q_dict = create_mlp(task_graph, trm_input, Shape(nf=trm_qkv_len, 
                                  cur_precision, True)
 
 # type(task_q_dict["weight"]) = StaticTaskBlock
-print("Model Shape Info (y、x、f<o-channel>、r<i-channel>、ky、kx)")
+import os
+print("Model Shape Info (y、x、f<o-channel>、r<i-channel>、ky、kx)", os.getpid())
 print("[trm_input]", "I", trm_input.id)
 print("[task_q_dict]", "C", task_q_dict["compute"].id, "O", task_q_dict["output"].id, "W", task_q_dict["weight"].id)
 

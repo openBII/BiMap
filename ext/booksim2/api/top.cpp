@@ -126,12 +126,14 @@ int booksim::eject()
     return this->o_fifo.dequeue();
 }
 
-void booksim::eject_all_print()
+std::string booksim::eject_all_print()
 {
+    std::string res = "";
     while (!this->o_fifo.is_empty()) {
         pkt p = this->o_fifo.dequeue_pkt();
-        std::cout << "[*] time: " << p.t_inject << "-" << p.t_eject << " src: " << p.addr_src << " dst: " << p.addr_dst << std::endl;
+        res += "Ti: " + std::to_string(p.t_inject) + " Te: " + std::to_string(p.t_eject) + " Src: " + std::to_string(p.addr_src) + " Dst: " + std::to_string(p.addr_dst) + " # ";
     }
+    return res;
 }
 
 /////////////////////////////////////////////////////////////////////////////

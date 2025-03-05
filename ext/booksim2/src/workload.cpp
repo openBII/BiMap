@@ -31,7 +31,7 @@
 #include "workload.hpp"
 #include "random_utils.hpp"
 #include "lockfree_queue.hpp"
-// #define DEBUG_NETRACE
+#include "simulatetrafficmanager.hpp"
 
 Workload::Workload(int nodes) : _nodes(nodes)
 {
@@ -1006,7 +1006,9 @@ void OnlineWorkload::_refill()
     ++_count;
     int delay, source, dest, size;
     pkt head_pkt = _bs_ptr->i_fifo.dequeue_pkt();
+  #ifdef TRACK_EJECT
     cout << "[refill] " << head_pkt.t_inject << "@" << _time << endl;
+  #endif
     delay = head_pkt.t_inject;
     source = head_pkt.addr_src;
     dest = head_pkt.addr_dst;

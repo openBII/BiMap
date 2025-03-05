@@ -186,10 +186,10 @@ class HybridCoreCommunicationPoint(CommunicationPoint):
 class BookSimCoreCommunicationPoint(CommunicationPoint):
     def __init__(self, config: CommunicationConfig):
         super().__init__(config)
-        # FIXME: Set EvaluationMode.STATIC for debugging
+        # FIXME: Set EvaluationMode.STATIC / DYNAMIC for debugging
         evaluator = BookSimCommunicationEvaluator(self.bandwidth, 
                                                     process_node=config.process_node,
-                                                    mode=EvaluationMode.STATIC,
+                                                    mode=EvaluationMode.DYNAMIC,
                                                     size=config.size,
                                                     latency=self.latency)
         self.set_evaluator(evaluator)
