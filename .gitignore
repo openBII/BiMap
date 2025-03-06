@@ -36,10 +36,11 @@ ext/booksim2/api/build
 ext/booksim2/api/build/CMakeFiles
 ext/booksim2/src/booksim
 ext/booksim2/src/netrace/util/trace_viewer
-ext/attacc/ramulator2/build
-ext/attacc/ramulator2/patches
-ext/attacc/ramulator2/log
-ext/attacc/ramulator2/ext
+ext/cent_pim/aim_simulator/build
+ext/cent_pim/aim_simulator/patches
+ext/cent_pim/aim_simulator/log
+ext/cent_pim/aim_simulator/ext
 *.trace
 *.csv
 *.dylib
+*.yaml
