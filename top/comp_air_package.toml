@@ -1,0 +1,56 @@
+process_node = 7
+
+size = [1, 1]
+
+[network]
+topology = "mesh"
+bandwidth = 16
+latency = 0
+
+[chiplet]
+size = [8, 8]
+
+[chiplet.network]
+topology = "mesh"
+bandwidth = 16
+latency = 2
+
+[chiplet.core.network] 
+# GB/s
+sram_bandwidth = 64
+dram_bandwidth = 64
+shadow_bandwidth = 1e16 # A Big Number!!!
+noc_bandwidth = 16 # Global
+nop_bandwidth = 16 # Global
+
+# SRAM-PIM
+[chiplet.core.mac_array]  # for mixed-precision, [[mac_array]] for multiple units
+[chiplet.core.mac_array.int8]
+parallelism = [32, 32]
+latency = 2
+[chiplet.core.mac_array.uint4]
+parallelism = [32, 32]
+latency = 1
+
+# DRAM-PIM
+[chiplet.core.vector_unit]
+[chiplet.core.vector_unit.int8]
+parallelism = 128
+[chiplet.core.vector_unit.uint4]
+parallelism = 256
+[chiplet.core.vector_unit.int8.latency]
+relu = 1  # latency for different operations
+softmax = 9
+add = 1
+[chiplet.core.vector_unit.uint4.latency]
+relu = 1  # latency for different operations
+softmax = 9
+add = 1
+
+[chiplet.core.local_memory]
+capacity = 2560  # KB, 512
+latency = 1
+bandwidth = 512
+
+[chiplet.core.dram]
+capacity = 2560  # KB, 512

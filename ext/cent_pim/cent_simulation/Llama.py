@@ -138,7 +138,6 @@ class TransformerBlockLlama(TransformerBlock):
         
         # AiM MAC BK x GB
         if self.pim_compute:
-        # if False:
             xq_aim = self.Vector_Matrix_Mul_weight_pim(RMSNorm_x_aim[0][0], self.wq_row_index, self.dim, self.wq.shape[0], FC_total_banks, self.trace_fc_kqvo, "breakdown_sa_weight").reshape(bsz, 1, -1)
             xk_aim = self.Vector_Matrix_Mul_weight_pim(RMSNorm_x_aim[0][0], self.wk_row_index, self.dim, self.wk.shape[0], FC_total_banks, self.trace_fc_kqvo, "breakdown_sa_weight").reshape(bsz, 1, -1)
             xv_aim = self.Vector_Matrix_Mul_weight_pim(RMSNorm_x_aim[0][0], self.wv_row_index, self.dim, self.wv.shape[0], FC_total_banks, self.trace_fc_kqvo, "breakdown_sa_weight").reshape(bsz, 1, -1)

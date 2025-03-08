@@ -1,5 +1,5 @@
 from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint
-from src.simulator.resource_simulator.config.matrix_config import HybridPackageConfig, PackageConfig
+from src.simulator.resource_simulator.config.matrix_config import HybridPackageConfig, PackageConfig, CompAirPackageConfig
 from src.simulator.resource_simulator.st_model.space_matrix.factory import Factory
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
 from src.simulator.resource_simulator.st_model.space_point.communication_point import CommunicationPoint
@@ -75,7 +75,7 @@ class CompAirPackageFactory(Factory):
     Factory class for creating Package objects
     """
     @staticmethod
-    def create_matrix(config: HybridPackageConfig) -> STMatrix:
+    def create_matrix(config: CompAirPackageConfig) -> STMatrix:
         package = STMatrix(dim=2, space_level=3)
         
         size_x, size_y = config.size

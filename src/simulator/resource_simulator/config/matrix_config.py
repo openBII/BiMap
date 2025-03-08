@@ -58,7 +58,17 @@ class HybridCoreConfig(Config):
         self.dram = self.config["dram"]
         self.flash = self.config["flash"]
 
+class CompAirCoreConfig(Config):
+    def __init__(self, config, process_node = None):
+        super().__init__(config, process_node)
 
+    def handler(self):
+        self.network = self.config["network"]
+        self.mac_array = self.config["mac_array"]
+        self.vector_unit = self.config["vector_unit"]
+        self.local_memory = self.config["local_memory"]
+        self.dram = self.config["dram"]
+        
 class ComputeChipletConfig(Config):
     def __init__(self, config, process_node = None):
         super().__init__(config, process_node)
@@ -82,7 +92,17 @@ class HybridComputeChipletConfig(Config):
         if "shared_memory" in self.config:
             self.shared_memory = self.config["shared_memory"]
 
+class CompAirComputeChipletConfig(Config):
+    def __init__(self, config, process_node = None):
+        super().__init__(config, process_node)
 
+    def handler(self):
+        self.core = CompAirCoreConfig(self.config["core"], self.process_node)
+        self.size = self.config["size"]
+        self.network = self.config["network"]
+        if "shared_memory" in self.config:
+            self.shared_memory = self.config["shared_memory"]
+            
 class PackageConfig(Config):
     def __init__(self, config, process_node = None):
         super().__init__(config, process_node)
@@ -104,6 +124,15 @@ class HybridPackageConfig(Config):
         self.size = self.config["size"]
         self.network = self.config["network"]
 
+class CompAirPackageConfig(Config):
+    def __init__(self, config, process_node = None):
+        super().__init__(config, process_node)
+
+    def handler(self):
+        self.chiplet = CompAirComputeChipletConfig(self.config["chiplet"],
+                                            self.process_node)
+        self.size = self.config["size"]
+        self.network = self.config["network"]
 
 class ComputeDomainConfig(Config):
     def __init__(self, config, process_node = None):

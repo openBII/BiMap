@@ -63,7 +63,6 @@ if __name__ == "__main__":
         TB.memory_mapping_verification()
         print("\n============ {} Functional Verification ============".format(args.filename.split("/")[-1].split(".")[0]))
         sa_aim = TB.self_attention_aim()
-        # sa_aim = TB.self_attention()
         out_aim = TB.FFN_aim(sa_aim)
         compare(out_aim[0][0], TB.out[0][0], "AiM out")
         TB.finish()

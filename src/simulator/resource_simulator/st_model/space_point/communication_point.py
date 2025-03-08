@@ -8,7 +8,7 @@ from src.simulator.resource_simulator.st_model.tick import Tick
 from src.simulator.resource_simulator.st_model.st_point import STPoint
 from src.simulator.resource_simulator.evaluation_model.communication_evaluator import CommunicationEvaluator, HybridCoreCommunicationEvaluator, SharedMemoryCommunicationEvaluator
 from src.simulator.resource_simulator.evaluation_model.communication_evaluator import CoreCommunicationEvaluator, NetworkParameterDict, BookSimCommunicationEvaluator
-from src.simulator.resource_simulator.config.communication_config import CoreCommunicationConfig, CommunicationConfig, HybridCoreCommunicationConfig
+from src.simulator.resource_simulator.config.communication_config import CoreCommunicationConfig, CommunicationConfig, HybridCoreCommunicationConfig, CompAirCoreCommunicationConfig
 from src.simulator.resource_simulator.evaluation_model.evaluator import Evaluator, EvaluationMode
 
 class CommunicationPoint(STPoint):
@@ -132,6 +132,50 @@ class SharedMemoryCommunicationPoint(CommunicationPoint):
                                                        latency=self.latency)
         self.set_evaluator(evaluator)
 
+# CompAirCoreCommunicationConfig
+
+class CompAirCoreCommunicationPoint(CommunicationPoint):
+    def __init__(self, config: CompAirCoreCommunicationConfig):
+        super().__init__(config)
+        # Hint Just Keep HybridCoreCommunicationEvaluator
+        evaluator = HybridCoreCommunicationEvaluator(self.bandwidth,
+                                                 config.process_node)
+        self.set_evaluator(evaluator)
+     
+    def config_handler(self, config: CompAirCoreCommunicationConfig):
+        
+        bandwidth_dict = NetworkParameterDict()
+        
+        """
+             +---> noc(5) <---+
+             |                |
+            dram(3) ====== sram(0)
+             ||||           ||||
+            dram_pim(2)    sram_pim(1)
+        """
+        
+        # "sram": 0 -> ?
+        bandwidth_dict[Hop(Coord(0), Coord(1))] = config.shadow_bandwidth
+        bandwidth_dict[Hop(Coord(0), Coord(3))] = config.dram_bandwidth
+        bandwidth_dict[Hop(Coord(0), Coord(5))] = config.noc_bandwidth
+        
+        # "sram_pim (mac_array)": 1 -> ?
+        bandwidth_dict[Hop(Coord(1), Coord(0))] = config.shadow_bandwidth
+
+        # "dram_pim (vec)": 2 -> ?
+        bandwidth_dict[Hop(Coord(2), Coord(3))] = config.shadow_bandwidth
+
+        # "dram": 3 -> ?
+        bandwidth_dict[Hop(Coord(3), Coord(0))] = config.dram_bandwidth
+        bandwidth_dict[Hop(Coord(3), Coord(2))] = config.shadow_bandwidth
+        bandwidth_dict[Hop(Coord(3), Coord(5))] = config.noc_bandwidth
+
+        # "router": 5 -> ?
+        bandwidth_dict[Hop(Coord(5), Coord(0))] = config.noc_bandwidth
+        bandwidth_dict[Hop(Coord(5), Coord(3))] = config.noc_bandwidth
+
+        # Memory -> Vector Unit
+        return bandwidth_dict, config.latency
 
 class HybridCoreCommunicationPoint(CommunicationPoint):
     def __init__(self, config: HybridCoreCommunicationConfig):

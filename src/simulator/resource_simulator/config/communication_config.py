@@ -25,6 +25,16 @@ class HybridCoreCommunicationConfig(CommunicationConfig):
         self.nop_bandwidth = nop_bandwidth
         self.latency = latency
 
+class CompAirCoreCommunicationConfig(CommunicationConfig):
+    def __init__(self, sram_bandwidth: float, dram_bandwidth: float, 
+                 shadow_bandwidth: float, noc_bandwidth: float, nop_bandwidth: float, process_node: int, latency: float = 0):
+        super().__init__(process_node=process_node)
+        self.sram_bandwidth = sram_bandwidth
+        self.dram_bandwidth = dram_bandwidth
+        self.shadow_bandwidth = shadow_bandwidth
+        self.noc_bandwidth = noc_bandwidth
+        self.nop_bandwidth = nop_bandwidth
+        self.latency = latency
 
 class CoreCommunicationConfig(CommunicationConfig):
     def __init__(self, buffer2array_input: float, 

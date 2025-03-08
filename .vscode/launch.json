@@ -6,6 +6,25 @@
     "configurations": [
     
         {
+            "name": "Python: CENT SIMULATION",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/ext/cent_pim/cent_simulation",
+            "args": [
+                "--model", "Llama2-70B",
+                "--generate_trace",
+                "--simulate_trace",
+                "--process_results",
+                "--update_csv",
+                "--num_devices", "32",
+                "--run_simulation_max_workers", "8",
+                "--generate_trace_max_workers", "8",
+                "--seqlen_gap", "128",
+            ],
+        },
+        {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",

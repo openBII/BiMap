@@ -694,6 +694,7 @@ class TransformerBlock(PIM):
             dic[channel] = torch.cat(load_reorder)
 
     def Vector_Matrix_Mul_weight_pim_only_trace(self, channel_lst, row_index_matrix, vector_dim, matrix_col, total_banks, timing):
+        # Key Function 01
         matrix_col_per_bank = (matrix_col - 1) // total_banks + 1
         rows_per_vector = (vector_dim - 1) // self.DRAM_column + 1
         utilized_banks = (matrix_col - 1) // matrix_col_per_bank + 1  # shape = [4096, 11008]
@@ -734,6 +735,7 @@ class TransformerBlock(PIM):
                         self.RD_MAC_only_trace(channel_lst)
 
     def Vector_Matrix_Mul_weight_af_pim_only_trace(self, channel_lst, row_index_matrix, vector_dim, matrix_col, total_banks, timing):
+        # Key Function 02
         matrix_col_per_bank = (matrix_col - 1) // total_banks + 1
         rows_per_vector = (vector_dim - 1) // self.DRAM_column + 1
         utilized_banks = (matrix_col - 1) // matrix_col_per_bank + 1  # shape = [4096, 11008]
