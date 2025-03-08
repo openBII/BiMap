@@ -3,7 +3,7 @@ from src.simulator.resource_simulator.st_model.space_matrix.factory import Facto
 from src.simulator.resource_simulator.st_model.st_matrix import STMatrix
 from src.simulator.resource_simulator.evaluation_model.evaluator import EvaluationMode
 from src.simulator.resource_simulator.st_model.space_point.communication_point import CoreCommunicationPoint, HybridCoreCommunicationPoint, CompAirCoreCommunicationPoint
-from src.simulator.resource_simulator.st_model.space_point.computation_point import MACArrayPoint, VectorPoint, HybridPrecisionMACArrayPoint
+from src.simulator.resource_simulator.st_model.space_point.computation_point import MACArrayPoint, VectorPoint, DramPimPoint, HybridPrecisionMACArrayPoint
 from src.simulator.resource_simulator.st_model.space_point.memory_point import MemoryPoint, RegisterFilePoint
 from src.simulator.resource_simulator.config.computation_config import ComputationConfig, ComputationInfo
 from src.simulator.resource_simulator.config.communication_config import CommunicationConfig, HybridCoreCommunicationConfig, CompAirCoreCommunicationConfig
@@ -231,33 +231,33 @@ class CompAirCoreFactory(Factory):
         mac_array = HybridPrecisionMACArrayPoint(mac_array_config, EvaluationMode.STATIC)
         core.add_element(coord=Coord(1), element=mac_array)
 
-        vector_unit_config = ComputationConfig()
-        vector_unit_config.process_node = config.process_node
+        dram_pim_vec_config = ComputationConfig()
+        dram_pim_vec_config.process_node = config.process_node
         if 'fp16' in config.vector_unit:
-            vector_unit_config[Precision.FLOAT_16] = ComputationInfo(
+            dram_pim_vec_config[Precision.FLOAT_16] = ComputationInfo(
                 parallelism=config.vector_unit['fp16']['parallelism'],
                 latency=config.vector_unit['fp16']['latency']
             )
         if 'fp32' in config.vector_unit:
-            vector_unit_config[Precision.FLOAT_32] = ComputationInfo(
+            dram_pim_vec_config[Precision.FLOAT_32] = ComputationInfo(
                 parallelism=config.vector_unit['fp32']['parallelism'],
                 latency=config.vector_unit['fp32']['latency']
             )
         if 'int8' in config.vector_unit:
-            vector_unit_config[Precision.INT_8] = ComputationInfo(
+            dram_pim_vec_config[Precision.INT_8] = ComputationInfo(
                 parallelism=config.vector_unit['int8']['parallelism'],
                 latency=config.vector_unit['int8']['latency']
             )
         if 'uint4' in config.vector_unit:
-            vector_unit_config[Precision.UINT_4] = ComputationInfo(
+            dram_pim_vec_config[Precision.UINT_4] = ComputationInfo(
                 parallelism=config.vector_unit['uint4']['parallelism'],
                 latency=config.vector_unit['uint4']['latency']
             )
         
         # Vector (DRAM-PIM)
-        vector_unit_config.local_memory_latency = config.local_memory["latency"]
-        vector_unit_config.local_memory_bandwidth = config.local_memory["bandwidth"]
-        vector_unit = VectorPoint(vector_unit_config)
+        dram_pim_vec_config.local_memory_latency = config.local_memory["latency"]
+        dram_pim_vec_config.local_memory_bandwidth = config.local_memory["bandwidth"]
+        vector_unit = DramPimPoint(dram_pim_vec_config)
         core.add_element(coord=Coord(2), element=vector_unit)
 
         # SRAM (Shadow)

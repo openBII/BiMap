@@ -8,6 +8,7 @@ from src.simulator.resource_simulator.evaluation_model.area.cost_model import ca
 from src.simulator.resource_simulator.evaluation_model.area.cost_model import calc_vector_area_mm2
 from src.simulator.resource_simulator.evaluation_model.area.cost_model import calc_reg_file_area
 from ext.mnsim2.api import PIM_Compute_API
+from ext.cent_pim.api import DRAM_PIM_Compute_API
 
 class ComputationEvaluator(Evaluator):
     def __init__(self, config: ComputationConfig,
@@ -167,7 +168,60 @@ class VectorUnitEvaluator(ComputationEvaluator):
 
         return area
     
+class DramPimEvaluator(ComputationEvaluator):
+    def __init__(self, config: ComputationConfig, 
+                 mode: EvaluationMode = EvaluationMode.STATIC) -> None:
+        super().__init__(config, mode)
 
+    def eval_by_execution(self, task: CTaskBlock):
+        # FIXME: Call CENT API (Really)
+        DRAM_PIM_Compute_API()
+    
+    def eval_by_model(self, task: CTaskBlock):
+        in_precision = task.in_precision
+        precision = min(in_precision)
+        computation_info = self.config[precision]
+        parallelism = computation_info.parallelism
+        num_tiles = math.ceil(task.shape.volume / parallelism)
+        if task.task_type == TaskBlockType.CADD:
+            one_time_latency = 2 * self.config.local_memory_latency + computation_info.latency[task.task_type] + math.ceil(parallelism * 2 / self.config.local_memory_bandwidth)
+        else:
+            one_time_latency = 2 * self.config.local_memory_latency + computation_info.latency[task.task_type] + math.ceil(parallelism / self.config.local_memory_bandwidth)
+        return num_tiles * one_time_latency
+        
+    def eval_area(self):
+        area = 0
+        transistor_density_mil_mm2, _ = find_logic_sram_transistor_density(
+            self.process_node.value)
+        num_registers = 0
+        for precision, computation_info in self.config:
+            if precision == Precision.FLOAT_16:
+                area += calc_vector_area_mm2(
+                    0, computation_info.parallelism, 0,
+                    0, transistor_density_mil_mm2)
+                num_registers += computation_info.parallelism * 3
+            elif precision == Precision.FLOAT_32:
+                area += calc_vector_area_mm2(
+                    0, 0, computation_info.parallelism,
+                    0, transistor_density_mil_mm2)
+                num_registers += computation_info.parallelism * 6
+            elif precision == Precision.FLOAT_64:
+                area += calc_vector_area_mm2(
+                    0, 0, 0,
+                    computation_info.parallelism, transistor_density_mil_mm2)
+                num_registers += computation_info.parallelism * 9
+            elif precision == Precision.INT_32:
+                area += calc_vector_area_mm2(
+                    computation_info.parallelism, 0, 0,
+                    0, transistor_density_mil_mm2)
+                num_registers += computation_info.parallelism * 6
+                
+        area += calc_reg_file_area(
+            1, num_registers, 16, 4, 
+            transistor_density_mil_mm2)
+
+        return area
+    
 class HybridPrecisionMACArrayEvaluator(ComputationEvaluator):
     def __init__(self, config: ComputationConfig,
                  mode: EvaluationMode = EvaluationMode.STATIC) -> None:
