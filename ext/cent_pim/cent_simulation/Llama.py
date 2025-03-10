@@ -1,9 +1,9 @@
 import math
 import torch
 import torch.nn.functional as F
-from aim_sim import PIM
-from TransformerBlock import TransformerBlock
-from utils import compare, apply_rotary_emb, repeat_kv, RMSNorm
+from cent_simulation.aim_sim import PIM
+from cent_simulation.TransformerBlock import TransformerBlock
+from cent_simulation.utils import compare, apply_rotary_emb, repeat_kv, RMSNorm
 
 debug = True
 
@@ -166,18 +166,20 @@ class TransformerBlockLlama(TransformerBlock):
             input_vector_EWMUL_length = (self.dim - 1) // (self.total_banks // 4) + 1
             input_vector_EWMUL_utilized_banks = (self.dim - 1) // input_vector_EWMUL_length + 1
             # Store re-mapped xq/xk for EWMUL
-            self.time["WR_SBK"] += self.timing_constant["WR_SBK"] + self.dim * 2 // self.burst_length
-            self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 1, self.xq_row_index, input_vector_EWMUL_length * 2)
-            self.time["WR_SBK"] += self.timing_constant["WR_SBK"] + self.dim * 2 // self.burst_length
-            self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 1, self.xk_row_index, input_vector_EWMUL_length // self.n_repeat * 2)
+            if self.use_compair_noc == False:
+                self.time["WR_SBK"] += self.timing_constant["WR_SBK"] + self.dim * 2 // self.burst_length
+                self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 1, self.xq_row_index, input_vector_EWMUL_length * 2)
+                self.time["WR_SBK"] += self.timing_constant["WR_SBK"] + self.dim * 2 // self.burst_length
+                self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 1, self.xk_row_index, input_vector_EWMUL_length // self.n_repeat * 2)
             # Rotary embedding
             self.EWMUL_only_trace(channel_lst_multi_transformer_block, self.xq_row_index, self.dim // self.burst_length)
             self.EWMUL_only_trace(channel_lst_multi_transformer_block, self.xk_row_index, self.dim // self.n_repeat // self.burst_length)
             # Load rotary embedding results
-            self.time["RD_SBK"] += self.timing_constant["RD_SBK"] + self.dim * 2 // self.burst_length
-            self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 2, self.xq_row_index, input_vector_EWMUL_length * 2)
-            self.time["RD_SBK"] += self.timing_constant["RD_SBK"] + self.dim * 2 // self.burst_length
-            self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 2, self.xk_row_index, input_vector_EWMUL_length // self.n_repeat * 2)
+            if self.use_compair_noc == False:
+                self.time["RD_SBK"] += self.timing_constant["RD_SBK"] + self.dim * 2 // self.burst_length
+                self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 2, self.xq_row_index, input_vector_EWMUL_length * 2)
+                self.time["RD_SBK"] += self.timing_constant["RD_SBK"] + self.dim * 2 // self.burst_length
+                self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 2, self.xk_row_index, input_vector_EWMUL_length // self.n_repeat * 2)
 
         self.dic_shape["xq"] = self.store_to_DRAM_multi_channel(xq_aim.reshape(-1), self.xq_row_index, self.mode["vector"], False)
 
@@ -624,11 +626,12 @@ class TransformerBlockLlama(TransformerBlock):
         # Reduction of dim // 16 intermidiate sum read from MAC
         # Broadcast a scalar to vector and store it for EWMUL
         input_vector_EWMUL_length = (self.dim - 1) // (total_banks // 4) + 1
-        input_vector_EWMUL_utilized_banks = (self.dim - 1) // input_vector_EWMUL_length + 1
+        input_vector_EWMUL_utilized_banks = (self.dim - 1) // input_vector_EWMUL_length + 1 # (Rank Level)
         if self.trace_norm:
             self.time["WR_SBK"] += self.timing_constant["WR_SBK"] + self.dim // self.burst_length
-            self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 0, self.x_copy_row_index, input_vector_EWMUL_length)
-            self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 1, self.x_copy_row_index, input_vector_EWMUL_length)
+            if self.use_compair_noc == False:
+                self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 0, self.x_copy_row_index, input_vector_EWMUL_length)
+                self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 1, self.x_copy_row_index, input_vector_EWMUL_length)
 
             # RMSNorm   EWMUL
             self.EWMUL_only_trace(channel_lst, self.x_copy_row_index, (input_vector_EWMUL_length - 1) // self.burst_length + 1)
@@ -653,18 +656,20 @@ class TransformerBlockLlama(TransformerBlock):
 
             # CXL Port
             # Store re-mapped xq/xk for EWMUL
-            self.time["WR_SBK"] += self.timing_constant["WR_SBK"] + self.dim * 2 // self.burst_length
-            self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 1, self.xq_row_index, input_vector_EWMUL_length * 2)
-            self.time["WR_SBK"] += self.timing_constant["WR_SBK"] + self.dim * 2 // self.burst_length
-            self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 1, self.xk_row_index, input_vector_EWMUL_length // self.n_repeat * 2)
+            if self.use_compair_noc == False:
+                self.time["WR_SBK"] += self.timing_constant["WR_SBK"] + self.dim * 2 // self.burst_length
+                self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 1, self.xq_row_index, input_vector_EWMUL_length * 2)
+                self.time["WR_SBK"] += self.timing_constant["WR_SBK"] + self.dim * 2 // self.burst_length
+                self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 1, self.xk_row_index, input_vector_EWMUL_length // self.n_repeat * 2)
             # Rotary embedding
             self.EWMUL_only_trace(channel_lst, self.xq_row_index, self.dim // self.burst_length)
             self.EWMUL_only_trace(channel_lst, self.xk_row_index, self.dim // self.n_repeat // self.burst_length)
             # Load rotary embedding results
-            self.time["RD_SBK"] += self.timing_constant["RD_SBK"] + self.dim * 2 // self.burst_length
-            self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 2, self.xq_row_index, input_vector_EWMUL_length * 2)
-            self.time["RD_SBK"] += self.timing_constant["RD_SBK"] + self.dim * 2 // self.burst_length
-            self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 2, self.xk_row_index, input_vector_EWMUL_length // self.n_repeat * 2)
+            if self.use_compair_noc == False:
+                self.time["RD_SBK"] += self.timing_constant["RD_SBK"] + self.dim * 2 // self.burst_length
+                self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 2, self.xq_row_index, input_vector_EWMUL_length * 2)
+                self.time["RD_SBK"] += self.timing_constant["RD_SBK"] + self.dim * 2 // self.burst_length
+                self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 2, self.xk_row_index, input_vector_EWMUL_length // self.n_repeat * 2)
 
         if self.trace_attention:
             # Store xk
@@ -734,18 +739,13 @@ class TransformerBlockLlama(TransformerBlock):
 
         if self.trace_softmax:
             
-        #     self.store_for_score_only_trace(self.scores_row_index, self.FC_total_banks, seqlen)
-        #     self.SYNC_only_trace()
-        #     self.load_for_score_only_trace(self.scores_row_index, self.FC_total_banks, seqlen)
-        #     self.SYNC_only_trace()
-
-        # if False:
             # CXL Port write scale
             rows_per_score = (seqlen - 1) // self.DRAM_column + 1
             self.time["WR_SBK"] += self.timing_constant["WR_SBK"] * rows_per_score + seqlen // self.burst_length
             self.store_for_EWMUL_score_only_trace(channels_required, self.scores_row_index, total_banks, 0, seqlen)
-            self.time["WR_SBK"] += self.timing_constant["WR_SBK"] * rows_per_score + seqlen // self.burst_length
-            self.store_for_EWMUL_score_only_trace(channels_required, self.scores_row_index, total_banks, 1, seqlen)
+            if self.use_compair_noc == False:
+                self.time["WR_SBK"] += self.timing_constant["WR_SBK"] * rows_per_score + seqlen // self.burst_length
+                self.store_for_EWMUL_score_only_trace(channels_required, self.scores_row_index, total_banks, 1, seqlen)
 
             # Scale score
             num_scores_per_bank = (self.n_heads - 1) // (self.channels_per_block * 4) + 1
@@ -758,13 +758,15 @@ class TransformerBlockLlama(TransformerBlock):
                     self.EWMUL_only_trace(channel_lst, self.scores_row_index + score_index * rows_per_score + row, (offset - 1) // self.burst_length + 1)
             
             # CXL Port write mean of sum(exp)
-            self.time["RD_SBK"] += self.timing_constant["RD_SBK"] * rows_per_score + seqlen // self.burst_length
-            self.load_from_EWMUL_score_only_trace(channels_required, self.scores_row_index, total_banks, 2, seqlen)
+            if self.use_compair_noc == False:
+                self.time["RD_SBK"] += self.timing_constant["RD_SBK"] * rows_per_score + seqlen // self.burst_length
+                self.load_from_EWMUL_score_only_trace(channels_required, self.scores_row_index, total_banks, 2, seqlen)
             self.SYNC_only_trace()
             self.time["WR_SBK"] += self.timing_constant["WR_SBK"] * rows_per_score + seqlen // self.burst_length
             self.store_for_EWMUL_score_only_trace(channels_required, self.scores_row_index, total_banks, 0, seqlen)
-            self.time["WR_SBK"] += self.timing_constant["WR_SBK"] * rows_per_score + seqlen // self.burst_length
-            self.store_for_EWMUL_score_only_trace(channels_required, self.scores_row_index, total_banks, 1, seqlen)
+            if self.use_compair_noc == False:    
+                self.time["WR_SBK"] += self.timing_constant["WR_SBK"] * rows_per_score + seqlen // self.burst_length
+                self.store_for_EWMUL_score_only_trace(channels_required, self.scores_row_index, total_banks, 1, seqlen)
 
             # Scale exp
             for score_index in range(num_scores_per_bank):
@@ -776,7 +778,8 @@ class TransformerBlockLlama(TransformerBlock):
                     self.EWMUL_only_trace(channel_lst, self.scores_row_index + score_index * rows_per_score + row, (offset - 1) // self.burst_length + 1)
 
             self.time["RD_SBK"] += self.timing_constant["RD_SBK"] * rows_per_score + seqlen // self.burst_length
-            self.load_from_EWMUL_score_only_trace(channels_required, self.scores_row_index, total_banks, 2, seqlen)
+            if self.use_compair_noc == False:
+                self.load_from_EWMUL_score_only_trace(channels_required, self.scores_row_index, total_banks, 2, seqlen)
             self.SYNC_only_trace()
 
         if self.trace_attention:
@@ -786,6 +789,8 @@ class TransformerBlockLlama(TransformerBlock):
         # Output GEMV
         if self.trace_fc_kqvo:
             self.Vector_Matrix_Mul_weight_pim_only_trace(channel_lst, self.wo_row_index, self.dim, self.dim, FC_total_banks, "breakdown_sa_weight")
+        
+        # RMSNorm
         if self.trace_norm:
             self.EWADD_only_trace(self.dim // self.burst_length)
 
@@ -802,8 +807,9 @@ class TransformerBlockLlama(TransformerBlock):
             # Reduction of dim // 16 intermidiate sum read from MAC
             # Broadcast a scalar to vector and store it for EWMUL
             self.time["WR_SBK"] += self.timing_constant["WR_SBK"] + self.dim // self.burst_length
-            self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 1, self.sa_copy_row_index, input_vector_EWMUL_length)
-            self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 0, self.sa_copy_row_index, input_vector_EWMUL_length)
+            if self.use_compair_noc == False:
+                self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 1, self.sa_copy_row_index, input_vector_EWMUL_length)
+                self.store_for_EWMUL_input_only_trace(channels_required, input_vector_EWMUL_utilized_banks, 0, self.sa_copy_row_index, input_vector_EWMUL_length)
 
             # RMSNorm   EWMUL
             self.EWMUL_only_trace(channel_lst, self.sa_copy_row_index, (input_vector_EWMUL_length - 1) // self.burst_length + 1)
@@ -831,22 +837,22 @@ class TransformerBlockLlama(TransformerBlock):
         # AF
         if self.trace_activation:
             iteration_required = ffn_dim > self.channels_per_block * (self.num_banks // 4) * self.DRAM_column
+            # print("[iteration_required]", iteration_required, ffn_dim, self.channels_per_block ,"*", (self.num_banks // 4) ,"*", self.DRAM_column)
             if iteration_required:
+                # Very Large Model
                 iteration_0 = total_banks // 4 * self.DRAM_column
                 iteration_0_bank_group_length = (iteration_0 - 1) // (total_banks // 4) + 1
                 iteration_0_bank_group_utilized_banks = (iteration_0 - 1) // iteration_0_bank_group_length + 1
-
                 iteration_1 = ffn_dim - iteration_0
                 iteration_1_bank_group_length = (iteration_1 - 1) // (total_banks // 4) + 1
                 iteration_1_bank_group_utilized_banks = (iteration_1 - 1) // iteration_1_bank_group_length + 1
-
-                self.store_for_EWMUL_input_only_trace(channels_required, iteration_0_bank_group_utilized_banks, 1, self.x1_row_index, iteration_0_bank_group_length)
-                self.store_for_EWMUL_input_only_trace(channels_required, iteration_1_bank_group_utilized_banks, 1, self.x1_sigmoid_row_index, iteration_1_bank_group_length)
-                self.store_for_EWMUL_input_only_trace(channels_required, iteration_0_bank_group_utilized_banks, 0, self.x1_row_index, iteration_0_bank_group_length)
-                self.store_for_EWMUL_input_only_trace(channels_required, iteration_1_bank_group_utilized_banks, 0, self.x1_sigmoid_row_index, iteration_1_bank_group_length)
+                if self.use_compair_noc == False:
+                    self.store_for_EWMUL_input_only_trace(channels_required, iteration_0_bank_group_utilized_banks, 1, self.x1_row_index, iteration_0_bank_group_length)
+                    self.store_for_EWMUL_input_only_trace(channels_required, iteration_1_bank_group_utilized_banks, 1, self.x1_sigmoid_row_index, iteration_1_bank_group_length)
+                    self.store_for_EWMUL_input_only_trace(channels_required, iteration_0_bank_group_utilized_banks, 0, self.x1_row_index, iteration_0_bank_group_length)
+                    self.store_for_EWMUL_input_only_trace(channels_required, iteration_1_bank_group_utilized_banks, 0, self.x1_sigmoid_row_index, iteration_1_bank_group_length)
                 self.EWMUL_only_trace(channel_lst, self.x1_row_index, (iteration_0_bank_group_length - 1) // self.burst_length + 1)
                 self.EWMUL_only_trace(channel_lst, self.x1_sigmoid_row_index, (iteration_1_bank_group_length - 1) // self.burst_length + 1)
-
                 for bank in range(self.num_banks):
                     bank_group_index = 2
                     if bank % 4 == bank_group_index:
@@ -854,7 +860,6 @@ class TransformerBlockLlama(TransformerBlock):
                         self.COPY_BK_GB_only_trace(channel_lst, bank, self.x1_sigmoid_row_index, (iteration_1_bank_group_length - 1) // self.burst_length + 1)
                         self.COPY_GB_BK_only_trace(channel_lst, bank-1, self.x1_row_index, (iteration_0_bank_group_length - 1) // self.burst_length + 1)
                         self.COPY_GB_BK_only_trace(channel_lst, bank-1, self.x1_sigmoid_row_index, (iteration_1_bank_group_length - 1) // self.burst_length + 1)
-
                 self.store_for_EWMUL_input_only_trace(channels_required, iteration_0_bank_group_utilized_banks, 1, self.x1_row_index, iteration_0_bank_group_length)
                 self.store_for_EWMUL_input_only_trace(channels_required, iteration_1_bank_group_utilized_banks, 1, self.x1_sigmoid_row_index, iteration_1_bank_group_length)
                 self.EWMUL_only_trace(channel_lst, self.x1_row_index, (iteration_0_bank_group_length - 1) // self.burst_length + 1)
@@ -863,18 +868,17 @@ class TransformerBlockLlama(TransformerBlock):
                 self.load_from_EWMUL_input_only_trace(channels_required, iteration_1_bank_group_utilized_banks, 2, self.x1_sigmoid_row_index, iteration_1_bank_group_length)
             
             else:
-
+                # LLAMA2-7B for 32 Channel * 16 Bank
                 self.time["WR_SBK"] += self.timing_constant["WR_SBK"] + ffn_bank_group_length * channels_required // self.burst_length
-                self.store_for_EWMUL_input_only_trace(channels_required, ffn_bank_group_utilized_banks, 0, self.x1_sigmoid_row_index, ffn_bank_group_length)
-                self.store_for_EWMUL_input_only_trace(channels_required, ffn_bank_group_utilized_banks, 1, self.x1_sigmoid_row_index, ffn_bank_group_length)
+                if self.use_compair_noc == False:
+                    self.store_for_EWMUL_input_only_trace(channels_required, ffn_bank_group_utilized_banks, 0, self.x1_sigmoid_row_index, ffn_bank_group_length)
+                    self.store_for_EWMUL_input_only_trace(channels_required, ffn_bank_group_utilized_banks, 1, self.x1_sigmoid_row_index, ffn_bank_group_length)
                 self.EWMUL_only_trace(channel_lst, self.x1_sigmoid_row_index, (ffn_bank_group_length - 1) // self.burst_length + 1)
-
                 for bank in range(self.num_banks):
                     bank_group_index = 2
                     if bank % 4 == bank_group_index:
                         self.COPY_BK_GB_only_trace(channel_lst, bank, self.x1_sigmoid_row_index, (ffn_bank_group_length - 1) // self.burst_length + 1)
                         self.COPY_GB_BK_only_trace(channel_lst, bank-1, self.x1_sigmoid_row_index, (ffn_bank_group_length - 1) // self.burst_length + 1)
-                
                 self.store_for_EWMUL_input_only_trace(channels_required, ffn_bank_group_utilized_banks, 0, self.x1_sigmoid_row_index, ffn_bank_group_length)
                 self.EWMUL_only_trace(channel_lst, self.x1_sigmoid_row_index, (ffn_bank_group_length - 1) // self.burst_length + 1)
                 self.time["RD_SBK"] += self.timing_constant["RD_SBK"] + ffn_bank_group_length * channels_required // self.burst_length

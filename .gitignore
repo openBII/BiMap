@@ -44,3 +44,5 @@ ext/cent_pim/aim_simulator/ext
 *.csv
 *.dylib
 *.yaml
+
+trace/*_channels_per_device/

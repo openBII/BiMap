@@ -8,6 +8,7 @@ from cent_simulation.cxl_latency import llama_latency, gpt_latency, vector_laten
 from cent_simulation.cent_power_calculator import DRAM_POWER, ACCEL_CYCLE, ACCEL_POWER, SRAM_POWER, CTRL_POWER, commands, isrs, power_calculator, command_processor, KILO, MEGA, GIGA, FREQ, WORD_SIZE, tRC, tBL, tCCDL, RV_COUNT, SB_RD_CYCLE, SB_WR_CYCLE, EXP_LANE_CYCLE, RV_RMSNorm_CYCLE, RV_ROTEmbed_CYCLE, RV_SFT_CYCLE_PIPELINE, RV_SFT_CYCLE_SINGLE
 from cent_simulation.utils import InOut_latency, n_heads, gqa_factor, embedding_size, ffn_size, TransformerBlock_number, minimal_channel_per_block, pipeline_parallel_mode_list, model_parallel_mode_list
 from cent_simulation.run_sim import factorize
+from cent_simulation.function_sim import func_sim_llama
 
 def generate_args():
     parser = argparse.ArgumentParser()
@@ -26,10 +27,10 @@ def generate_args():
     parser.add_argument("--process_throughputs", action="store_true", help="average throughputs for various seqlen")
     parser.add_argument("--processed_result_path", type=str, help="Path to the final result file", default="processed_results.csv")
     parser.add_argument("--phase", choices=["end2end", "prefill", "decoding"], help="Phase of the model", default="end2end")
-    parser.add_argument("--prefill", type=int, help="Prefill length", default=512)
-    parser.add_argument("--decoding", type=int, help="Decoding length", default=128)
+    parser.add_argument("--prefill", type=int, help="Prefill length", default=1024)
+    parser.add_argument("--decoding", type=int, help="Decoding length", default=8192)
     parser.add_argument("--seqlen", type=int, nargs='+', help="Sequence list")
-    parser.add_argument("--seqlen_gap", type=int, help="Gap between sequence lengths", default=128)
+    parser.add_argument("--seqlen_gap", type=int, help="Gap between sequence lengths", default=1024)
     args = parser.parse_args()
     return args
 
@@ -51,7 +52,14 @@ def generate_trace(args, seqlen_list):
     blocks_per_device = (TransformerBlock_number[args.model] - 1) // args.num_devices + 1
     channels_per_block = args.num_channels // blocks_per_device
     FC_devices_list = factorize(args.num_devices)
-
+    trace_log_file = []
+    for seqlen in seqlen_list:
+        if model_parallel:
+            filename = f"./trace/{args.num_channels}_channels_per_device/model_parallel/{args.model}/trace_{FC_devices}_FC_devices_seqlen_{seqlen}.txt"
+        else:
+            filename = f"./trace/{args.num_channels}_channels_per_device/pipeline_parallel/{args.model}/trace_{channels_per_block}_channels_per_block_seqlen_{seqlen}.txt"
+        trace_log_file.append(filename)
+    
     # No Embedding
     for seqlen in seqlen_list:
         if model_parallel:
@@ -65,18 +73,8 @@ def generate_trace(args, seqlen_list):
                 raise ValueError(f"Channels per block {channels_per_block} is less than minimal channel per block {minimal_channel_per_block[args.model]}")
             if not os.path.exists(f"./trace/{args.num_channels}_channels_per_device/pipeline_parallel/{args.model}/trace_{channels_per_block}_channels_per_block_seqlen_{seqlen}.txt"):
                 commands_generate_traces.append(["python", rel_path + "function_sim.py", model, "--n_heads", str(n_heads[args.model]), "--ffn_dim", str(ffn_size[args.model]), "--only-trace", "--num-channels", str(args.num_channels), "--channels-per-block", str(channels_per_block), "--pipeline-parallel", "--multi-tb-per-device", "--seqlen", str(seqlen), "--op-trace", "--GEMV", "reuse-GB", "--reuse-size", str(args.reuse_size), "--trace-file", f"../trace/{args.num_channels}_channels_per_device/pipeline_parallel/{args.model}/trace_{channels_per_block}_channels_per_block_seqlen_{seqlen}.txt"])
-    """
-        ['python', 'ext/cent_pim/cent_simulation/function_sim.py', '--Llama', '--n_heads', '32', '--ffn_dim', '11008', '--only-trace', '--num-channels', '32', '--channels-per-block', '32', '--pipeline-parallel', '--multi-tb-per-device', '--seqlen', '128', '--op-trace', '--GEMV', 'reuse-GB', '--reuse-size', '32', '--trace-file', '../trace/32_channels_per_device/pipeline_parallel/Llama2-7B/trace_32_channels_per_block_seqlen_128.txt']
-        ['python', 'ext/cent_pim/cent_simulation/function_sim.py', '--Llama', '--n_heads', '32', '--ffn_dim', '11008', '--only-trace', '--num-channels', '32', '--channels-per-block', '32', '--pipeline-parallel', '--multi-tb-per-device', '--seqlen', '256', '--op-trace', '--GEMV', 'reuse-GB', '--reuse-size', '32', '--trace-file', '../trace/32_channels_per_device/pipeline_parallel/Llama2-7B/trace_32_channels_per_block_seqlen_256.txt']
-        ['python', 'ext/cent_pim/cent_simulation/function_sim.py', '--Llama', '--n_heads', '32', '--ffn_dim', '11008', '--only-trace', '--num-channels', '32', '--channels-per-block', '32', '--pipeline-parallel', '--multi-tb-per-device', '--seqlen', '384', '--op-trace', '--GEMV', 'reuse-GB', '--reuse-size', '32', '--trace-file', '../trace/32_channels_per_device/pipeline_parallel/Llama2-7B/trace_32_channels_per_block_seqlen_384.txt']
-        ['python', 'ext/cent_pim/cent_simulation/function_sim.py', '--Llama', '--n_heads', '32', '--ffn_dim', '11008', '--only-trace', '--num-channels', '32', '--channels-per-block', '32', '--pipeline-parallel', '--multi-tb-per-device', '--seqlen', '512', '--op-trace', '--GEMV', 'reuse-GB', '--reuse-size', '32', '--trace-file', '../trace/32_channels_per_device/pipeline_parallel/Llama2-7B/trace_32_channels_per_block_seqlen_512.txt']
-        ['python', 'ext/cent_pim/cent_simulation/function_sim.py', '--Llama', '--n_heads', '32', '--ffn_dim', '11008', '--only-trace', '--num-channels', '32', '--channels-per-block', '32', '--pipeline-parallel', '--multi-tb-per-device', '--seqlen', '640', '--op-trace', '--GEMV', 'reuse-GB', '--reuse-size', '32', '--trace-file', '../trace/32_channels_per_device/pipeline_parallel/Llama2-7B/trace_32_channels_per_block_seqlen_640.txt']
-    """
     
-    # FIXME: Do not use "python function_sim.py ..."
-    #        Use Dedicated APIs to generate traces online ...
-    
-    return
+    func_sim_llama(trace_log_file, seqlen_list)
 
 def DRAM_PIM_Compute_API():
     

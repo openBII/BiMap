@@ -1,8 +1,8 @@
 import math
 import torch
 import torch.nn.functional as F
-from aim_sim import PIM
-from utils import compare, apply_rotary_emb, repeat_kv, RMSNorm
+from cent_simulation.aim_sim import PIM
+from cent_simulation.utils import compare, apply_rotary_emb, repeat_kv, RMSNorm
 
 debug = True
 
@@ -13,6 +13,8 @@ class TransformerBlock(PIM):
     def __init__(self, dic_model, args):
         super().__init__(args)
         self.pim_compute = args.pim_compute
+        self.use_compair_sram_pim = False
+        self.use_compair_noc = False
         if args.op_trace:
             self.trace_prepare = True
             self.trace_norm = True
@@ -694,14 +696,16 @@ class TransformerBlock(PIM):
             dic[channel] = torch.cat(load_reorder)
 
     def Vector_Matrix_Mul_weight_pim_only_trace(self, channel_lst, row_index_matrix, vector_dim, matrix_col, total_banks, timing):
-        # Key Function 01
         matrix_col_per_bank = (matrix_col - 1) // total_banks + 1
         rows_per_vector = (vector_dim - 1) // self.DRAM_column + 1
         utilized_banks = (matrix_col - 1) // matrix_col_per_bank + 1  # shape = [4096, 11008]
         channels_required_all_devices = (utilized_banks - 1) // self.num_banks + 1
         channel_multi_transformer_block_required = 32 if channels_required_all_devices > 32 else self.num_channels // channels_required_all_devices * channels_required_all_devices
         channel_lst = [channel for channel in range(channel_multi_transformer_block_required)]
+        # print("[GeMV]", channel_lst, row_index_matrix, vector_dim, matrix_col, total_banks, timing)
+        # print("[GeMV]", vector_dim, "/", self.DRAM_column, "=", rows_per_vector)
         if self.GEMV_order == "no-reuse":
+            # print("[GeMV] Mat-Col / Bank", matrix_col_per_bank)
             for row_index in range(rows_per_vector):
                 if row_index == rows_per_vector - 1:
                     op_size = (vector_dim - self.DRAM_column * row_index - 1) // self.burst_length + 1
@@ -710,11 +714,15 @@ class TransformerBlock(PIM):
                 self.WR_GB_only_trace(channel_lst, op_size)
                 for vector_index_per_bank in range(matrix_col_per_bank):
                     self.WR_BIAS_only_trace(channel_lst)
-                    self.MAC_ABK_only_trace(channel_lst, row_index_matrix + vector_index_per_bank * rows_per_vector + row_index, op_size, timing)
-                    self.RD_MAC_only_trace(channel_lst)
+                    if self.use_compair_sram_pim == False:
+                        self.MAC_ABK_only_trace(channel_lst, row_index_matrix + vector_index_per_bank * rows_per_vector + row_index, op_size, timing)
+                    if self.use_compair_noc == False:
+                        self.RD_MAC_only_trace(channel_lst)
         elif self.GEMV_order == "reuse-GB":
             num_reuse_groups = (matrix_col_per_bank - 1) // self.reuse_size + 1
             reuse_group_size = (matrix_col_per_bank - 1) // num_reuse_groups + 1
+            # print("[GeMV] Reuse", num_reuse_groups, reuse_group_size)
+            # print("[GeMV] Mat-Col / Bank", matrix_col_per_bank)
             for row_index in range(rows_per_vector):
                 if row_index == rows_per_vector - 1:
                     op_size = (vector_dim - self.DRAM_column * row_index - 1) // self.burst_length + 1
@@ -730,12 +738,13 @@ class TransformerBlock(PIM):
                         self.WR_BIAS_only_trace(channel_lst)
                     for latch_index in range(num_left_maxtrix_col):
                         vector_index_per_bank = reuse_group_index * reuse_group_size + latch_index
-                        self.MAC_ABK_only_trace(channel_lst, row_index_matrix + vector_index_per_bank * rows_per_vector + row_index, op_size, timing)
+                        if self.use_compair_sram_pim == False:
+                            self.MAC_ABK_only_trace(channel_lst, row_index_matrix + vector_index_per_bank * rows_per_vector + row_index, op_size, timing)
                     for latch_index in range(num_left_maxtrix_col):
-                        self.RD_MAC_only_trace(channel_lst)
+                        if self.use_compair_noc == False:
+                            self.RD_MAC_only_trace(channel_lst)
 
     def Vector_Matrix_Mul_weight_af_pim_only_trace(self, channel_lst, row_index_matrix, vector_dim, matrix_col, total_banks, timing):
-        # Key Function 02
         matrix_col_per_bank = (matrix_col - 1) // total_banks + 1
         rows_per_vector = (vector_dim - 1) // self.DRAM_column + 1
         utilized_banks = (matrix_col - 1) // matrix_col_per_bank + 1  # shape = [4096, 11008]
@@ -1158,7 +1167,10 @@ class TransformerBlock(PIM):
 
     
     def store_for_EWMUL_input_only_trace(self, channels_required, total_banks, bank_group_index, row_index, size):
+        # print("[C]", channels_required, "[B]", total_banks, "[b_idx]", bank_group_index, "[r_idx]", row_index, "[size]", size)
         num_transformer_blocks_per_device = max(self.num_channels // channels_required, 1)
+        # print("[num_transformer_blocks_per_device]", num_transformer_blocks_per_device)
+        # print("[loop]", ((size - 1) // self.burst_length + 1), total_banks, num_transformer_blocks_per_device)
         for i in range((size - 1) // self.burst_length + 1):
             for bank in range(total_banks):
                 dimm_index, channel_index, bank_index = self.bank_index(bank*4+bank_group_index)
@@ -1184,10 +1196,11 @@ class TransformerBlock(PIM):
     
     def store_for_EWMUL_score_only_trace(self, channels_required, row_index, total_banks, bank_group_index, seqlen):
         num_transformer_blocks_per_device = max(self.num_channels // channels_required, 1)
-        # size_per_bank = (self.n_heads * seqlen - 1) // (total_banks // 4) + 1
-        # rows_per_bank = (size_per_bank - 1) // self.DRAM_column + 1
         rows_per_score = (seqlen - 1) // self.DRAM_column + 1
         num_heads_per_bank = (self.n_heads - 1) // (self.channels_per_block * 4) + 1
+        
+        # print("[store_for_EWMUL_score_only_trace]", channels_required, row_index, total_banks, bank_group_index, seqlen)
+        # print("[loop]", rows_per_score, "*", num_heads_per_bank, "*", ((seqlen - 1) // self.burst_length + 1), "*", total_banks // 4, "*", num_transformer_blocks_per_device)
         for k in range(rows_per_score):
             if k == rows_per_score - 1:
                 # size = (size_per_bank - 1) % self.DRAM_column + 1

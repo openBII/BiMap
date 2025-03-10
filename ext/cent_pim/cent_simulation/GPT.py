@@ -1,8 +1,8 @@
 import math
 import torch
 import torch.nn.functional as F
-from aim_sim import PIM
-from TransformerBlock import TransformerBlock
+from cent_simulation.aim_sim import PIM
+from cent_simulation.TransformerBlock import TransformerBlock
 
 debug = True
 

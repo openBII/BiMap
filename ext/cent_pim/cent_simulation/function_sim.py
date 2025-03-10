@@ -1,7 +1,61 @@
 import torch
-from utils import get_args, compare
-from Llama import TransformerBlockLlama
-from GPT import TransformerBlockGPT
+from cent_simulation.utils import get_args, generate_args_func_sim, compare
+from cent_simulation.Llama import TransformerBlockLlama
+from cent_simulation.GPT import TransformerBlockGPT
+
+def func_sim_llama(trace_log_file, seqlen_list):
+    
+    args = generate_args_func_sim()
+    
+    for i in range(len(trace_log_file)):
+        args.seqlen = seqlen_list[i]
+        args.trace_file = trace_log_file[i]
+        print(args.trace_file, args.seqlen)
+        args.n_heads = 32 # {"Llama2-7B": 32, "Llama2-13B": 40, "Llama2-70B": 64}
+        head_dim = 4096 // 32
+        dim = head_dim * args.n_heads
+        ffn_dim = args.ffn_dim
+        TP_param = 8 if args.GPT3_175B_TP_8 else 1
+        n_heads = args.n_heads // TP_param
+        n_kv_heads = args.n_kv_heads if args.Llama_GQA else n_heads   
+        dic_model = {
+            "TP_param": torch.tensor(TP_param),
+            "dim": torch.tensor(dim),
+            "n_heads": torch.tensor(n_heads),
+            "x": torch.zeros((1, 1, dim)),
+            "SANorm": torch.zeros(dim),
+            "FFNNorm": torch.zeros(dim),
+            "sa": torch.zeros((1, 1, dim)),
+            "h": torch.zeros((1, 1, dim)),
+            "out": torch.zeros((1, 1, dim)),
+            "wq": torch.zeros((dim // TP_param, dim)),
+            "wk": torch.zeros((head_dim * n_kv_heads), dim),
+            "wv": torch.zeros((head_dim * n_kv_heads), dim),
+            "xq": torch.zeros((1, 1, dim)),
+            "xk": torch.zeros((1, 1, head_dim * n_heads)),
+            "xv": torch.zeros((1, 1, head_dim * n_heads)),
+            "start_pos": torch.tensor(args.seqlen - 1),
+            "cache_k": torch.zeros((1, args.seqlen, n_kv_heads, head_dim)),
+            "cache_v": torch.zeros((1, args.seqlen, n_kv_heads, head_dim)),
+            "scores": torch.zeros((1, n_heads, 1, args.seqlen)),
+            "output": torch.zeros((1, 1, dim)),
+            "wo": torch.zeros((dim // TP_param, dim)),
+            "w1": torch.zeros((ffn_dim // TP_param, dim)),
+            "w3": torch.zeros((ffn_dim // TP_param, dim)),
+            "w2": torch.zeros((dim // TP_param, ffn_dim)),
+            "ffn": torch.zeros((1, 1, dim))
+        }
+            
+        if args.Llama_GQA:
+            dic_model["n_kv_heads"] = torch.tensor(n_kv_heads)
+        
+        TB = TransformerBlockLlama(dic_model, args) if \
+                args.Llama_GQA or args.Llama or args.filename else \
+                TransformerBlockGPT(dic_model, args)
+        TB.memory_mapping()
+        TB.trace_only()
+        TB.finish()
+        TB.file.close()
 
 if __name__ == "__main__":
 
