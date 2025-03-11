@@ -13,8 +13,8 @@ class TransformerBlock(PIM):
     def __init__(self, dic_model, args):
         super().__init__(args)
         self.pim_compute = args.pim_compute
-        self.use_compair_sram_pim = False
-        self.use_compair_noc = False
+        self.use_comp_air_sram_pim = False
+        self.use_comp_air_noc = False
         if args.op_trace:
             self.trace_prepare = True
             self.trace_norm = True
@@ -714,9 +714,9 @@ class TransformerBlock(PIM):
                 self.WR_GB_only_trace(channel_lst, op_size)
                 for vector_index_per_bank in range(matrix_col_per_bank):
                     self.WR_BIAS_only_trace(channel_lst)
-                    if self.use_compair_sram_pim == False:
+                    if self.use_comp_air_sram_pim == False:
                         self.MAC_ABK_only_trace(channel_lst, row_index_matrix + vector_index_per_bank * rows_per_vector + row_index, op_size, timing)
-                    if self.use_compair_noc == False:
+                    if self.use_comp_air_noc == False:
                         self.RD_MAC_only_trace(channel_lst)
         elif self.GEMV_order == "reuse-GB":
             num_reuse_groups = (matrix_col_per_bank - 1) // self.reuse_size + 1
@@ -738,10 +738,10 @@ class TransformerBlock(PIM):
                         self.WR_BIAS_only_trace(channel_lst)
                     for latch_index in range(num_left_maxtrix_col):
                         vector_index_per_bank = reuse_group_index * reuse_group_size + latch_index
-                        if self.use_compair_sram_pim == False:
+                        if self.use_comp_air_sram_pim == False:
                             self.MAC_ABK_only_trace(channel_lst, row_index_matrix + vector_index_per_bank * rows_per_vector + row_index, op_size, timing)
                     for latch_index in range(num_left_maxtrix_col):
-                        if self.use_compair_noc == False:
+                        if self.use_comp_air_noc == False:
                             self.RD_MAC_only_trace(channel_lst)
 
     def Vector_Matrix_Mul_weight_af_pim_only_trace(self, channel_lst, row_index_matrix, vector_dim, matrix_col, total_banks, timing):

@@ -174,8 +174,8 @@ class DramPimEvaluator(ComputationEvaluator):
         super().__init__(config, mode)
 
     def eval_by_execution(self, task: CTaskBlock):
-        # FIXME: Call CENT API (Really)
-        DRAM_PIM_Compute_API()
+        # Individually Simulated by CENT-PIM
+        ...
     
     def eval_by_model(self, task: CTaskBlock):
         in_precision = task.in_precision
@@ -228,7 +228,7 @@ class HybridPrecisionMACArrayEvaluator(ComputationEvaluator):
         super().__init__(config, mode)
     
     def eval_by_execution(self, task: CTaskBlock):
-        # FIXME: unit is ns
+        # FIXME: (CompAir) unit is ns
         in_precision = task.in_precision
         precision = Precision.UINT_4 if (Precision.UINT_4 in in_precision) else min(in_precision)
         computation_info = self.config[precision]

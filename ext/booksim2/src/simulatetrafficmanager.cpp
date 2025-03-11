@@ -28,6 +28,7 @@
 #include <sstream>
 
 #include "simulatetrafficmanager.hpp"
+#include "compair.hpp"
 
 SimulateTrafficManager::SimulateTrafficManager( const Configuration &config, 
 						const vector<Network *> & net, booksim* bs_ptr )
@@ -67,7 +68,7 @@ void SimulateTrafficManager::_Inject( )
         int const dest = wl->dest();
         int const size = wl->size();
         int const time = (_include_queuing == 1) ? wl->time() : _time;
-        int const pid = _GeneratePacket(source, dest, size, c, time);
+        int const pid = _GeneratePacketCompAir(source, dest, size, c, time);
         wl->inject(pid);
       } else {
 	      wl->defer();
@@ -151,7 +152,10 @@ bool SimulateTrafficManager::_SingleSim_Stage()
     }
     
     // If any flits were ejected, break the loop
-    if (ejected) break;
+    if (ejected) {
+      // FIXME: (CompAir) Need to do sth. for the multi-intermidiate case
+      break;
+    }
   }
   
   // Print the end time of the measurements
@@ -244,6 +248,7 @@ bool SimulateTrafficManager::_StepSim( )
         if (true) {
           cout << f->ctime << "-" 
               << GetSimTime() << " | "
+              << "subnet " << subnet << " | "
               << "node " << n << " | "
               << "Ejecting flit " << f->id
               << " (packet " << f->pid << ")" 
@@ -282,7 +287,7 @@ bool SimulateTrafficManager::_StepSim( )
     _net[subnet]->ReadInputs( );
   }
   
-  // Inject
+  // Inject pkts
   if ( !_empty_network ) { _Inject(); }
 
   // Inject flits
@@ -515,4 +520,99 @@ bool SimulateTrafficManager::_StepSim( )
   assert(_time);
   if (gTrace) cout << "TIME " << _time << endl;
   return ejected;
+}
+
+int SimulateTrafficManager::_GeneratePacketCompAir( int source, int dest, int size, int cl, int time )
+{
+  assert(size > 0);
+  assert((source >= 0) && (source < _nodes));
+  assert((dest >= 0) && (dest < _nodes));
+
+  int pid = _cur_pid++;
+  assert(_cur_pid);
+
+  bool watch = gWatchOut && (_packets_to_watch.count(pid) > 0);
+
+  if(watch) {
+    *gWatchOut << GetSimTime() << " | "
+	       << "node" << source << " | "
+	       << "Enqueuing packet " << pid
+	       << " at time " << time
+	       << "." << endl;
+  }
+
+  Workload * const wl = _workload[cl];
+  #ifdef TRACK_EJECT
+    cout << GetSimTime() << " | "
+	       << "node" << source << " | "
+         << "comp_air type " <<  wl->ca_info().type << " | "
+         << "comp_air data " <<  wl->ca_info().data << " | "
+	       << "Enqueuing packet " << pid
+	       << " at time " << time
+	       << "." << endl;
+  #endif
+  
+  // FIXME: (CompAir) Need to do sth. for wl->ca_info() ...
+  
+  bool record = (((_sim_state == running) ||
+		  ((_sim_state == draining) && (time < _drain_time))) &&
+		 _measure_stats[cl]);
+
+  for ( int i = 0; i < size; ++i ) {
+
+    int id = _cur_id++;
+    assert(_cur_id);
+
+    Flit * f = Flit::New();
+
+    f->id = id;
+    f->pid = pid;
+    f->watch = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
+    f->src = source;
+    f->dest = dest;
+    f->ctime = time;
+    f->record = record;
+    f->cl = cl;
+    f->head = (i == 0);
+    f->tail = (i == (size-1));
+    f->vc  = -1;
+    f->ca_info = wl->ca_info();
+
+    switch(_pri_type) {
+      case class_based:
+        f->pri = _class_priority[cl];
+        break;
+      case age_based:
+        f->pri = numeric_limits<int>::max() - time;
+        assert(f->pri >= 0);
+        break;
+      case sequence_based:
+        f->pri = numeric_limits<int>::max() - _packet_seq_no[cl][source];
+        break;
+      default:
+        f->pri = 0;
+    }
+    assert(f->pri >= 0);
+
+    _total_in_flight_flits[f->cl].insert(make_pair(f->id, f));
+    if(record) {
+      _measured_in_flight_flits[f->cl].insert(make_pair(f->id, f));
+    }
+    
+    if(gTrace) {
+      cout<<"New Flit "<<f->src<<endl;
+    }
+
+    if(f->watch) { 
+      *gWatchOut << GetSimTime() << " | "
+		  << "node" << source << " | "
+		  << "Enqueuing flit " << f->id
+		  << " (packet " << f->pid
+		  << ") at time " << time
+		  << "." << endl;
+    }
+
+    _partial_packets[cl][source].push_back(f);
+  }
+  return pid;
 }

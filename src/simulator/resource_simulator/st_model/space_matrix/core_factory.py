@@ -201,7 +201,6 @@ class CompAirCoreFactory(Factory):
             process_node=config.process_node
         )
         
-        # FIXME: Change to a correct one
         communication_network = CompAirCoreCommunicationPoint(communication_config)
         core.add_communication_network(communication_network)
 
@@ -227,7 +226,6 @@ class CompAirCoreFactory(Factory):
         mac_array_config.local_memory_latency = config.local_memory["latency"]
         mac_array_config.local_memory_bandwidth = config.local_memory["bandwidth"]
         
-        # FIXME: Change to EvaluationMode.Dynamic for PIM
         mac_array = HybridPrecisionMACArrayPoint(mac_array_config, EvaluationMode.STATIC)
         core.add_element(coord=Coord(1), element=mac_array)
 

@@ -288,7 +288,7 @@ class CommunicationEvaluator(Evaluator):
             min_end_time = float('inf')  # 当前轮次评估中最先结束的edge
             for key_edge, neighbor_edges in overlap_groups.items():
                 num_edges = len(neighbor_edges)
-                # FIXME
+                # FIXME (Huanyu)
                 real_bandwidth = self.get_bandwidth(self.edge_map[key_edge][0]) / num_edges
                 latency = self.latency * len(self.edge_map[key_edge])
 
@@ -319,7 +319,7 @@ class CommunicationEvaluator(Evaluator):
 
             for key_edge, neighbor_edges in overlap_groups.items():
                 num_edges = len(neighbor_edges)
-                # FIXME
+                # FIXME (Huanyu)
                 real_bandwidth = self.get_bandwidth(self.edge_map[key_edge][0]) / num_edges
                 latency = self.latency * len(self.edge_map[key_edge])
 
@@ -736,7 +736,7 @@ class BookSimCommunicationEvaluator(CommunicationEvaluator):
             min_end_time = float('inf')  # 当前轮次评估中最先结束的edge
             for key_edge, neighbor_edges in overlap_groups.items():
                 num_edges = len(neighbor_edges)
-                # FIXME
+                # FIXME (Huanyu)
                 real_bandwidth = self.get_bandwidth(self.edge_map[key_edge][0]) / num_edges
                 latency = self.latency * len(self.edge_map[key_edge])
 

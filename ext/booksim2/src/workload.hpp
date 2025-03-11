@@ -38,6 +38,9 @@
 #include "injection.hpp"
 #include "traffic.hpp"
 #include "top.hpp"
+#include "compair.hpp"
+
+#define TRACK_EJECT
 
 extern "C" {
 #include "netrace/netrace.h"
@@ -61,6 +64,7 @@ public:
   virtual bool completed() const = 0;
   virtual int source() const;
   virtual int dest() const = 0;
+  virtual comp_air_info ca_info() const = 0;
   virtual int size() const = 0;
   virtual int time() const = 0;
   virtual void inject(int pid) = 0;
@@ -75,6 +79,7 @@ public:
   NullWorkload(int nodes) : Workload(nodes) {}
   virtual bool completed() const {return true;}
   virtual int dest() const {return -1;}
+  virtual comp_air_info ca_info() const { comp_air_info ca_info; return ca_info;}
   virtual int size() const {return -1;}
   virtual int time() const {return -1;}
   virtual void inject(int pid) {assert(false);}
@@ -103,6 +108,7 @@ public:
   virtual void advanceTime();
   virtual bool completed() const;
   virtual int dest() const;
+  virtual comp_air_info ca_info() const;
   virtual int size() const;
   virtual int time() const;
   virtual void inject(int pid);
@@ -141,6 +147,7 @@ public:
   virtual void advanceTime();
   virtual bool completed() const;
   virtual int dest() const;
+  virtual comp_air_info ca_info() const;
   virtual int size() const;
   virtual int time() const;
   virtual void inject(int pid);
@@ -197,6 +204,7 @@ public:
   virtual void advanceTime();
   virtual bool completed() const;
   virtual int dest() const;
+  virtual comp_air_info ca_info() const;
   virtual int size() const;
   virtual int time() const;
   virtual void inject(int pid);
@@ -213,6 +221,7 @@ protected:
     unsigned int time;
     int dest;
     int size;
+    comp_air_info ca_info;
   };
   int _next_source;
   PacketInfo _next_packet;
@@ -232,6 +241,7 @@ public:
   virtual void advanceTime();
   virtual bool completed() const;
   virtual int dest() const;
+  virtual comp_air_info ca_info() const;
   virtual int size() const;
   virtual int time() const;
   virtual void inject(int pid);

@@ -33,7 +33,6 @@
 #include "trafficmanager.hpp"
 #include "workload.hpp"
 #include "top.hpp"
-// #define TRACK_EJECT
 
 class SimulateTrafficManager : public TrafficManager {
 
@@ -54,6 +53,7 @@ protected:
   virtual bool _SingleSim_Stage();
 
   bool _Completed( );
+  int _GeneratePacketCompAir( int source, int dest, int size, int cl, int time );
 
   virtual void _UpdateOverallStats( );
 

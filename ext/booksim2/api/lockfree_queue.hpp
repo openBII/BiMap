@@ -3,7 +3,8 @@
 
 #include <atomic>  
 #include <memory>  
-  
+#include "compair.hpp"
+
 template <typename T>  
 class LockFreeLinkedListQueue {  
 private:  
@@ -72,6 +73,8 @@ struct pkt
     int t_inject;   // Timestamp of injecting
     int t_eject;    // Timestamp of ejecting
     int pkg_size;   // Size of packet
+    struct comp_air_info ca_info;
+
     pkt(){
         this->addr_src = -1;
         this->addr_dst = -1;
@@ -92,6 +95,21 @@ struct pkt
         this->t_inject = t_i;
         this->t_eject  = t_e;
         this->pkg_size = pkg_size;
+    }
+    pkt(int t_i,    int t_e, int type,
+        float data, int src, int dst,
+        int pkg_size, int iter_tag,
+        int x_0,    int y_0, int op_0,
+        int x_1,    int y_1, int op_1,
+        int x_2,    int y_2, int op_2,
+        int x_3,    int y_3, int op_3) {
+        this->addr_src = src;
+        this->addr_dst = dst;
+        this->t_inject = t_i;
+        this->t_eject  = t_e;
+        this->pkg_size = pkg_size;
+        this->ca_info.set(type, data, iter_tag, x_0, y_0, op_0, 
+                            x_1, y_1, op_1, x_2, y_2, op_2, x_3, y_3, op_3);
     }
 };
 
@@ -129,6 +147,25 @@ public:
   
     bool enqueue(int src, int dst, int t_inject, int t_eject, int pkg_size) {
         pkt new_value(src, dst, t_inject, t_eject, pkg_size);
+        Node* new_node = new Node(new_value);  
+        while (true) {  
+            Node* old_tail = tail.load();  
+            Node* next = old_tail->next.load();  
+            if (old_tail == tail.load()) {  
+                if (next == nullptr) {  
+                    if (old_tail->next.compare_exchange_strong(next, new_node)) {  
+                        tail.compare_exchange_strong(old_tail, new_node);  
+                        return true;  
+                    }  
+                } else {  
+                    tail.compare_exchange_strong(old_tail, next);  
+                }  
+            }  
+        }  
+        return false;  
+    }
+
+    bool enqueue_pkt(pkt new_value) {
         Node* new_node = new Node(new_value);  
         while (true) {  
             Node* old_tail = tail.load();  

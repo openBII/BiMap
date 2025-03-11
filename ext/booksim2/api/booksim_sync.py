@@ -28,7 +28,6 @@ class BookSim2Sync:
 
         ret = os.fork()
         if ret == 0:
-            # 子进程
             try:
                 print("Child Process Bgn", os.getpid())
                 info_res = ""
@@ -48,7 +47,6 @@ class BookSim2Sync:
                 shared_mem.close()
             exit(0)
         else:
-            # 父进程
             try:
                 print("Parent Process Bgn", os.getpid())
                 os.waitpid(ret, 0)
@@ -68,6 +66,17 @@ class BookSim2Sync:
     def inject(self, delay, src, dst, size=1):
         self.bsim2.inject(src, dst, delay, size)
         
+    def inject_comp_air(self, ca_type: int, 
+                        data: float, t_inject: int,
+                        src: int, iter_tag: int, pkg_size: int,
+                        x_0: int = -1, y_0: int = -1, op_0: int = -1, 
+                        x_1: int = -1, y_1: int = -1, op_1: int = -1, 
+                        x_2: int = -1, y_2: int = -1, op_2: int = -1, 
+                        x_3: int = -1, y_3: int = -1, op_3: int = -1):
+        self.bsim2.inject_comp_air(ca_type, data, t_inject, src, iter_tag, pkg_size, 
+                                   x_0, y_0, op_0, x_1, y_1, op_1, 
+                                   x_2, y_2, op_2, x_3, y_3, op_3)
+        
     def task(self):
         # Init ...
         self.bsim2.init("ext/booksim2/src/examples/mesh88_simulate.config", True)
@@ -81,8 +90,7 @@ class BookSim2Sync:
             self.info = self.bsim2.eject_all_print()
             if self.end or i + 1 >= self.max_round:
                 print("Booksim End", self.end, i)
-                exit(0)
-                # self.bsim2.end()
+                self.bsim2.end()
         
 if __name__ == "__main__":
     sim = BookSim2Sync()
@@ -91,8 +99,10 @@ if __name__ == "__main__":
     sim.inject(0, 3, 26) # 3
     sim.inject(0, 3, 28) # 13
     sim.inject(0, 4, 32) # 24
+    sim.inject_comp_air(ca_type=1, data=1.3, t_inject=1, src=5, iter_tag=0, pkg_size=1, x_0=2, y_0=0, op_0=0)
+    sim.inject_comp_air(ca_type=2, data=3.2, t_inject=1, src=6, iter_tag=2, pkg_size=4, x_0=0, y_0=1, op_0=0, x_1=-1, y_1=0, op_1=0)
     print("Hello")
-    print("[run_ahead]", sim.run_ahead())
+    # print("[run_ahead]", sim.run_ahead())
     
     for i in range(5): 
         sim.run_step()
@@ -101,9 +111,9 @@ if __name__ == "__main__":
     sim.inject(0, 5, 32, 3) # Stat from the last end (79)
     sim.inject(0, 5, 32, 3) # Stat from the last end (79)
     
-    print("Hello2")
-    print("[run_ahead]", sim.run_ahead())
-    exit()
+    # print("Hello2")
+    # print("[run_ahead]", sim.run_ahead())
+
     # ----------------------------------------
     sim.inject(0, 5, 32, 3) # Stat from the last end (79)
     sim.inject(0, 5, 32, 3) # Stat from the last end (79)

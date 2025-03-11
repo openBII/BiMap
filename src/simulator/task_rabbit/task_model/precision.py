@@ -79,7 +79,7 @@ class Precision(Enum):
         else:
             return False
 
-    # FIXME(huanyu)
+    # FIXME (huanyu)
     def __lt__(self, other):
         if isinstance(other, Precision):
             return self.value < other.value

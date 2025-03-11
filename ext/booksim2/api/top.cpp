@@ -121,6 +121,22 @@ void booksim::inject(int src, int dst, int t_inject, int pkg_size)
     this->i_fifo.enqueue(src, dst, t_inject, -1, pkg_size);
 }
 
+void booksim::inject_comp_air(  int type,   float data, int t_inject,
+                                int src,    int iter_tag, int pkg_size,
+                                int x_0,    int y_0,    int op_0, 
+                                int x_1,    int y_1,    int op_1, 
+                                int x_2,    int y_2,    int op_2, 
+                                int x_3,    int y_3,    int op_3 )
+{
+    // FIXME: (CompAir) Inject to all the cores
+    int t_i = t_inject;
+    int t_e = -1;
+    int dst = src + x_0 + y_0; // Fake Number: To get shape ...
+    pkt comp_pkt(t_i, t_e, type, data, src, dst, pkg_size, iter_tag,
+                 x_0, y_0, op_0, x_1, y_1, op_1, x_2, y_2, op_2, x_3, y_3, op_3);
+    this->i_fifo.enqueue_pkt(comp_pkt);
+}
+
 int booksim::eject()
 {
     return this->o_fifo.dequeue();
@@ -150,6 +166,7 @@ PYBIND11_MODULE(booksim2, m)
         .def("run_async", &booksim::run_async)
         .def("run_sync", &booksim::run_sync)
         .def("init", &booksim::init)
+        .def("inject_comp_air", &booksim::inject_comp_air)
         .def("eject_all_print", &booksim::eject_all_print)
         .def("inject", &booksim::inject)
         .def("eject", &booksim::eject)

@@ -83,7 +83,7 @@ class CompAirPackageFactory(Factory):
         for i in range(size_x):
             for j in range(size_y):
                 chiplet = ComputeChipletFactory.create_matrix(config.chiplet,
-                                                              "compair")
+                                                              "comp_air")
                 package.add_element(coord=Coord((i, j)), element=chiplet)
 
         if config.network["topology"] == "mesh":

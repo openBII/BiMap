@@ -17,7 +17,7 @@ class ComputeChipletFactory(Factory):
             for j in range(size_y):
                 if type == "hybrid":
                     core = HybridCoreFactory.create_matrix(config.core)
-                elif type == "compair":
+                elif type == "comp_air":
                     core = CompAirCoreFactory.create_matrix(config.core)
                 else:
                     core = CoreFactory.create_matrix(config.core)

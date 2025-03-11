@@ -33,6 +33,7 @@
 
 #include "booksim.hpp"
 #include "outputset.hpp"
+#include "compair.hpp"
 
 class Flit {
 
@@ -70,6 +71,9 @@ public:
 
   // Fields for arbitrary data
   void* data ;
+
+  // Fields for CompAir
+  comp_air_info ca_info;
 
   // Lookahead route info
   OutputSet la_route_set;

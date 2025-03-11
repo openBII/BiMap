@@ -326,7 +326,7 @@ class TaskGraph():
             if edge.out_task.id == dst_task_id and edge.is_enable():
                 return edge
 
-    # FIXME TaskBlock的check方法未定义
+    # FIXME (Huanyu) check in TaskBlock is not defined
     def check(self) -> None:
         """
         检查结点的基本形状信息

@@ -43,12 +43,16 @@ TrafficManager* TrafficManager::New(Configuration const & config,
   TrafficManager* result = NULL;
   string sim_type = config.GetStr("sim_type");
   if((sim_type == "latency") || (sim_type == "throughput")) {
+    // printf("SteadyStateTrafficManager\n");
     result = new SteadyStateTrafficManager(config, net);
   } else if(sim_type == "batch") {
+    // printf("BatchTrafficManager\n");
     result = new BatchTrafficManager(config, net);
   } else if(sim_type == "workload") {
+    // printf("WorkloadTrafficManager\n");
     result = new WorkloadTrafficManager(config, net);
   } else if(sim_type == "simulate") {
+    // printf("SimulateTrafficManager\n");
     result = new SimulateTrafficManager(config, net, bs_ptr);
   } else {
     cerr << "Unknown simulation type: " << sim_type << endl;

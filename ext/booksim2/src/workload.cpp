@@ -291,6 +291,12 @@ bool SyntheticWorkload::completed() const
   return false;
 }
 
+comp_air_info SyntheticWorkload::ca_info() const
+{
+  comp_air_info ca_info;
+  return ca_info;
+}
+
 int SyntheticWorkload::dest() const
 {
   assert(!_pending_nodes.empty());
@@ -448,6 +454,12 @@ int TraceWorkload::dest() const
   int const dest = _ready_packets[source].front().dest;
   assert((dest >= 0) && (dest < _nodes));
   return dest;
+}
+
+comp_air_info TraceWorkload::ca_info() const
+{
+  comp_air_info ca_info;
+  return ca_info;
 }
 
 int TraceWorkload::size() const
@@ -885,6 +897,12 @@ int NetraceWorkload::dest() const
   return dest;
 }
 
+comp_air_info NetraceWorkload::ca_info() const
+{
+  comp_air_info ca_info;
+  return ca_info;
+}
+
 int NetraceWorkload::size() const
 {
   assert(!_pending_nodes.empty());
@@ -1007,7 +1025,7 @@ void OnlineWorkload::_refill()
     int delay, source, dest, size;
     pkt head_pkt = _bs_ptr->i_fifo.dequeue_pkt();
   #ifdef TRACK_EJECT
-    cout << "[refill] " << head_pkt.t_inject << "@" << _time << endl;
+    // cout << "[refill] " << head_pkt.t_inject << "@" << _time << endl;
   #endif
     delay = head_pkt.t_inject;
     source = head_pkt.addr_src;
@@ -1022,6 +1040,7 @@ void OnlineWorkload::_refill()
       _next_packet.time = time;
       _next_packet.dest = dest;
       _next_packet.size = size;
+      _next_packet.ca_info = head_pkt.ca_info;
       assert(time >= _time);
       if(time == _time) {
         if(_ready_packets[source].empty()) {
@@ -1093,6 +1112,15 @@ int OnlineWorkload::dest() const
   int const dest = _ready_packets[source].front().dest;
   assert((dest >= 0) && (dest < _nodes));
   return dest;
+}
+
+comp_air_info OnlineWorkload::ca_info() const
+{
+  assert(!_pending_nodes.empty());
+  int const source = _pending_nodes.front();
+  assert((source >= 0) && (source < _nodes));
+  assert(!_ready_packets[source].empty());
+  return _ready_packets[source].front().ca_info;
 }
 
 int OnlineWorkload::size() const
