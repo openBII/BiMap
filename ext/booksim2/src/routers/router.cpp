@@ -133,6 +133,7 @@ Router *Router::NewRouter( const Configuration& config,
   const string type = config.GetStr( "router" );
   Router *r = NULL;
   if ( type == "iq" ) {
+    // Default
     r = new IQRouter( config, parent, name, id, inputs, outputs );
   } else if ( type == "event" ) {
     r = new EventRouter( config, parent, name, id, inputs, outputs );

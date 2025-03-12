@@ -40,7 +40,7 @@
 #include "top.hpp"
 #include "compair.hpp"
 
-#define TRACK_EJECT
+// #define TRACK_EJECT
 
 extern "C" {
 #include "netrace/netrace.h"

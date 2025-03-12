@@ -551,25 +551,43 @@ void dor_next_torus( int cur, int dest, int in_port,
 void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
   int out_port = inject ? -1 : dor_next_mesh( r->GetID( ), f->dest );
-  
   int vcBegin = gBeginVCs[f->cl];
   int vcEnd = gEndVCs[f->cl];
-  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
-
-  if ( !inject && f->watch ) {
-    *gWatchOut << GetSimTime() << " | " << r->FullName() << " | "
-	       << "Adding VC range [" 
+  if (r && f) {
+    // printf("[dim_order_mesh:557]\n");
+    int new_dest = f->GetUpdatedDest(r->GetID());
+    int new_out_port = inject ? -1 : dor_next_mesh( r->GetID( ), new_dest );
+    if (new_dest >= 0) {
+      cout << "[dim_order_mesh*] cal flit " << f->id << " for router " << r->GetID() << endl;
+      cout << "[dim_order_mesh*]"
+         << " Router " << r->GetID()
+	       << " Adding VC range [" 
 	       << vcBegin << "," 
 	       << vcEnd << "]"
 	       << " at output port " << out_port
+         << "-> (" << new_dest << ":" << new_out_port << ")"
 	       << " for flit " << f->id
 	       << " (input port " << in_channel
 	       << ", destination " << f->dest << ")"
 	       << "." << endl;
+      
+      // Change the ports 
+      out_port = new_out_port;
+    } else {
+      // cout << "[dim_order_mesh]"
+      //    << " Router " << r->GetID()
+	    //    << " Adding VC range [" 
+	    //    << vcBegin << "," 
+	    //    << vcEnd << "]"
+	    //    << " at output port " << out_port
+	    //    << " for flit " << f->id
+	    //    << " (input port " << in_channel
+	    //    << ", destination " << f->dest << ")"
+	    //    << "." << endl;
+    }
   }
-  
+  assert(((f->vc >= vcBegin) && (f->vc <= vcEnd)) || (inject && (f->vc < 0)));
   outputs->Clear();
-
   outputs->AddRange( out_port, vcBegin, vcEnd );
 }
 
@@ -1028,7 +1046,7 @@ void planar_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSe
   Even if it were, this should really use f->ph instead of introducing a single-
   use field.
 
-void limited_adapt_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *outputs, bool inject )
+void limited_adapt_mesh( const Router *r, Flit *f, int in_channel, OutputSet *outputs, bool inject )
 {
   outputs->Clear( );
 

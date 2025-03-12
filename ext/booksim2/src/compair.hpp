@@ -1,12 +1,15 @@
 #ifndef _COMP_AIR_HPP
 #define _COMP_AIR_HPP
 
+#define EDGE_LEN 8
+
 struct comp_air_info 
 {
 public:
-    int type;       // 0: scalar, 1: reduce, 2: p2p, 3: broadcast
+    int type;       // 0: scalar, 1: reduce, 2: p2p, 3: broadcast, 4: Cover, -1: Normal
     float data;     // data (BF16 in reality)
     int iter_tag;   // 0 ~ 15
+    int edge_len;
     int x_0; int y_0; int op_0; // x_offset, y_offset, op (0: data, 1: iter || 0: +=, 1: -=, 2: *=, 3: /=)
     int x_1; int y_1; int op_1; // x_offset, y_offset, op (0: data, 1: iter || 0: +=, 1: -=, 2: *=, 3: /=)
     int x_2; int y_2; int op_2; // x_offset, y_offset, op (0: data, 1: iter || 0: +=, 1: -=, 2: *=, 3: /=)
@@ -21,6 +24,7 @@ public:
         this->x_1 = -1; this->y_1 = -1; this->op_1 = -1;
         this->x_2 = -1; this->y_2 = -1; this->op_2 = -1;
         this->x_3 = -1; this->y_3 = -1; this->op_3 = -1;
+        this->edge_len = EDGE_LEN;
     }
 
     void set(

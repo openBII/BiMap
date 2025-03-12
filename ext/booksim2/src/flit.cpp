@@ -94,6 +94,169 @@ Flit * Flit::New() {
   return f;
 }
 
+void Flit::UpdateDest(int node_id) {
+  if (node_id == this->dest && this->ca_info.type >= 0) {
+    int matched_router_id = MatchedDestID(node_id);
+    if (matched_router_id >= 0) {
+      if (matched_router_id == 0) {
+
+        if (this->ca_info.op_1 >= 0) {
+          int new_dest = this->dest + this->ca_info.x_1 + this->ca_info.y_1 * this->ca_info.edge_len;
+          printf("[RRC] Flit %d: Update dest at node_id %d go %d <0>\n", this->id, node_id, new_dest);
+          this->last_dest = this->dest;
+          this->dest = new_dest;
+        } else if (this->ca_info.iter_tag > 0) {
+          int new_dest = this->src + this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len;
+          printf("[RRC] Flit %d: Update dest at node_id %d dst %d <1>\n", this->id, node_id, new_dest);
+          this->last_dest = this->dest;
+          this->dest = new_dest;
+          this->ca_info.iter_tag -= 1;
+        }
+
+      } else if (matched_router_id == 1) {
+        
+        if (this->ca_info.op_2 >= 0) {
+          int new_dest = this->dest + this->ca_info.x_2 + this->ca_info.y_2 * this->ca_info.edge_len;
+          printf("[RRC] Flit %d: Update dest at node_id %d go %d <2>\n", this->id, node_id, new_dest);
+          this->last_dest = this->dest;
+          this->dest = new_dest;
+        } else if (this->ca_info.iter_tag > 0) {
+          int new_dest = this->src + this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len;
+          printf("[RRC] Flit %d: Update dest at node_id %d dst %d <3>\n", this->id, node_id, new_dest);
+          this->last_dest = this->dest;
+          this->dest = new_dest;
+          this->ca_info.iter_tag -= 1;
+        }
+
+      } else if (matched_router_id == 2) {
+
+        if (this->ca_info.op_3 >= 0) {
+          int new_dest = this->dest + this->ca_info.x_3 + this->ca_info.y_3 * this->ca_info.edge_len;
+          printf("[RRC] Flit %d: Update dest at node_id %d go %d <4>\n", this->id, node_id, new_dest);
+          this->last_dest = this->dest;
+          this->dest = new_dest;
+        } else if (this->ca_info.iter_tag > 0) {
+          int new_dest = this->src + this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len;
+          printf("[RRC] Flit %d: Update dest at node_id %d dst %d <5>\n", this->id, node_id, new_dest);
+          this->last_dest = this->dest;
+          this->dest = new_dest;
+          this->ca_info.iter_tag -= 1;
+        }
+
+      } else if (matched_router_id == 3) {
+
+        if (this->ca_info.iter_tag > 0) {
+          int new_dest = this->src + this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len;
+          printf("[RRC] Flit %d: Update dest at node_id %d dst %d <6>\n", this->id, node_id, new_dest);
+          this->last_dest = this->dest;
+          this->dest = new_dest;
+          this->ca_info.iter_tag -= 1;
+        }
+      }
+    }
+  }
+}
+
+int Flit::GetUpdatedDest(int node_id) const {
+  int matched_router_id = MatchedDestID(node_id);
+  if (node_id == this->dest && this->ca_info.type >= 0) {
+    if (matched_router_id >= 0) {
+      if (matched_router_id == 0) {
+        if (this->ca_info.op_1 >= 0) {
+          int new_dest = this->dest + this->ca_info.x_1 + this->ca_info.y_1 * this->ca_info.edge_len;
+          return new_dest;
+        } else if (this->ca_info.iter_tag > 0) {
+          int new_dest = this->src + this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len;
+          return new_dest;
+        }
+      } else if (matched_router_id == 1) {
+        
+        if (this->ca_info.op_2 >= 0) {
+          int new_dest = this->dest + this->ca_info.x_2 + this->ca_info.y_2 * this->ca_info.edge_len;
+          return new_dest;
+        } else if (this->ca_info.iter_tag > 0) {
+          int new_dest = this->src + this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len;
+          return new_dest;
+        }
+
+      } else if (matched_router_id == 2) {
+
+        if (this->ca_info.op_3 >= 0) {
+          int new_dest = this->dest + this->ca_info.x_3 + this->ca_info.y_3 * this->ca_info.edge_len;
+          return new_dest;
+        } else if (this->ca_info.iter_tag > 0) {
+          int new_dest = this->src + this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len;
+          return new_dest;
+        }
+
+      } else if (matched_router_id == 3) {
+
+        if (this->ca_info.iter_tag > 0) {
+          int new_dest = this->src + this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len;
+          return new_dest;
+        }
+      }
+    }
+  }
+  // printf("[GetUpdatedDest] Flit %d: %d -> keep for %d <m:%d>\n", this->id, this->dest, node_id, matched_router_id);
+  return -1;
+}
+
+int Flit::MatchedDestID(int node_id) const {
+  int matched_router_id = -1;
+  int base_router = this->src;
+  if (base_router + this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len == node_id) {
+    matched_router_id = 0;
+  } else {
+    base_router += this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len;
+    if (base_router + this->ca_info.x_1 + this->ca_info.y_1 * this->ca_info.edge_len == node_id) {
+      matched_router_id = 1;
+    } else {
+      base_router += this->ca_info.x_1 + this->ca_info.y_1 * this->ca_info.edge_len;
+      if (base_router + this->ca_info.x_2 + this->ca_info.y_2 * this->ca_info.edge_len == node_id) {
+        matched_router_id = 2;
+      } else {
+        base_router += this->ca_info.x_2 + this->ca_info.y_2 * this->ca_info.edge_len;
+        if (base_router + this->ca_info.x_3 + this->ca_info.y_3 * this->ca_info.edge_len == node_id) {
+          matched_router_id = 3;
+        } else {
+          matched_router_id = -1;
+        }
+      } 
+    }
+  }
+  return matched_router_id;
+}
+
+int Flit::LastPos() const {
+  if (this->ca_info.type >= 0 && this->ca_info.iter_tag == 0) {
+    int base_pos = this->src;
+    if (this->ca_info.op_0 >= 0) {
+      base_pos += this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len;
+      if (this->ca_info.op_1 >= 0) {
+        base_pos += this->ca_info.x_1 + this->ca_info.y_1 * this->ca_info.edge_len;
+        if (this->ca_info.op_2 >= 0) {
+          base_pos += this->ca_info.x_2 + this->ca_info.y_2 * this->ca_info.edge_len;
+          if (this->ca_info.op_3 >= 0) {
+            base_pos += this->ca_info.x_3 + this->ca_info.y_3 * this->ca_info.edge_len;
+            return base_pos;
+          } else {
+            return base_pos;
+          }
+        } else {
+          return base_pos;
+        }
+      } else {
+        return base_pos;
+      }
+    } else {
+      return -1;
+    }
+  } else {
+    return -1;
+  }
+}
+
 void Flit::Free() {
   _free.push(this);
 }

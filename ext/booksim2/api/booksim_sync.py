@@ -95,42 +95,46 @@ class BookSim2Sync:
 if __name__ == "__main__":
     sim = BookSim2Sync()
     # ----------------------------------------
-    sim.inject(0, 10, 20) # Stat from the last end (0)
-    sim.inject(0, 3, 26) # 3
-    sim.inject(0, 3, 28) # 13
-    sim.inject(0, 4, 32) # 24
-    sim.inject_comp_air(ca_type=1, data=1.3, t_inject=1, src=5, iter_tag=0, pkg_size=1, x_0=2, y_0=0, op_0=0)
-    sim.inject_comp_air(ca_type=2, data=3.2, t_inject=1, src=6, iter_tag=2, pkg_size=4, x_0=0, y_0=1, op_0=0, x_1=-1, y_1=0, op_1=0)
-    print("Hello")
-    # print("[run_ahead]", sim.run_ahead())
+    # sim.inject(0, 10, 20) # Stat from the last end (0)
+    # sim.inject(0, 3, 26) # 3
+    # sim.inject(0, 3, 28) # 13
+    # sim.inject(0, 4, 32) # 24
+    # manual config
+    sim.inject_comp_air(ca_type=4, data=3.0, t_inject=1, src=6, iter_tag=0, pkg_size=1, x_0=0, y_0=0, op_0=8)
+    sim.inject_comp_air(ca_type=4, data=3.1, t_inject=1, src=6, iter_tag=0, pkg_size=1, x_0=0, y_0=1, op_0=8)
+    sim.inject_comp_air(ca_type=4, data=3.2, t_inject=1, src=6, iter_tag=0, pkg_size=1, x_0=-1, y_0=1, op_0=8)
+    sim.inject_comp_air(ca_type=4, data=2.5, t_inject=1, src=5, iter_tag=0, pkg_size=1, x_0=2, y_0=0, op_0=8)
+    # compute
+    sim.inject_comp_air(ca_type=0, data=1.3, t_inject=1, src=5, iter_tag=0, pkg_size=1, x_0=2, y_0=0, op_0=0)
+    sim.inject_comp_air(ca_type=0, data=3.3, t_inject=1, src=6, iter_tag=5, pkg_size=1, x_0=0, y_0=0, op_0=0, x_1=0, y_1=1, op_1=0, x_2=-1, y_2=0, op_2=0)
     
-    for i in range(5): 
+    for i in range(10): 
         sim.run_step()
         print(sim.info)
     
-    sim.inject(0, 5, 32, 3) # Stat from the last end (79)
-    sim.inject(0, 5, 32, 3) # Stat from the last end (79)
+    # sim.inject(0, 5, 32, 3) # Stat from the last end (79)
+    # sim.inject(0, 5, 32, 3) # Stat from the last end (79)
     
     # print("Hello2")
     # print("[run_ahead]", sim.run_ahead())
 
     # ----------------------------------------
-    sim.inject(0, 5, 32, 3) # Stat from the last end (79)
-    sim.inject(0, 5, 32, 3) # Stat from the last end (79)
-    for i in range(1): 
-        sim.run_step()
-        print(sim.info)
+    # sim.inject(0, 5, 32, 3) # Stat from the last end (79)
+    # sim.inject(0, 5, 32, 3) # Stat from the last end (79)
+    # for i in range(1): 
+    #     sim.run_step()
+    #     print(sim.info)
     # ----------------------------------------
-    sim.inject(0, 6, 43, 1) # Stat from the last end (1236)
-    sim.inject(0, 24, 54, 1) # 1236 + 2112 = 3348
-    for i in range(2): 
-        sim.run_step()
-        print(sim.info)
+    # sim.inject(0, 6, 43, 1) # Stat from the last end (1236)
+    # sim.inject(0, 24, 54, 1) # 1236 + 2112 = 3348
+    # for i in range(2): 
+    #     sim.run_step()
+    #     print(sim.info)
     # ----------------------------------------
-    sim.inject(0, 24, 54, 1) # Stat from the last end (4391)
-    for i in range(2): 
-        sim.run_step()
-        print(sim.info)
+    # sim.inject(0, 24, 54, 1) # Stat from the last end (4391)
+    # for i in range(2): 
+    #     sim.run_step()
+    #     print(sim.info)
     # ----------------------------------------
     sim.run_step(end=True) # End
     

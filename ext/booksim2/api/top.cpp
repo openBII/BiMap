@@ -128,13 +128,19 @@ void booksim::inject_comp_air(  int type,   float data, int t_inject,
                                 int x_2,    int y_2,    int op_2, 
                                 int x_3,    int y_3,    int op_3 )
 {
-    // FIXME: (CompAir) Inject to all the cores
+    int edge_len = config.GetInt("k");
+    // 0: scalar and 4: cover
     int t_i = t_inject;
     int t_e = -1;
-    int dst = src + x_0 + y_0; // Fake Number: To get shape ...
-    pkt comp_pkt(t_i, t_e, type, data, src, dst, pkg_size, iter_tag,
-                 x_0, y_0, op_0, x_1, y_1, op_1, x_2, y_2, op_2, x_3, y_3, op_3);
-    this->i_fifo.enqueue_pkt(comp_pkt);
+    int dst = src + x_0 + y_0 * edge_len;
+    cout << "[inject_comp_air] pkt " << src << " -> " << dst << endl;
+    if (dst < edge_len * edge_len && dst >= 0) {
+        pkt comp_pkt(t_i, t_e, type, data, src, dst, pkg_size, iter_tag,
+                x_0, y_0, op_0, x_1, y_1, op_1, x_2, y_2, op_2, x_3, y_3, op_3);
+        this->i_fifo.enqueue_pkt(comp_pkt);
+    } else {
+        printf("Dst (%d) out-of range!!\n", dst);
+    }
 }
 
 int booksim::eject()

@@ -93,7 +93,8 @@
         "ios": "cpp",
         "locale": "cpp",
         "queue": "cpp",
-        "stack": "cpp"
+        "stack": "cpp",
+        "any": "cpp"
     },
 
     "python.envFile": "${workspaceFolder}/.vscode/.env",

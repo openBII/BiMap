@@ -152,10 +152,7 @@ bool SimulateTrafficManager::_SingleSim_Stage()
     }
     
     // If any flits were ejected, break the loop
-    if (ejected) {
-      // FIXME: (CompAir) Need to do sth. for the multi-intermidiate case
-      break;
-    }
+    if (ejected) { break; }
   }
   
   // Print the end time of the measurements
@@ -544,15 +541,13 @@ int SimulateTrafficManager::_GeneratePacketCompAir( int source, int dest, int si
   Workload * const wl = _workload[cl];
   #ifdef TRACK_EJECT
     cout << GetSimTime() << " | "
-	       << "node" << source << " | "
+	       << "node " << source << " | "
          << "comp_air type " <<  wl->ca_info().type << " | "
          << "comp_air data " <<  wl->ca_info().data << " | "
 	       << "Enqueuing packet " << pid
 	       << " at time " << time
 	       << "." << endl;
   #endif
-  
-  // FIXME: (CompAir) Need to do sth. for wl->ca_info() ...
   
   bool record = (((_sim_state == running) ||
 		  ((_sim_state == draining) && (time < _drain_time))) &&
@@ -570,6 +565,7 @@ int SimulateTrafficManager::_GeneratePacketCompAir( int source, int dest, int si
     f->watch = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
     f->src = source;
     f->dest = dest;
+    f->last_dest = dest;
     f->ctime = time;
     f->record = record;
     f->cl = cl;

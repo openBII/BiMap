@@ -57,6 +57,7 @@ public:
 
   int  src;
   int  dest;
+  int  last_dest;
 
   int  pri;
 
@@ -83,6 +84,10 @@ public:
   static Flit * New();
   void Free();
   static void FreeAll();
+  int GetUpdatedDest(int node_id) const;
+  void UpdateDest(int node_id);
+  int MatchedDestID(int node_id) const;
+  int LastPos() const;
 
 private:
 

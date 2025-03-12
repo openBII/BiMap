@@ -66,7 +66,12 @@ class IQRouter : public Router {
   int _routing_delay;
   int _vc_alloc_delay;
   int _sw_alloc_delay;
-  
+
+  // CompAir
+  float _acc_data_reg;
+  int _acc_iter_tag_reg;
+  int _acc_iter_op_reg;
+
   map<int, Flit *> _in_queue_flits;
 
   deque<pair<int, pair<Credit *, int> > > _proc_credits;
@@ -137,7 +142,7 @@ class IQRouter : public Router {
   void _SendFlits( );
   void _SendCredits( );
   
-  void _UpdateNOQ(int input, int vc, Flit const * f);
+  void _UpdateNOQ(int input, int vc, Flit * f);
 
   // ----------------------------------------
   //
