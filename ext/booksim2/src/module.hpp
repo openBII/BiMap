@@ -38,14 +38,19 @@ class Module {
 private:
   string _name;
   string _fullname;
-
   vector<Module *> _children;
 
 protected:
   void _AddChild( Module *child );
 
 public:
+
   Module( Module *parent, const string& name );
+
+  // For CompAir
+  vector<int> reduced_flits;
+  vector<int> generated_flits;
+
   virtual ~Module( ) { }
   
   inline const string & Name() const { return _name; }

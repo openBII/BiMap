@@ -2193,6 +2193,7 @@ void IQRouter::_SwitchUpdate( )
     assert(GetSimTime() == time);
 
     Flit * const f = item.second.first;
+    int flit_send = true;  // send the flit
     assert(f);
 
     if (f->ca_info.type >= 0) {
@@ -2200,36 +2201,38 @@ void IQRouter::_SwitchUpdate( )
       // Flict Compute @Switch traversal
       int matched_router_id = f->MatchedDestID(_id);
       
-      if (matched_router_id >= 0 && (_id == f->last_dest || (f->ca_info.iter_tag == 0 && f->LastPos() == _id))) {
+      bool is_latest_pos = (f->ca_info.iter_tag == 0 && f->LastPos() == _id);
+      if (matched_router_id >= 0 && (_id == f->last_dest || (f->last_dest != f->dest && is_latest_pos))) {
 
         // Match the router !!!
         cout  << "[FC*] rid: " << _id << " fid: " << f->id << "(" << f->src << "," << f->dest << "," << f->last_dest <<  ")" << " type: " << f->ca_info.type 
               << " [after-compute] data " << f->ca_info.data << " iter " << f->ca_info.iter_tag 
               << " reg_data " << _acc_data_reg << " reg_iter " << _acc_iter_tag_reg
-              << " (packet " << f->pid << ")" << " from VC " << f->vc << " as tail " << f->tail << endl;
+              << " (packet " << f->pid << ")" << " from VC " << f->vc << " as tail " << f->tail
+              << " match " << matched_router_id << endl;
         
         // Decoded signals from flit
         int opcode = 0; // 0: +=; 1: -=; 2: *=; 3: /=
         int data_iter_tag = 0; // 0: operate _acc_data_reg; 1: operate _acc_iter_tag_reg
-        int writereg = 0; // write the reg if 1
+        int write_reg = 0; // write the reg if 1
 
-        // Decode: opcode, data_iter_tag, writereg
+        // Decode: opcode, data_iter_tag, write_reg
         if (matched_router_id == 0) {
           opcode = f->ca_info.op_0 & 0x3;
           data_iter_tag = f->ca_info.op_0 & 0x4;
-          writereg = f->ca_info.op_0 & 0x8;
+          write_reg = f->ca_info.op_0 & 0x8;
         } else if (matched_router_id == 1) {
           opcode = f->ca_info.op_1 & 0x3;
           data_iter_tag = f->ca_info.op_1 & 0x4;
-          writereg = f->ca_info.op_1 & 0x8;
+          write_reg = f->ca_info.op_1 & 0x8;
         } else if (matched_router_id == 2) {
           opcode = f->ca_info.op_2 & 0x3;
           data_iter_tag = f->ca_info.op_2 & 0x4;
-          writereg = f->ca_info.op_2 & 0x8;
+          write_reg = f->ca_info.op_2 & 0x8;
         } else if (matched_router_id == 3) {
           opcode = f->ca_info.op_3 & 0x3;
           data_iter_tag = f->ca_info.op_3 & 0x4;
-          writereg = f->ca_info.op_3 & 0x8;
+          write_reg = f->ca_info.op_3 & 0x8;
         }
         
         // Flit Compute
@@ -2240,46 +2243,52 @@ void IQRouter::_SwitchUpdate( )
           if (opcode == 0) {
             // add
             f->ca_info.data += _acc_data_reg;
-            if (writereg) _acc_data_reg = f->ca_info.data;
-            if (data_iter_tag) {
-              if (_acc_iter_op_reg == 0) _acc_data_reg += _acc_iter_tag_reg;
-              else if (_acc_iter_op_reg == 1) _acc_data_reg -= _acc_iter_tag_reg;
-              else if (_acc_iter_op_reg == 2) _acc_data_reg *= _acc_iter_tag_reg;
-              else if (_acc_iter_op_reg == 3) _acc_data_reg /= _acc_iter_tag_reg;
-            }
           } else if (opcode == 1) {
             // sub
             f->ca_info.data -= _acc_data_reg;
-            if (writereg) _acc_data_reg = f->ca_info.data;
-            if (data_iter_tag) {
-              if (_acc_iter_op_reg == 0) _acc_data_reg += _acc_iter_tag_reg;
-              else if (_acc_iter_op_reg == 1) _acc_data_reg -= _acc_iter_tag_reg;
-              else if (_acc_iter_op_reg == 2) _acc_data_reg *= _acc_iter_tag_reg;
-              else if (_acc_iter_op_reg == 3) _acc_data_reg /= _acc_iter_tag_reg;
-            }
           } else if (opcode == 2) {
             // mul
             f->ca_info.data *= _acc_data_reg;
-            if (writereg) _acc_data_reg = f->ca_info.data;
-            if (data_iter_tag) {
-              if (_acc_iter_op_reg == 0) _acc_data_reg += _acc_iter_tag_reg;
-              else if (_acc_iter_op_reg == 1) _acc_data_reg -= _acc_iter_tag_reg;
-              else if (_acc_iter_op_reg == 2) _acc_data_reg *= _acc_iter_tag_reg;
-              else if (_acc_iter_op_reg == 3) _acc_data_reg /= _acc_iter_tag_reg;
-            }
           } else if (opcode == 3) {
             // div
             f->ca_info.data /= _acc_data_reg;
-            if (writereg) _acc_data_reg = f->ca_info.data;
-            if (data_iter_tag) {
-              if (_acc_iter_op_reg == 0) _acc_data_reg += _acc_iter_tag_reg;
-              else if (_acc_iter_op_reg == 1) _acc_data_reg -= _acc_iter_tag_reg;
-              else if (_acc_iter_op_reg == 2) _acc_data_reg *= _acc_iter_tag_reg;
-              else if (_acc_iter_op_reg == 3) _acc_data_reg /= _acc_iter_tag_reg;
-            }
+          }
+          if (write_reg) _acc_data_reg = f->ca_info.data;
+          if (data_iter_tag) {
+            if (_acc_iter_op_reg == 0) _acc_data_reg += _acc_iter_tag_reg;
+            else if (_acc_iter_op_reg == 1) _acc_data_reg -= _acc_iter_tag_reg;
+            else if (_acc_iter_op_reg == 2) _acc_data_reg *= _acc_iter_tag_reg;
+            else if (_acc_iter_op_reg == 3) _acc_data_reg /= _acc_iter_tag_reg;
           }
         } else if (f->ca_info.type == 1) {
           // reduce
+          assert (write_reg > 0); // writing reg is a must
+          assert (_acc_iter_op_reg == 1); // -= 1 is a must
+          if (_acc_iter_tag_reg > 0) {
+            if (opcode == 0) {
+              // add
+              _acc_data_reg += f->ca_info.data;
+            } else if (opcode == 1) {
+              // sub
+              _acc_data_reg -= f->ca_info.data;
+            } else if (opcode == 2) {
+              // mul
+              _acc_data_reg *= f->ca_info.data;
+            } else if (opcode == 3) {
+              // div
+              _acc_data_reg /= f->ca_info.data;
+            }
+            _acc_iter_tag_reg -= 1;
+            if (_acc_iter_tag_reg == 0) {
+              // done and send
+              f->ca_info.data = _acc_data_reg;
+            } else {
+              // just keep it
+              flit_send = false;
+            }
+          } else {
+            flit_send = false;
+          }
         } else if (f->ca_info.type == 2) {
           // p2p
         } else if (f->ca_info.type == 3) {
@@ -2293,7 +2302,7 @@ void IQRouter::_SwitchUpdate( )
           }
         }
         cout  << "[FC*] rid: " << _id << " flit " << f->id << " [after-compute] data " << f->ca_info.data
-              << " iter " << f->ca_info.iter_tag << "(" << opcode << "," << writereg << "," << data_iter_tag << ")"  << " reg_data " << _acc_data_reg 
+              << " iter " << f->ca_info.iter_tag << "(" << opcode << "," << write_reg << "," << data_iter_tag << ")"  << " reg_data " << _acc_data_reg 
               << " reg_iter " << _acc_iter_tag_reg 
               << " acc_iter_op_reg " << _acc_iter_op_reg << endl;
       } else {
@@ -2303,34 +2312,38 @@ void IQRouter::_SwitchUpdate( )
       }
     }
 
-    int const expanded_input = item.second.second.first;
-    int const input = expanded_input / _input_speedup;
-    assert((input >= 0) && (input < _inputs));
-    int const expanded_output = item.second.second.second;
-    int const output = expanded_output / _output_speedup;
-    assert((output >= 0) && (output < _outputs));
+    if (flit_send) {
+      int const expanded_input = item.second.second.first;
+      int const input = expanded_input / _input_speedup;
+      assert((input >= 0) && (input < _inputs));
+      int const expanded_output = item.second.second.second;
+      int const output = expanded_output / _output_speedup;
+      assert((output >= 0) && (output < _outputs));
 
-    if(f->watch) {
-      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-        << "Completed crossbar traversal for flit " << f->id
-        << " from input " << input
-        << "." << (expanded_input % _input_speedup)
-        << " to output " << output
-        << "." << (expanded_output % _output_speedup)
-        << "." << endl;
-    }
-    _switchMonitor->traversal(input, output, f) ;
+      cout << GetSimTime() << " | " << FullName() << " | "
+          << "Completed crossbar traversal for flit " << f->id
+          << " from input " << input
+          << "." << (expanded_input % _input_speedup)
+          << " to output " << output
+          << "." << (expanded_output % _output_speedup)
+          << "." << endl;
 
-    if(f->watch) {
-      *gWatchOut << GetSimTime() << " | " << FullName() << " | "
-        << "Buffering flit " << f->id
-        << " at output " << output
-        << "." << endl;
+      _switchMonitor->traversal(input, output, f) ;
+      if(f->watch) {
+        *gWatchOut << GetSimTime() << " | " << FullName() << " | "
+          << "Buffering flit " << f->id
+          << " at output " << output
+          << "." << endl;
+      }
+      _output_buffer[output].push(f);
+      //the output buffer size isn't precise due to flits in flight
+      //but there is a maximum bound based on output speed up and ST traversal
+      assert(_output_buffer[output].size()<=(size_t)_output_buffer_size+ _crossbar_delay* _output_speedup+( _output_speedup-1) ||_output_buffer_size==-1);
+    } else {
+      reduced_flits.push_back(f->id);
+      cout << GetSimTime() << " | " << FullName() << " | "
+          << "Dropping flit " << f->id << "." << endl;
     }
-    _output_buffer[output].push(f);
-    //the output buffer size isn't precise due to flits in flight
-    //but there is a maximum bound based on output speed up and ST traversal
-    assert(_output_buffer[output].size()<=(size_t)_output_buffer_size+ _crossbar_delay* _output_speedup+( _output_speedup-1) ||_output_buffer_size==-1);
     _crossbar_flits.pop_front();
   }
 }

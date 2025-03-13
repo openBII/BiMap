@@ -215,7 +215,26 @@ bool SimulateTrafficManager::_StepSim( )
 {
   // Deadlock Detection
   bool flits_in_flight = false;
+  vector<int> merged_flits_vec;
+  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
+    // FIXME: (CompAir)
+    vector<int> merged_flits_local = _net[subnet]->GetMergedFlits();
+    for ( auto item : merged_flits_local )  merged_flits_vec.push_back(item);
+  }
   for (int c = 0; c < _classes; ++c) {
+    bool class_not_empty = !_total_in_flight_flits[c].empty();
+    if (class_not_empty) {
+
+      for ( auto merged_flit_id : merged_flits_vec ) {
+        if (_total_in_flight_flits[c].find(merged_flit_id) != _total_in_flight_flits[c].end()) {
+          cout << "[SimulateTrafficManager] Class " << c << " try to merge " << merged_flit_id << endl;
+          if(_total_in_flight_flits[c][merged_flit_id]->record) {
+            _measured_in_flight_flits[c].erase(merged_flit_id);
+          }
+          _total_in_flight_flits[c].erase(merged_flit_id);
+        }
+      }
+    }
     flits_in_flight |= !_total_in_flight_flits[c].empty();
   }
   if ( flits_in_flight && (_deadlock_timer++ >= _deadlock_warn_timeout) ) {

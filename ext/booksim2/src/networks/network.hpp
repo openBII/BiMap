@@ -97,6 +97,7 @@ public:
   void Display( ostream & os = cout ) const;
   void DumpChannelMap( ostream & os = cout, string const & prefix = "" ) const;
   void DumpNodeMap( ostream & os = cout, string const & prefix = "" ) const;
+  vector<int> GetMergedFlits( );
 
   int NumChannels() const {return _channels;}
   const vector<FlitChannel *> & GetInject() {return _inject;}

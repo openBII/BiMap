@@ -197,6 +197,20 @@ void Network::Evaluate( )
   }
 }
 
+vector<int> Network::GetMergedFlits( )
+{
+  vector<int> merged_flits;
+  for(deque<TimedModule *>::const_iterator iter = _timed_modules.begin();
+      iter != _timed_modules.end();
+      ++iter) {
+    for (size_t i = 0; i < (*iter)->reduced_flits.size(); i++) {
+      merged_flits.push_back((*iter)->reduced_flits[i]);
+    }
+    (*iter)->reduced_flits.clear();
+  }
+  return merged_flits;
+}
+
 void Network::WriteOutputs( )
 {
   for(deque<TimedModule *>::const_iterator iter = _timed_modules.begin();
