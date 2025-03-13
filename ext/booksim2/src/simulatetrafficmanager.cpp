@@ -229,7 +229,7 @@ bool SimulateTrafficManager::_StepSim( )
     if (class_not_empty) {
       for ( auto merged_flit_id : merged_flits_vec ) {
         if (_total_in_flight_flits[c].find(merged_flit_id) != _total_in_flight_flits[c].end()) {
-          cout << "[SimulateTrafficManager] Class " << c << " try to merge " << merged_flit_id << endl;
+          // cout << "[SimulateTrafficManager] Class " << c << " try to merge " << merged_flit_id << endl;
           if(_total_in_flight_flits[c][merged_flit_id]->record) {
             _measured_in_flight_flits[c].erase(merged_flit_id);
           }
@@ -316,8 +316,8 @@ bool SimulateTrafficManager::_StepSim( )
       int time = item.time;
       comp_air_info ca_info = item.ca_info;
       int const pid = _GeneratePacketCompAir(source, dest, size, cl, time, ca_info);
-      printf("Inject flit %d (%d->%d) at %d (x,y,op)=(%d,%d,%d) => w[%d]\n", pid, source, dest, time, 
-                                                                    ca_info.x_0, ca_info.y_0, ca_info.op_0, cl);
+      // printf("[INJ] Inject flit %d (%d->%d) at %d (x,y,op)=(%d,%d,%d) => w[%d]\n", pid, source, dest, time, 
+      //                                                               ca_info.x_0, ca_info.y_0, ca_info.op_0, cl);
     }
   }
 

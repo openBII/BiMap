@@ -35,6 +35,7 @@
  */
 
 #include "booksim.hpp"
+#include "workload.hpp"
 #include "flit.hpp"
 
 stack<Flit *> Flit::_all;
@@ -102,12 +103,16 @@ void Flit::UpdateDest(int node_id) {
 
         if (this->ca_info.op_1 >= 0) {
           int new_dest = this->dest + this->ca_info.x_1 + this->ca_info.y_1 * this->ca_info.edge_len;
+        #ifdef TRACK_COMP_AIR
           printf("[RRC] Flit %d: Update dest at node_id %d go %d <0>\n", this->id, node_id, new_dest);
+        #endif
           this->last_dest = this->dest;
           this->dest = new_dest;
         } else if (this->ca_info.iter_tag > 0) {
           int new_dest = this->src + this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len;
+        #ifdef TRACK_COMP_AIR
           printf("[RRC] Flit %d: Update dest at node_id %d dst %d <1>\n", this->id, node_id, new_dest);
+        #endif
           this->last_dest = this->dest;
           this->dest = new_dest;
           this->ca_info.iter_tag -= 1;
@@ -117,12 +122,16 @@ void Flit::UpdateDest(int node_id) {
         
         if (this->ca_info.op_2 >= 0) {
           int new_dest = this->dest + this->ca_info.x_2 + this->ca_info.y_2 * this->ca_info.edge_len;
+        #ifdef TRACK_COMP_AIR
           printf("[RRC] Flit %d: Update dest at node_id %d go %d <2>\n", this->id, node_id, new_dest);
+        #endif
           this->last_dest = this->dest;
           this->dest = new_dest;
         } else if (this->ca_info.iter_tag > 0) {
           int new_dest = this->src + this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len;
+        #ifdef TRACK_COMP_AIR
           printf("[RRC] Flit %d: Update dest at node_id %d dst %d <3>\n", this->id, node_id, new_dest);
+        #endif
           this->last_dest = this->dest;
           this->dest = new_dest;
           this->ca_info.iter_tag -= 1;
@@ -132,12 +141,16 @@ void Flit::UpdateDest(int node_id) {
 
         if (this->ca_info.op_3 >= 0) {
           int new_dest = this->dest + this->ca_info.x_3 + this->ca_info.y_3 * this->ca_info.edge_len;
+        #ifdef TRACK_COMP_AIR
           printf("[RRC] Flit %d: Update dest at node_id %d go %d <4>\n", this->id, node_id, new_dest);
+        #endif
           this->last_dest = this->dest;
           this->dest = new_dest;
         } else if (this->ca_info.iter_tag > 0) {
           int new_dest = this->src + this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len;
+        #ifdef TRACK_COMP_AIR
           printf("[RRC] Flit %d: Update dest at node_id %d dst %d <5>\n", this->id, node_id, new_dest);
+        #endif
           this->last_dest = this->dest;
           this->dest = new_dest;
           this->ca_info.iter_tag -= 1;
@@ -147,7 +160,9 @@ void Flit::UpdateDest(int node_id) {
 
         if (this->ca_info.iter_tag > 0) {
           int new_dest = this->src + this->ca_info.x_0 + this->ca_info.y_0 * this->ca_info.edge_len;
+        #ifdef TRACK_COMP_AIR
           printf("[RRC] Flit %d: Update dest at node_id %d dst %d <6>\n", this->id, node_id, new_dest);
+        #endif
           this->last_dest = this->dest;
           this->dest = new_dest;
           this->ca_info.iter_tag -= 1;

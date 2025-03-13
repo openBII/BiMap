@@ -390,7 +390,7 @@ void IQRouter::_InputQueuing( )
       assert(f->head);
       assert(_switch_hold_vc[input*_input_speedup + vc%_input_speedup] != vc);
       if (f->GetUpdatedDest(_id) >= 0) {
-        printf("[iq_router:393] --> change dest\n");
+        // printf("[iq_router:393] --> change dest\n");
         f->UpdateDest(_id);
       }
 
@@ -1166,9 +1166,9 @@ void IQRouter::_SWHoldUpdate( )
           _switch_hold_vc[expanded_input] = -1;
           _switch_hold_in[expanded_input] = -1;
           _switch_hold_out[expanded_output] = -1;
-          printf("[iq_router:1173]\n");
+          // printf("[iq_router:1173]\n");
           if (f->GetUpdatedDest(_id) >= 0) {
-            printf("--> change dest\n");
+            // printf("--> change dest\n");
             f->UpdateDest(_id);
           }
 
@@ -2060,9 +2060,9 @@ void IQRouter::_SWAllocUpdate( )
 	assert(nf->vc == vc);
 	if(f->tail) {
 	  assert(nf->head);
-    printf("[iq_router:2071]\n");
+    // printf("[iq_router:2071]\n");
     if (f->GetUpdatedDest(_id) >= 0) {
-      printf("--> change dest\n");
+      // printf("--> change dest\n");
       f->UpdateDest(_id);
     }
 
@@ -2205,12 +2205,13 @@ void IQRouter::_SwitchUpdate( )
       if (matched_router_id >= 0 && (_id == f->last_dest || (f->last_dest != f->dest && is_latest_pos))) {
 
         // Match the router !!!
+      #ifdef TRACK_COMP_AIR
         cout  << "[FC*] rid: " << _id << " fid: " << f->id << "(" << f->src << "," << f->dest << "," << f->last_dest <<  ")" << " type: " << f->ca_info.type 
               << " [after-compute] data " << f->ca_info.data << " iter " << f->ca_info.iter_tag 
               << " reg_data " << _acc_data_reg << " reg_iter " << _acc_iter_tag_reg
               << " (packet " << f->pid << ")" << " from VC " << f->vc << " as tail " << f->tail
               << " match " << matched_router_id << endl;
-        
+      #endif
         // Decoded signals from flit
         int opcode = 0; // 0: +=; 1: -=; 2: *=; 3: /=
         int data_iter_tag = 0; // 0: operate _acc_data_reg; 1: operate _acc_iter_tag_reg
@@ -2333,10 +2334,12 @@ void IQRouter::_SwitchUpdate( )
             _acc_iter_op_reg = opcode;
           }
         }
+      #ifdef TRACK_COMP_AIR
         cout  << "[FC*] rid: " << _id << " flit " << f->id << " [after-compute] data " << f->ca_info.data
               << " iter " << f->ca_info.iter_tag << "(" << opcode << "," << write_reg << "," << data_iter_tag << ")"  << " reg_data " << _acc_data_reg 
               << " reg_iter " << _acc_iter_tag_reg 
               << " acc_iter_op_reg " << _acc_iter_op_reg << endl;
+      #endif
       } else {
         // cout  << "[FC] rid: " << _id << " flit " << f->id << "(" << f->src << "," << f->dest << "," << f->last_dest <<  ")" << " type: " << f->ca_info.type 
         //       << " (packet " << f->pid << ")"  << " from VC " << f->vc << " as tail " << f->tail << endl;
@@ -2364,8 +2367,8 @@ void IQRouter::_SwitchUpdate( )
       assert(_output_buffer[output].size()<=(size_t)_output_buffer_size+ _crossbar_delay* _output_speedup+( _output_speedup-1) ||_output_buffer_size==-1);
     } else {
       reduced_flits.push_back(f->id);
-      cout << GetSimTime() << " | " << FullName() << " | "
-          << "Dropping flit " << f->id << "." << endl;
+      // cout << GetSimTime() << " | " << FullName() << " | "
+      //     << "Dropping flit " << f->id << "." << endl;
     }
     _crossbar_flits.pop_front();
   }

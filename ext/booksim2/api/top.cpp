@@ -133,7 +133,7 @@ void booksim::inject_comp_air(  int type,   float data, int t_inject,
     int t_i = t_inject;
     int t_e = -1;
     int dst = src + x_0 + y_0 * edge_len;
-    cout << "[inject_comp_air] pkt " << src << " -> " << dst << endl;
+    // cout << "[inject_comp_air] pkt " << src << " -> " << dst << endl;
     if (dst < edge_len * edge_len && dst >= 0) {
         pkt comp_pkt(t_i, t_e, type, data, src, dst, pkg_size, iter_tag,
                 x_0, y_0, op_0, x_1, y_1, op_1, x_2, y_2, op_2, x_3, y_3, op_3);

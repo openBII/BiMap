@@ -41,6 +41,7 @@
 #include "compair.hpp"
 
 // #define TRACK_EJECT
+// #define TRACK_COMP_AIR
 
 extern "C" {
 #include "netrace/netrace.h"

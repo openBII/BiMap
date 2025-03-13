@@ -19061,12 +19061,28 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__charconv/to_chars_integral.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__charconv/to_chars_result.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__charconv/traits.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/calendar.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/concepts.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/convert_to_timespec.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/convert_to_tm.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/day.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/duration.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/file_clock.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/hh_mm_ss.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/high_resolution_clock.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/literals.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/month.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/month_weekday.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/monthday.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/statically_widen.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/steady_clock.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/system_clock.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/time_point.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/weekday.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/year.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/year_month.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/year_month_day.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/year_month_weekday.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__compare/common_comparison_category.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__compare/compare_partial_order_fallback.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__compare/compare_strong_order_fallback.h \
@@ -19105,6 +19121,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__condition_variable/condition_variable.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__config \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__config_site \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__cxxabi_config.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__debug_utils/randomize_range.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__debug_utils/strict_weak_ordering_check.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__exception/exception.h \
@@ -19112,6 +19129,22 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__exception/nested_exception.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__exception/operations.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__exception/terminate.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/copy_options.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/directory_entry.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/directory_iterator.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/directory_options.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/file_status.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/file_time_type.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/file_type.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/filesystem_error.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/operations.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/path.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/path_iterator.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/perm_options.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/perms.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/recursive_directory_iterator.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/space_info.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/u8path.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__format/buffer.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__format/concepts.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__format/enable_insertable.h \
@@ -19281,8 +19314,11 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__system_error/error_code.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__system_error/error_condition.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__system_error/system_error.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__thread/formatter.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__thread/id.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__thread/poll_with_backoff.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__thread/this_thread.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__thread/thread.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__threading_support \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__tree \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__tuple/make_tuple_types.h \
@@ -19464,6 +19500,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/cassert \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/cctype \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/cerrno \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/chrono \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/climits \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/clocale \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/cmath \
@@ -19479,12 +19516,18 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/ctype.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/cwchar \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/cwctype \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/cxxabi.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/deque \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/errno.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/exception \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/execution \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/filesystem \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/forward_list \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/fstream \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/functional \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/initializer_list \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/inttypes.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/iomanip \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/ios \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/iosfwd \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/iostream \
@@ -19492,16 +19535,20 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/iterator \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/limits \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/limits.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/list \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/locale \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/locale.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/map \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/math.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/memory \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/mutex \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/new \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/optional \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/ostream \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/queue \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/ratio \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/set \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/sstream \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/stack \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/stddef.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/stdexcept \
@@ -19513,10 +19560,13 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/string.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/string_view \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/system_error \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/thread \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/tuple \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/type_traits \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/typeindex \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/typeinfo \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/unordered_map \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/unordered_set \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/utility \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/variant \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/vector \
@@ -19525,6 +19575,8 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/wctype.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/ctype.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/errno.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/gethostuuid.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/inttypes.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/libkern/_OSByteOrder.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/libkern/arm/OSByteOrder.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/limits.h \
@@ -19566,6 +19618,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_pthread/_pthread_rwlockattr_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_pthread/_pthread_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_pthread/_pthread_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_select.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_symbol_aliasing.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_blkcnt_t.h \
@@ -19582,6 +19635,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_fd_set.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_fd_setsize.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_fd_zero.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_filesec_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_fsblkcnt_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_fsfilcnt_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_gid_t.h \
@@ -19603,8 +19657,10 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_null.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_off_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_pid_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_posix_vdisable.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_rsize_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_rune_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_s_ifmt.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_seek_set.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_sigaltstack.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_sigset_t.h \
@@ -19614,6 +19670,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_time_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_timespec.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_timeval.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_timeval64.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_u_char.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_u_int.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_u_int16_t.h \
@@ -19625,6 +19682,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_uid_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_uintptr_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_useconds_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_uuid_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_va_list.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_wchar_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_wint_t.h \
@@ -19633,17 +19691,23 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/errno.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/qos.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/resource.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/select.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/signal.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/stat.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/stdio.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/syslimits.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/time.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/unistd.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/wait.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/time.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/unistd.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/wchar.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/wctype.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/__wctype.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/_ctype.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/_inttypes.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/_stdio.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/_stdlib.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/_string.h \
@@ -19651,14 +19715,152 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp.o: /Us
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/_wchar.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/_wctype.h \
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/__stddef_max_align_t.h \
+  /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/inttypes.h \
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/limits.h \
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/stdarg.h \
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/stddef.h \
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/stdint.h \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim_config.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/buffer_state.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/channel.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/config_utils.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/credit.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/flit.hpp \
-  /Users/hongyi/Code/BiMap/ext/booksim2/src/outputset.hpp
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/flitchannel.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/globals.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/injection.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/netrace/netrace.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/networks/network.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/outputset.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/routers/router.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/stats.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/timed_module.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/traffic.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/workload.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/lockfree_queue.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/top.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/attr.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/buffer_info.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/cast.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/class.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/common.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/cpp_conduit.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/descr.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/exception_translation.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/init.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/internals.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/type_caster_base.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/typeid.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/value_and_holder.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/gil.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/gil_safe_call_once.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/options.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/pybind11.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/pytypes.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/typing.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/Python.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/abstract.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/bltinmodule.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/boolobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/bytearrayobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/bytesobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cellobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/ceval.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/classobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/code.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/codecs.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/compile.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/complexobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/context.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/abstract.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/bytearrayobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/bytesobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/ceval.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/code.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/dictobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/fileobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/fileutils.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/frameobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/import.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/initconfig.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/listobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/methodobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/object.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/objimpl.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/pyerrors.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/pylifecycle.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/pymem.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/pystate.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/sysmodule.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/traceback.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/tupleobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/unicodeobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/descrobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/dictobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/enumobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/eval.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/exports.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/fileobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/fileutils.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/floatobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/frameobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/funcobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/genericaliasobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/genobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/import.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/intrcheck.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/iterobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/listobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/longintrepr.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/longobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/memoryobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/methodobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/modsupport.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/moduleobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/namespaceobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/object.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/objimpl.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/odictobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/osmodule.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/patchlevel.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/picklebufobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyarena.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pycapsule.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyconfig.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyctype.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pydebug.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyerrors.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyfpe.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyframe.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyhash.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pylifecycle.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pymacconfig.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pymacro.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pymath.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pymem.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyport.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pystate.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pystrcmp.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pystrtod.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pythonrun.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pythread.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pytime.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/rangeobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/setobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/sliceobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/structseq.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/sysmodule.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/traceback.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/tracemalloc.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/tupleobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/typeslots.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/unicodeobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/warnings.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/weakrefobject.h
 
 CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/flitchannel.cpp.o: /Users/hongyi/Code/BiMap/ext/booksim2/src/flitchannel.cpp \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/Availability.h \
@@ -36320,12 +36522,28 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__charconv/to_chars_integral.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__charconv/to_chars_result.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__charconv/traits.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/calendar.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/concepts.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/convert_to_timespec.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/convert_to_tm.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/day.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/duration.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/file_clock.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/hh_mm_ss.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/high_resolution_clock.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/literals.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/month.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/month_weekday.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/monthday.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/statically_widen.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/steady_clock.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/system_clock.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/time_point.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/weekday.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/year.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/year_month.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/year_month_day.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__chrono/year_month_weekday.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__compare/common_comparison_category.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__compare/compare_partial_order_fallback.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__compare/compare_strong_order_fallback.h \
@@ -36364,6 +36582,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__condition_variable/condition_variable.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__config \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__config_site \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__cxxabi_config.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__debug_utils/randomize_range.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__debug_utils/strict_weak_ordering_check.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__exception/exception.h \
@@ -36371,6 +36590,22 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__exception/nested_exception.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__exception/operations.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__exception/terminate.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/copy_options.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/directory_entry.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/directory_iterator.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/directory_options.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/file_status.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/file_time_type.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/file_type.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/filesystem_error.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/operations.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/path.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/path_iterator.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/perm_options.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/perms.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/recursive_directory_iterator.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/space_info.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__filesystem/u8path.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__format/buffer.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__format/concepts.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__format/enable_insertable.h \
@@ -36540,8 +36775,11 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__system_error/error_code.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__system_error/error_condition.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__system_error/system_error.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__thread/formatter.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__thread/id.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__thread/poll_with_backoff.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__thread/this_thread.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__thread/thread.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__threading_support \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__tree \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/__tuple/make_tuple_types.h \
@@ -36723,6 +36961,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/cassert \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/cctype \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/cerrno \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/chrono \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/climits \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/clocale \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/cmath \
@@ -36738,12 +36977,18 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/ctype.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/cwchar \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/cwctype \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/cxxabi.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/deque \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/errno.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/exception \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/execution \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/filesystem \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/forward_list \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/fstream \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/functional \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/initializer_list \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/inttypes.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/iomanip \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/ios \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/iosfwd \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/iostream \
@@ -36751,6 +36996,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/iterator \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/limits \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/limits.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/list \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/locale \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/locale.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/map \
@@ -36763,6 +37009,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/queue \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/ratio \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/set \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/sstream \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/stack \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/stddef.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/stdexcept \
@@ -36774,10 +37021,13 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/string.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/string_view \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/system_error \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/thread \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/tuple \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/type_traits \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/typeindex \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/typeinfo \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/unordered_map \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/unordered_set \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/utility \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/variant \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/vector \
@@ -36786,6 +37036,8 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/c++/v1/wctype.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/ctype.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/errno.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/gethostuuid.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/inttypes.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/libkern/_OSByteOrder.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/libkern/arm/OSByteOrder.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/limits.h \
@@ -36827,6 +37079,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_pthread/_pthread_rwlockattr_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_pthread/_pthread_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_pthread/_pthread_types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_select.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_symbol_aliasing.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_blkcnt_t.h \
@@ -36843,6 +37096,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_fd_set.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_fd_setsize.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_fd_zero.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_filesec_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_fsblkcnt_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_fsfilcnt_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_gid_t.h \
@@ -36864,8 +37118,10 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_null.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_off_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_pid_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_posix_vdisable.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_rsize_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_rune_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_s_ifmt.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_seek_set.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_sigaltstack.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_sigset_t.h \
@@ -36875,6 +37131,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_time_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_timespec.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_timeval.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_timeval64.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_u_char.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_u_int.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_u_int16_t.h \
@@ -36886,6 +37143,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_uid_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_uintptr_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_useconds_t.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_uuid_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_va_list.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_wchar_t.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/_types/_wint_t.h \
@@ -36894,17 +37152,23 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/errno.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/qos.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/resource.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/select.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/signal.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/stat.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/stdio.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/syslimits.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/time.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/types.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/unistd.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/sys/wait.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/time.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/unistd.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/wchar.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/wctype.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/__wctype.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/_ctype.h \
+  /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/_inttypes.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/_stdio.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/_stdlib.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/_string.h \
@@ -36912,11 +37176,14 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/_wchar.h \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/xlocale/_wctype.h \
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/__stddef_max_align_t.h \
+  /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/inttypes.h \
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/limits.h \
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/stdarg.h \
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/stddef.h \
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/stdint.h \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim_config.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/buffer_state.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/channel.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/config_utils.hpp \
@@ -36924,8 +37191,10 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Users/hongyi/Code/BiMap/ext/booksim2/src/flit.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/flitchannel.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/globals.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/injection.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/misc_utils.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/netrace/netrace.h \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/networks/cmesh.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/networks/fattree.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/networks/kncube.hpp \
@@ -36936,7 +37205,130 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.cpp.o
   /Users/hongyi/Code/BiMap/ext/booksim2/src/random_utils.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/routefunc.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/routers/router.hpp \
-  /Users/hongyi/Code/BiMap/ext/booksim2/src/timed_module.hpp
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/stats.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/timed_module.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/traffic.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/workload.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/lockfree_queue.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/top.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/attr.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/buffer_info.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/cast.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/class.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/common.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/cpp_conduit.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/descr.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/exception_translation.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/init.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/internals.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/type_caster_base.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/typeid.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/detail/value_and_holder.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/gil.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/gil_safe_call_once.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/options.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/pybind11.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/pytypes.h \
+  /Users/hongyi/Code/BiMap/ext/booksim2/api/pybind11/include/pybind11/typing.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/Python.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/abstract.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/bltinmodule.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/boolobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/bytearrayobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/bytesobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cellobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/ceval.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/classobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/code.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/codecs.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/compile.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/complexobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/context.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/abstract.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/bytearrayobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/bytesobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/ceval.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/code.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/dictobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/fileobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/fileutils.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/frameobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/import.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/initconfig.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/listobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/methodobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/object.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/objimpl.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/pyerrors.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/pylifecycle.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/pymem.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/pystate.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/sysmodule.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/traceback.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/tupleobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/cpython/unicodeobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/descrobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/dictobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/enumobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/eval.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/exports.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/fileobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/fileutils.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/floatobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/frameobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/funcobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/genericaliasobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/genobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/import.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/intrcheck.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/iterobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/listobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/longintrepr.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/longobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/memoryobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/methodobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/modsupport.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/moduleobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/namespaceobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/object.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/objimpl.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/odictobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/osmodule.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/patchlevel.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/picklebufobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyarena.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pycapsule.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyconfig.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyctype.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pydebug.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyerrors.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyfpe.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyframe.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyhash.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pylifecycle.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pymacconfig.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pymacro.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pymath.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pymem.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pyport.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pystate.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pystrcmp.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pystrtod.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pythonrun.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pythread.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/pytime.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/rangeobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/setobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/sliceobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/structseq.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/sysmodule.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/traceback.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/tracemalloc.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/tupleobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/typeslots.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/unicodeobject.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/warnings.h \
+  /Users/hongyi/anaconda3/envs/bimap/include/python3.9/weakrefobject.h
 
 CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/routers/chaos_router.cpp.o: /Users/hongyi/Code/BiMap/ext/booksim2/src/routers/chaos_router.cpp \
   /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/Availability.h \
@@ -51063,8 +51455,6 @@ CMakeFiles/booksim2.dir/top.cpp.o: /Users/hongyi/Code/BiMap/ext/booksim2/api/top
 
 /Users/hongyi/Code/BiMap/ext/booksim2/src/simulatetrafficmanager.cpp:
 
-/Users/hongyi/Code/BiMap/ext/booksim2/src/workload.hpp:
-
 /Users/hongyi/Code/BiMap/ext/booksim2/src/routers/iq_router.cpp:
 
 /Users/hongyi/Code/BiMap/ext/booksim2/src/routers/chaos_router.hpp:
@@ -51104,6 +51494,8 @@ CMakeFiles/booksim2.dir/top.cpp.o: /Users/hongyi/Code/BiMap/ext/booksim2/api/top
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/secure/_strings.h:
 
 /Users/hongyi/Code/BiMap/ext/booksim2/src/injection.cpp:
+
+/Users/hongyi/Code/BiMap/ext/booksim2/src/workload.hpp:
 
 /Users/hongyi/Code/BiMap/ext/booksim2/src/flit.cpp:
 

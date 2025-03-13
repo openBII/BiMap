@@ -48,8 +48,7 @@
 #include "tree4.hpp"
 #include "qtree.hpp"
 #include "cmesh.hpp"
-
-
+#include "workload.hpp"
 
 map<string, tRoutingFunction> gRoutingFunctionMap;
 
@@ -558,6 +557,7 @@ void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
     int new_dest = f->GetUpdatedDest(r->GetID());
     int new_out_port = inject ? -1 : dor_next_mesh( r->GetID( ), new_dest );
     if (new_dest >= 0) {
+    #ifdef TRACK_COMP_AIR
       cout << "[dim_order_mesh*] cal flit " << f->id << " for router " << r->GetID() << endl;
       cout << "[dim_order_mesh*]"
          << " Router " << r->GetID()
@@ -570,7 +570,7 @@ void dim_order_mesh( const Router *r, const Flit *f, int in_channel, OutputSet *
 	       << " (input port " << in_channel
 	       << ", destination " << f->dest << ")"
 	       << "." << endl;
-      
+    #endif
       // Change the ports 
       out_port = new_out_port;
     } else {
