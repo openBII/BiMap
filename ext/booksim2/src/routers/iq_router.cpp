@@ -2293,6 +2293,38 @@ void IQRouter::_SwitchUpdate( )
           // p2p
         } else if (f->ca_info.type == 3) {
           // broadcast
+          int overall_intermediate_node = ((f->ca_info.op_0 >= 0) ? 1 : 0) + 
+                                          ((f->ca_info.op_1 >= 0) ? 1 : 0) + 
+                                          ((f->ca_info.op_2 >= 0) ? 1 : 0) + 
+                                          ((f->ca_info.op_3 >= 0) ? 1 : 0) ;
+          for (size_t i = matched_router_id + 2; i < overall_intermediate_node; i++) {
+            flit_gen_info flit_info;
+            flit_info.source = _id;
+            flit_info.size = 1;
+            flit_info.cl = f->cl;
+            flit_info.time = GetSimTime();
+            flit_info.ca_info.type = f->ca_info.type;
+            flit_info.ca_info.iter_tag = f->ca_info.iter_tag;
+            flit_info.ca_info.data = f->ca_info.data;
+            flit_info.ca_info.edge_len = f->ca_info.edge_len;
+            if (i == 2) {
+              // printf("-> to %d\n", _id + f->ca_info.x_2 + f->ca_info.y_2 * f->ca_info.edge_len);
+              flit_info.ca_info.x_0 = f->ca_info.x_2;
+              flit_info.ca_info.y_0 = f->ca_info.y_2;
+              flit_info.ca_info.op_0 = f->ca_info.op_2;
+              flit_info.ca_info.x_1 = f->ca_info.x_3;
+              flit_info.ca_info.y_1 = f->ca_info.y_3;
+              flit_info.ca_info.op_1 = f->ca_info.op_3;
+              flit_info.dest = flit_info.source + f->ca_info.x_2 + f->ca_info.y_2 * f->ca_info.edge_len;
+            } else {
+              // printf("-> to %d\n", _id + f->ca_info.x_3 + f->ca_info.y_3 * f->ca_info.edge_len);
+              flit_info.ca_info.x_0 = f->ca_info.x_3;
+              flit_info.ca_info.y_0 = f->ca_info.y_3;
+              flit_info.ca_info.op_0 = f->ca_info.op_3;
+              flit_info.dest = flit_info.source + f->ca_info.x_3 + f->ca_info.y_3 * f->ca_info.edge_len;
+            }
+            generated_flits.push_back(flit_info);
+          }
         } else if (f->ca_info.type == 4) {
           // Cover
           if (data_iter_tag == 0) _acc_data_reg = f->ca_info.data;
@@ -2319,15 +2351,6 @@ void IQRouter::_SwitchUpdate( )
       int const expanded_output = item.second.second.second;
       int const output = expanded_output / _output_speedup;
       assert((output >= 0) && (output < _outputs));
-
-      cout << GetSimTime() << " | " << FullName() << " | "
-          << "Completed crossbar traversal for flit " << f->id
-          << " from input " << input
-          << "." << (expanded_input % _input_speedup)
-          << " to output " << output
-          << "." << (expanded_output % _output_speedup)
-          << "." << endl;
-
       _switchMonitor->traversal(input, output, f) ;
       if(f->watch) {
         *gWatchOut << GetSimTime() << " | " << FullName() << " | "

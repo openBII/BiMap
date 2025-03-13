@@ -211,6 +211,20 @@ vector<int> Network::GetMergedFlits( )
   return merged_flits;
 }
 
+vector<flit_gen_info> Network::GetGeneratedFlits( )
+{
+  vector<flit_gen_info> g_flits;
+  for(deque<TimedModule *>::const_iterator iter = _timed_modules.begin();
+      iter != _timed_modules.end();
+      ++iter) {
+    for (size_t i = 0; i < (*iter)->generated_flits.size(); i++) {
+      g_flits.push_back((*iter)->generated_flits[i]);
+    }
+    (*iter)->generated_flits.clear();
+  }
+  return g_flits;
+}
+
 void Network::WriteOutputs( )
 {
   for(deque<TimedModule *>::const_iterator iter = _timed_modules.begin();

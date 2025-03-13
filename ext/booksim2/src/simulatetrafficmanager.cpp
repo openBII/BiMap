@@ -68,7 +68,7 @@ void SimulateTrafficManager::_Inject( )
         int const dest = wl->dest();
         int const size = wl->size();
         int const time = (_include_queuing == 1) ? wl->time() : _time;
-        int const pid = _GeneratePacketCompAir(source, dest, size, c, time);
+        int const pid = _GeneratePacketCompAir(source, dest, size, c, time, wl->ca_info());
         wl->inject(pid);
       } else {
 	      wl->defer();
@@ -215,16 +215,18 @@ bool SimulateTrafficManager::_StepSim( )
 {
   // Deadlock Detection
   bool flits_in_flight = false;
+
+  // Merged Flits Detection
   vector<int> merged_flits_vec;
   for ( int subnet = 0; subnet < _subnets; ++subnet ) {
-    // FIXME: (CompAir)
     vector<int> merged_flits_local = _net[subnet]->GetMergedFlits();
     for ( auto item : merged_flits_local )  merged_flits_vec.push_back(item);
   }
+
+  // Eliminate merged flits from _total_in_flight_flits & _measured_in_flight_flits
   for (int c = 0; c < _classes; ++c) {
     bool class_not_empty = !_total_in_flight_flits[c].empty();
     if (class_not_empty) {
-
       for ( auto merged_flit_id : merged_flits_vec ) {
         if (_total_in_flight_flits[c].find(merged_flit_id) != _total_in_flight_flits[c].end()) {
           cout << "[SimulateTrafficManager] Class " << c << " try to merge " << merged_flit_id << endl;
@@ -303,6 +305,22 @@ bool SimulateTrafficManager::_StepSim( )
     _net[subnet]->ReadInputs( );
   }
   
+  // Inject New Generated Flits
+  for ( int subnet = 0; subnet < _subnets; ++subnet ) {
+    for ( auto item : _net[subnet]->GetGeneratedFlits() ) {
+      
+      int source = item.source;
+      int dest = item.dest;
+      int size = item.size;
+      int cl = item.cl;
+      int time = item.time;
+      comp_air_info ca_info = item.ca_info;
+      int const pid = _GeneratePacketCompAir(source, dest, size, cl, time, ca_info);
+      printf("Inject flit %d (%d->%d) at %d (x,y,op)=(%d,%d,%d) => w[%d]\n", pid, source, dest, time, 
+                                                                    ca_info.x_0, ca_info.y_0, ca_info.op_0, cl);
+    }
+  }
+
   // Inject pkts
   if ( !_empty_network ) { _Inject(); }
 
@@ -538,7 +556,7 @@ bool SimulateTrafficManager::_StepSim( )
   return ejected;
 }
 
-int SimulateTrafficManager::_GeneratePacketCompAir( int source, int dest, int size, int cl, int time )
+int SimulateTrafficManager::_GeneratePacketCompAir( int source, int dest, int size, int cl, int time, comp_air_info ca_info )
 {
   assert(size > 0);
   assert((source >= 0) && (source < _nodes));
@@ -578,7 +596,6 @@ int SimulateTrafficManager::_GeneratePacketCompAir( int source, int dest, int si
     assert(_cur_id);
 
     Flit * f = Flit::New();
-
     f->id = id;
     f->pid = pid;
     f->watch = watch | (gWatchOut && (_flits_to_watch.count(f->id) > 0));
@@ -591,7 +608,7 @@ int SimulateTrafficManager::_GeneratePacketCompAir( int source, int dest, int si
     f->head = (i == 0);
     f->tail = (i == (size-1));
     f->vc  = -1;
-    f->ca_info = wl->ca_info();
+    f->ca_info = ca_info;
 
     switch(_pri_type) {
       case class_based:

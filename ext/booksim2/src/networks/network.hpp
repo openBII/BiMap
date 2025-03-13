@@ -98,6 +98,7 @@ public:
   void DumpChannelMap( ostream & os = cout, string const & prefix = "" ) const;
   void DumpNodeMap( ostream & os = cout, string const & prefix = "" ) const;
   vector<int> GetMergedFlits( );
+  vector<flit_gen_info> GetGeneratedFlits( );
 
   int NumChannels() const {return _channels;}
   const vector<FlitChannel *> & GetInject() {return _inject;}

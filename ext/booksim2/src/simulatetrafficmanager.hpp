@@ -53,7 +53,7 @@ protected:
   virtual bool _SingleSim_Stage();
 
   bool _Completed( );
-  int _GeneratePacketCompAir( int source, int dest, int size, int cl, int time );
+  int _GeneratePacketCompAir( int source, int dest, int size, int cl, int time, comp_air_info ca_info );
 
   virtual void _UpdateOverallStats( );
 

@@ -29,10 +29,21 @@
 #define _MODULE_HPP_
 
 #include "booksim.hpp"
+#include "compair.hpp"
 
 #include <string>
 #include <vector>
 #include <iostream>
+
+struct flit_gen_info
+{
+  int source;
+  int dest;
+  int size;
+  int cl;
+  int time;
+  comp_air_info ca_info;
+};
 
 class Module {
 private:
@@ -49,7 +60,7 @@ public:
 
   // For CompAir
   vector<int> reduced_flits;
-  vector<int> generated_flits;
+  vector<flit_gen_info> generated_flits;
 
   virtual ~Module( ) { }
   

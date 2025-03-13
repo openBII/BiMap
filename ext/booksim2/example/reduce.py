@@ -9,7 +9,6 @@ from ext.booksim2.api.booksim_sync import BookSim2Sync
 if __name__ == "__main__":
     sim = BookSim2Sync()
     # manual config (0~3 +-*/ | +8 write reg | +4 go iter)
-    
     # L0 (x, y)
     # - (0,0) (0,2) -> (0,0) # 2
     # - (2,0) (2,2) -> (2,0) # 2
@@ -45,5 +44,7 @@ if __name__ == "__main__":
     for i in range(2): 
         sim.run_step()
         print(sim.info)
-    # sim.run_step(end=True) # End
+    
+    # End
+    sim.run_step(end=True)
     

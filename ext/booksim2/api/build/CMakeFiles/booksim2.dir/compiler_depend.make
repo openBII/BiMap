@@ -894,6 +894,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/allo
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/separable_output_first.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/wavefront.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/config_utils.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp
 
@@ -1781,6 +1782,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/isli
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/allocator.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/islip.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/config_utils.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/random_utils.hpp
@@ -2669,6 +2671,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/loa.
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/allocator.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/loa.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/config_utils.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/random_utils.hpp
@@ -3557,6 +3560,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/maxs
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/allocator.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/maxsize.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/config_utils.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp
 
@@ -4444,6 +4448,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/pim.
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/allocator.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/pim.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/config_utils.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/random_utils.hpp
@@ -5332,6 +5337,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/sela
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/allocator.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/selalloc.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/config_utils.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/random_utils.hpp
@@ -6222,6 +6228,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/sepa
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/separable.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/arbiter.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/config_utils.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp
 
@@ -7111,6 +7118,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/sepa
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/separable_input_first.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/arbiter.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/config_utils.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp
 
@@ -8000,6 +8008,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/sepa
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/separable_output_first.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/arbiter.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/config_utils.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp
 
@@ -8887,6 +8896,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/wave
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/allocator.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/wavefront.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/config_utils.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp
 
@@ -9747,6 +9757,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/arbite
   /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/roundrobin_arb.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/tree_arb.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp
 
 CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/matrix_arb.cpp.o: /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/matrix_arb.cpp \
@@ -10604,6 +10615,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/matrix
   /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/arbiter.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/matrix_arb.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp
 
 CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/prio_arb.cpp.o: /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/prio_arb.cpp \
@@ -11489,6 +11501,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/prio_a
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/stdint.h \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/prio_arb.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/config_utils.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp
 
@@ -12347,6 +12360,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/roundr
   /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/arbiter.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/roundrobin_arb.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp
 
 CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/tree_arb.cpp.o: /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/tree_arb.cpp \
@@ -13205,6 +13219,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/tree_a
   /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/arbiter.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/arbiters/tree_arb.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp
 
 CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/batchtrafficmanager.cpp.o: /Users/hongyi/Code/BiMap/ext/booksim2/src/batchtrafficmanager.cpp \
@@ -23154,6 +23169,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/module.cpp.o: /
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/stddef.h \
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/stdint.h \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp
 
 CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/netrace/netrace.c.o: /Users/hongyi/Code/BiMap/ext/booksim2/src/netrace/netrace.c \
@@ -42684,6 +42700,7 @@ CMakeFiles/booksim2.dir/Users/hongyi/Code/BiMap/ext/booksim2/src/stats.cpp.o: /U
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/stddef.h \
   /Library/Developer/CommandLineTools/usr/lib/clang/15.0.0/include/stdint.h \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/booksim.hpp \
+  /Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/module.hpp \
   /Users/hongyi/Code/BiMap/ext/booksim2/src/stats.hpp
 
@@ -51260,8 +51277,6 @@ CMakeFiles/booksim2.dir/top.cpp.o: /Users/hongyi/Code/BiMap/ext/booksim2/api/top
 
 /Users/hongyi/Code/BiMap/ext/booksim2/src/flitchannel.hpp:
 
-/Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp:
-
 /Users/hongyi/Code/BiMap/ext/booksim2/src/batchtrafficmanager.hpp:
 
 /Library/Developer/CommandLineTools/SDKs/MacOSX14.4.sdk/usr/include/unistd.h:
@@ -51377,6 +51392,8 @@ CMakeFiles/booksim2.dir/top.cpp.o: /Users/hongyi/Code/BiMap/ext/booksim2/api/top
 /Users/hongyi/Code/BiMap/ext/booksim2/src/random_utils.hpp:
 
 /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/islip.cpp:
+
+/Users/hongyi/Code/BiMap/ext/booksim2/src/compair.hpp:
 
 /Users/hongyi/Code/BiMap/ext/booksim2/src/allocators/separable_output_first.hpp:
 
