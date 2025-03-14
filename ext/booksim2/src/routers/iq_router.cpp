@@ -2333,6 +2333,10 @@ void IQRouter::_SwitchUpdate( )
             _acc_iter_tag_reg = f->ca_info.data;
             _acc_iter_op_reg = opcode;
           }
+        } else if (f->ca_info.type == 5) {
+          // Read
+          if (data_iter_tag == 0) f->ca_info.data = _acc_data_reg;
+          else f->ca_info.data = _acc_iter_tag_reg;
         }
       #ifdef TRACK_COMP_AIR
         cout  << "[FC*] rid: " << _id << " flit " << f->id << " [after-compute] data " << f->ca_info.data

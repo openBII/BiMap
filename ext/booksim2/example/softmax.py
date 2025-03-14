@@ -7,7 +7,8 @@ import booksim2
 from ext.booksim2.api.booksim_sync import BookSim2Sync
 from ext.booksim2.example.broadcast import broadcast_comp_air
 from ext.booksim2.example.reduce import reduce_comp_air
-from ext.booksim2.example.exp import exp_comp_air, scalar_r_comp_air
+from ext.booksim2.example.exp import exp_comp_air
+from ext.booksim2.example.scalar import scalar_r_comp_air
 
 def softmax_comp_air(sim: BookSim2Sync):
     # e^s 8 num/bank * 16 banks * 32 devices
