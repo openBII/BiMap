@@ -8,16 +8,10 @@ from ext.booksim2.api.booksim_sync import BookSim2Sync
            
 def rope_rearrange_comp_air(sim: BookSim2Sync):
     """
-    Perform an exponential computation using computation air packets in the simulation.
+    Rearranges and injects computation air packets into the simulation in multiple steps.
 
     Args:
-        sim (BookSim2Sync): The simulation object.
-        x (float): The first input value.
-        y (float): The second input value.
-        iter_num (int): The number of iterations for the computation.
-
-    Returns:
-        str: The result token obtained from the simulation info.
+        sim (BookSim2Sync): The simulation object to which the computation air packets will be injected.
     """
     q = [1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8]
     
