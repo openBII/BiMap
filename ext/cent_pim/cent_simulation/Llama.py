@@ -595,6 +595,43 @@ class TransformerBlockLlama(TransformerBlock):
 
         return out_aim
     
+    def trace_only_gen(self):
+        bsz, _, _ = self.x.shape
+        seqlen = self.seqlen
+        total_banks = self.total_banks
+        if self.model_parallel:
+            FC_total_banks = total_banks * self.FC_devices
+            channels_required = self.num_channels
+        else:
+            FC_total_banks = total_banks
+            channels_required = self.channels_per_block
+        channel_multi_transformer_block_required = self.num_channels // channels_required * channels_required
+        channel_lst = [channel for channel in range(channel_multi_transformer_block_required)]
+        
+        # O GEMV
+        if self.trace_fc_kqvo:
+            self.Vector_Matrix_Mul_weight_pim_only_trace(channel_lst, self.wo_row_index, self.dim, self.dim, FC_total_banks, "breakdown_sa_weight")
+    
+    def trace_only_ffn(self):
+        bsz, _, _ = self.x.shape
+        seqlen = self.seqlen
+        total_banks = self.total_banks
+        if self.model_parallel:
+            FC_total_banks = total_banks * self.FC_devices
+            channels_required = self.num_channels
+        else:
+            FC_total_banks = total_banks
+            channels_required = self.channels_per_block
+        channel_multi_transformer_block_required = self.num_channels // channels_required * channels_required
+        channel_lst = [channel for channel in range(channel_multi_transformer_block_required)]
+
+        # w1 w3 FFN GEMV
+        ffn_dim = self.w1.shape[0]
+        if self.trace_fc_ffn:
+            self.Vector_Matrix_Mul_weight_af_pim_only_trace(channel_lst, self.w1_row_index, self.dim, ffn_dim, FC_total_banks, "breakdown_ffn_weight")
+            self.Vector_Matrix_Mul_weight_pim_only_trace(channel_lst, self.w3_row_index, self.dim, ffn_dim, FC_total_banks, "breakdown_ffn_weight")
+            self.Vector_Matrix_Mul_weight_pim_only_trace(channel_lst, self.w2_row_index, ffn_dim, self.dim, FC_total_banks, "breakdown_ffn_weight")
+            
     def trace_only(self):
         bsz, _, _ = self.x.shape
         seqlen = self.seqlen

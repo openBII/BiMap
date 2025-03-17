@@ -21,7 +21,6 @@ class TransformerBlock(PIM):
             self.trace_fc_kqvo = True
             self.trace_attention = True
             self.trace_softmax = True
-            self.trace_fc_kqvo = True
             self.trace_fc_ffn = True
             self.trace_activation = True
         else:
