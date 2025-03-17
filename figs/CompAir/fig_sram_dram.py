@@ -10,7 +10,7 @@ color = {
 }
 
 # 读取CSV文件
-data = pd.read_csv('figs/CompAir/SRAMvsDRAM.csv')
+data = pd.read_csv('figs/CompAir/SRAMvsDRAM.report')
 
 # 提取数据
 batch_sizes = data['BatchSize']
