@@ -63,16 +63,32 @@ def generate_structure_file(nf: int, nr: int, xbar_size: int = 256):
     net_array = [[net_tupe]]
     return net_array
 
-def PIM_Compute_API(nf: int, nr: int, xbar_size: int = 256):
+def PIM_Compute_API(nf: int, nr: int, xbar_size: int = 64):
+    
+    # Load Config
     SimConfig_path = os.path.join("ext/mnsim2/SimConfig.ini")
     structure_file = generate_structure_file(nf, nr, xbar_size)
     TCG_mapping = TCG(structure_file, SimConfig_path)
+    
+    # Latency
     __latency = Model_latency(NetStruct=structure_file, SimConfig_path=SimConfig_path, TCG_mapping=TCG_mapping)
     __latency.calculate_model_latency(mode=1)
+    
+    # Power
+    __power = Model_inference_power(NetStruct=structure_file, SimConfig_path=SimConfig_path, TCG_mapping=TCG_mapping)
+    __power.calculate_model_power()
+    
+    # Area
+    __area = Model_area(NetStruct=structure_file, SimConfig_path=SimConfig_path, TCG_mapping=TCG_mapping)
+    __area.model_area_output(1,1)
+    
+    # Final Latency
     final_latency = max(max(__latency.finish_time))
-    return final_latency
+    total_power = __power.arch_total_power
+    return final_latency, total_power
 
 # Main for Testing
 if __name__ == "__main__":
-    final_latency = PIM_Compute_API(1024, 768)
+    final_latency, total_power = PIM_Compute_API(512, 64)
     print("Final Latency: {} (ns)".format(final_latency))
+    print("Total Power: {}".format(total_power))

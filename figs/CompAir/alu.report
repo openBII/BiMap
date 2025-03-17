@@ -1,0 +1,177 @@
+============================================================================
+| DesignWare Building Block Library  |         Version         | Available |
+============================================================================
+| Basic DW Building Blocks           | U-2022.12-DWBB_202212.0 |     *     |
+| Licensed DW Building Blocks        | U-2022.12-DWBB_202212.0 |     *     |
+============================================================================
+
+====================================================================================================
+| Flow Information                                                                                 |
+----------------------------------------------------------------------------------------------------
+| Flow         | Design Compiler                                                                   |
+====================================================================================================
+| Design Information                                      | Value                                  |
+====================================================================================================
+| Number of Scenarios                                     | 0                                      |
+| Leaf Cell Count                                         | 153                                    |
+| Number of User Hierarchies                              | 4                                      |
+| Sequential Cell Count                                   | 33                                     |
+| Macro Count                                             | 0                                      |
+| Number of Power Domains                                 | 0                                      |
+| Number of Path Groups                                   | 2                                      |
+| Number of VT Class                                      | 1                                      |
+| Number of Clocks                                        | 1                                      |
+| Number of Dont Touch Cells                              | 49                                     |
+| Number of Dont Touch Nets                               | 0                                      |
+| Number of Size Only Cells                               | 0                                      |
+| Design with UPF Data                                    | false                                  |
+====================================================================================================
+
+Information: There are 8 potential problems in your design. Please run 'check_design' for more information. (LINT-99)
+
+
+
+  Beginning Pass 1 Mapping
+  ------------------------
+  Processing 'bf16_divider'
+  Processing 'bfloat16_Multiplier'
+  Processing 'bf16_multiplier'
+  Processing 'bf16_adder'
+  Processing 'CurryALU'
+
+  Updating timing information
+Information: Updating design information... (UID-85)
+
+  Beginning Implementation Selection
+  ----------------------------------
+  Allocating blocks in 'DW_div_uns_a_width20_b_width20'
+  Allocating blocks in 'DW_div_a_width20_b_width20_tc_mode0_rem_mode1'
+  Processing 'bf16_divider_DW_div_uns_0'
+  Mapping 'DW01_add'
+  Mapping 'DW01_add'
+  Mapping 'DW01_add'
+  Mapping 'DW01_add'
+  Mapping 'bfloat16_Multiplier_DW_cmp_0'
+  Mapping 'bfloat16_Multiplier_DW_cmp_1'
+  Processing 'bfloat16_Multiplier_DW01_sub_0'
+  Processing 'bfloat16_Multiplier_DW01_add_0'
+  Processing 'bf16_adder_DW01_inc_0'
+  Processing 'bf16_adder_DW01_sub_0_DW01_sub_1'
+  Processing 'bf16_adder_DW01_sub_1_DW01_sub_2'
+  Processing 'bf16_adder_DW01_add_0_DW01_add_1'
+  Mapping 'DW_rightsh'
+Information: Added key list 'DesignWare' to design 'bf16_adder'. (DDB-72)
+  Mapping 'DW_rightsh'
+  Mapping 'bf16_adder_DW_cmp_0'
+  Processing 'bf16_adder_DW01_sub_2_DW01_sub_3'
+  Processing 'bf16_adder_DW01_sub_3_DW01_sub_4'
+  Processing 'bf16_adder_DW01_cmp6_0'
+  Building model 'DW01_add_width5' (rpl)
+  Processing 'DW01_add_width5'
+  Building model 'DW01_sub_width5' (rpl)
+  Processing 'DW01_sub_width5'
+  Processing 'bf16_divider_DW01_sub_0_DW01_sub_5'
+  Processing 'bf16_divider_DW01_add_5_DW01_add_2'
+  Mapping 'bfloat16_Multiplier_DW_mult_uns_0'
+Information: Command 'do_operand_isolation' is obsolete and is being ignored.  Please refer to the replacement command 'set power_enable_datapath_gating true' instead. (INFO-118)
+
+  Beginning Mapping Optimizations  (Medium effort)
+  -------------------------------
+Information: Added key list 'DesignWare' to design 'bfloat16_Multiplier'. (DDB-72)
+Information: Added key list 'DesignWare' to design 'bf16_divider'. (DDB-72)
+Information: Command 'do_operand_isolation' is obsolete and is being ignored.  Please refer to the replacement command 'set power_enable_datapath_gating true' instead. (INFO-118)
+
+                                  TOTAL                                      
+   ELAPSED            WORST NEG   SETUP    DESIGN                            
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT         
+  --------- --------- --------- --------- --------- -------------------------
+    0:00:04     907.6      0.00       0.0       0.0                          
+    0:00:04     907.6      0.00       0.0       0.0                          
+    0:00:04     907.6      0.00       0.0       0.0                          
+    0:00:04     907.6      0.00       0.0       0.0                          
+    0:00:04     907.6      0.00       0.0       0.0                          
+    0:00:04     474.8      0.00       0.0       0.0                          
+    0:00:04     474.8      0.00       0.0       0.0                          
+    0:00:04     474.8      0.00       0.0       0.0                          
+    0:00:04     474.8      0.00       0.0       0.0                          
+    0:00:04     474.8      0.00       0.0       0.0                          
+    0:00:04     474.8      0.00       0.0       0.0                          
+    0:00:04     474.8      0.00       0.0       0.0                          
+    0:00:04     474.8      0.00       0.0       0.0                          
+
+
+
+  Beginning Delay Optimization Phase
+  ----------------------------------
+
+                                  TOTAL                                      
+   ELAPSED            WORST NEG   SETUP    DESIGN                            
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT         
+  --------- --------- --------- --------- --------- -------------------------
+    0:00:04     474.8      0.00       0.0       0.0                          
+    0:00:04     474.8      0.00       0.0       0.0                          
+    0:00:05     474.6      0.00       0.0       0.0                          
+
+
+  Beginning Area-Recovery Phase  (cleanup)
+  -----------------------------
+
+                                  TOTAL                                      
+   ELAPSED            WORST NEG   SETUP    DESIGN                            
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT         
+  --------- --------- --------- --------- --------- -------------------------
+    0:00:05     474.6      0.00       0.0       0.0                          
+    0:00:05     474.6      0.00       0.0       0.0                          
+    0:00:05     474.0      0.00       0.0       0.0                          
+    0:00:05     474.0      0.00       0.0       0.0                          
+    0:00:05     474.0      0.00       0.0       0.0                          
+    0:00:05     474.0      0.00       0.0       0.0                          
+    0:00:05     474.0      0.00       0.0       0.0                          
+    0:00:05     473.9      0.00       0.0       0.0                          
+    0:00:05     473.9      0.00       0.0       0.0                          
+    0:00:05     473.9      0.00       0.0       0.0                          
+    0:00:05     473.9      0.00       0.0       0.0                          
+    0:00:05     473.9      0.00       0.0       0.0                          
+    0:00:05     473.9      0.00       0.0       0.0                          
+    0:00:05     471.9      0.00       0.0       0.0                          
+Loading db file '/projects/pdk/umc28/stdcell/DesignWare_logic_libs/umc28nlph/35hd/hdl/lvt/3.00a/liberty/logic_synth/um28nphllogl35hdl140f_ssgwc0p81v0c.db'
+
+
+Note: Symbol # after min delay cost means estimated hold TNS across all active scenarios 
+
+
+  Optimization Complete
+  ---------------------
+1
+# Area
+report_area
+ 
+****************************************
+Report : area
+Design : CurryALU
+Version: U-2022.12-SP3
+Date   : Mon Mar 17 11:00:55 2025
+****************************************
+
+Information: Updating design information... (UID-85)
+Library(s) Used:
+
+    um28nphllogl35hdl140f_ssgwc0p81v0c (File: /projects/pdk/umc28/stdcell/DesignWare_logic_libs/umc28nlph/35hd/hdl/lvt/3.00a/liberty/logic_synth/um28nphllogl35hdl140f_ssgwc0p81v0c.db)
+
+Number of ports:                          445
+Number of nets:                          1053
+Number of cells:                          593
+Number of combinational cells:            548
+Number of sequential cells:                33
+Number of macros/black boxes:               0
+Number of buf/inv:                        104
+Number of references:                      20
+
+Combinational area:                411.264002
+Buf/Inv area:                       27.090000
+Noncombinational area:              60.606001
+Macro/Black Box area:                0.000000
+Net Interconnect area:      undefined  (Wire load has zero net area)
+
+Total cell area:                   471.870002
+Total area:                 undefined

@@ -1,0 +1,430 @@
+dc_shell> elaborate SmartRouter
+Loading db file '/home/eda_tool/synopsys/syn/U-2022.12-SP3/libraries/syn/gtech.db'
+Loading db file '/home/eda_tool/synopsys/syn/U-2022.12-SP3/libraries/syn/standard.sldb'
+  Loading link library 'um28nphllogl35hdl140f_ssgwc0p81v0c'
+  Loading link library 'gtech'
+Running PRESTO HDLC
+Warning:  /projects/lhy/tjroc/src/SmartRouter.v:40: signed to unsigned conversion occurs. (VER-318)
+Warning:  /projects/lhy/tjroc/src/SmartRouter.v:47: signed to unsigned conversion occurs. (VER-318)
+Warning:  /projects/lhy/tjroc/src/SmartRouter.v:57: signed to unsigned conversion occurs. (VER-318)
+Warning:  /projects/lhy/tjroc/src/SmartRouter.v:97: signed to unsigned conversion occurs. (VER-318)
+
+Inferred memory devices in process
+	in routine SmartRouter line 230 in file
+		'/projects/lhy/tjroc/src/SmartRouter.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+|     s2_data_reg     | Flip-flop |  160  |  Y  | N  | N  | N  | N  | N  | N  |
+|    s2_sa_mat_reg    | Flip-flop |  25   |  Y  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+Presto compilation completed successfully. (SmartRouter)
+Loading db file '/home/eda_tool/synopsys/syn/U-2022.12-SP3/libraries/syn/dw_foundation.sldb'
+Elaborated 1 design.
+Current design is now 'SmartRouter'.
+Information: Building the design 'BufferWrArb' instantiated from design 'SmartRouter' with
+	the parameters "DataWidth=32'h00000020,FifoDepth=32'h00000004,VCNumber=32'h00000004". (HDL-193)
+Warning:  /projects/lhy/tjroc/src/BufferWrArb.v:33: signed to unsigned conversion occurs. (VER-318)
+Warning:  /projects/lhy/tjroc/src/BufferWrArb.v:105: signed to unsigned conversion occurs. (VER-318)
+Warning:  /projects/lhy/tjroc/src/BufferWrArb.v:138: signed to unsigned conversion occurs. (VER-318)
+Warning:  /projects/lhy/tjroc/src/BufferWrArb.v:139: signed to unsigned conversion occurs. (VER-318)
+
+Inferred memory devices in process
+	in routine BufferWrArb_00000020_00000004_00000004 line 75 in file
+		'/projects/lhy/tjroc/src/BufferWrArb.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+| last_push_reqs_reg  | Flip-flop |   4   |  Y  | N  | N  | N  | N  | N  | N  |
+|  last_is_tail_reg   | Flip-flop |   1   |  N  | N  | N  | N  | N  | N  | N  |
+|      state_reg      | Flip-flop |   1   |  N  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+
+Inferred memory devices in process
+	in routine BufferWrArb_00000020_00000004_00000004 line 122 in file
+		'/projects/lhy/tjroc/src/BufferWrArb.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+|    cur_head_reg     | Flip-flop |  128  |  Y  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+Presto compilation completed successfully. (BufferWrArb_00000020_00000004_00000004)
+Information: Building the design 'BypassMux' instantiated from design 'SmartRouter' with
+	the parameters "DataWidth=32'h00000020,VCNumber=32'h00000004". (HDL-193)
+
+Inferred memory devices in process
+	in routine BypassMux_00000020_00000004 line 50 in file
+		'/projects/lhy/tjroc/src/BypassMux.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+|   bypass_head_reg   | Flip-flop |  32   |  Y  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+Presto compilation completed successfully. (BypassMux_00000020_00000004)
+Information: Building the design 'VcAllocNby' instantiated from design 'SmartRouter' with
+	the parameters "VCNumber=32'h00000004". (HDL-193)
+Warning:  /projects/lhy/tjroc/src/VcAllocNby.v:43: signed to unsigned conversion occurs. (VER-318)
+
+Inferred memory devices in process
+	in routine VcAllocNby_00000004 line 49 in file
+		'/projects/lhy/tjroc/src/VcAllocNby.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+|   reg_next_vc_reg   | Flip-flop |  20   |  Y  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+Presto compilation completed successfully. (VcAllocNby_00000004)
+Information: Building the design 'LkAheadConflict' instantiated from design 'SmartRouter' with
+	the parameters "DataWidth=32'h00000020,LkAheadWidth=32'h0000000e". (HDL-193)
+
+Inferred memory devices in process
+	in routine LkAheadConflict_00000020_0000000e line 40 in file
+		'/projects/lhy/tjroc/src/LkAheadConflict.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+|   reg_bypass_reg    | Flip-flop |   5   |  Y  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+Presto compilation completed successfully. (LkAheadConflict_00000020_0000000e)
+Information: Building the design 'LkAheadRtrComp'. (HDL-193)
+Presto compilation completed successfully. (LkAheadRtrComp)
+Information: Building the design 'SwAlloc'. (HDL-193)
+Presto compilation completed successfully. (SwAlloc)
+Information: Building the design 'LkAheadGen' instantiated from design 'SmartRouter' with
+	the parameters "DataWidth=32'h00000020,LkAheadWidth=32'h0000000e". (HDL-193)
+
+Inferred memory devices in process
+	in routine LkAheadGen_00000020_0000000e line 52 in file
+		'/projects/lhy/tjroc/src/LkAheadGen.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+| reg_lookahead_e_reg | Flip-flop |  14   |  Y  | N  | N  | N  | N  | N  | N  |
+| reg_lookahead_s_reg | Flip-flop |  14   |  Y  | N  | N  | N  | N  | N  | N  |
+| reg_lookahead_l_reg | Flip-flop |  14   |  Y  | N  | N  | N  | N  | N  | N  |
+| reg_lookahead_n_reg | Flip-flop |  14   |  Y  | N  | N  | N  | N  | N  | N  |
+| reg_lookahead_w_reg | Flip-flop |  14   |  Y  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+Presto compilation completed successfully. (LkAheadGen_00000020_0000000e)
+Information: Building the design 'SmartSwTrav' instantiated from design 'SmartRouter' with
+	the parameters "DataWidth=32'h00000020,VCNumber=32'h00000004". (HDL-193)
+
+Inferred memory devices in process
+	in routine SmartSwTrav_00000020_00000004 line 105 in file
+		'/projects/lhy/tjroc/src/SwTrav.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+|   reg_data_e_reg    | Flip-flop |  32   |  Y  | N  | N  | N  | N  | N  | N  |
+|   reg_data_s_reg    | Flip-flop |  32   |  Y  | N  | N  | N  | N  | N  | N  |
+|   reg_data_l_reg    | Flip-flop |  32   |  Y  | N  | N  | N  | N  | N  | N  |
+|   reg_data_n_reg    | Flip-flop |  32   |  Y  | N  | N  | N  | N  | N  | N  |
+|   reg_data_w_reg    | Flip-flop |  32   |  Y  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+Presto compilation completed successfully. (SmartSwTrav_00000020_00000004)
+Information: Building the design 'RoundRobinArbitor' instantiated from design 'BufferWrArb_00000020_00000004_00000004' with
+	the parameters "N=32'h00000004". (HDL-193)
+
+Inferred memory devices in process
+	in routine RoundRobinArbitor_00000004 line 35 in file
+		'/projects/lhy/tjroc/src/Arbitor.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+|   last_state_reg    | Flip-flop |   4   |  Y  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+Presto compilation completed successfully. (RoundRobinArbitor_00000004)
+Information: Building the design 'SyncFifo' instantiated from design 'BufferWrArb_00000020_00000004_00000004' with
+	the parameters "width=32'h00000020,depth=32'h00000004". (HDL-193)
+Warning:  /projects/lhy/tjroc/src/SyncFifo.v:96: signed to unsigned conversion occurs. (VER-318)
+
+Inferred memory devices in process
+	in routine SyncFifo_00000020_00000004 line 48 in file
+		'/projects/lhy/tjroc/src/SyncFifo.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+|    write_ptr_reg    | Flip-flop |   2   |  Y  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+
+Inferred memory devices in process
+	in routine SyncFifo_00000020_00000004 line 58 in file
+		'/projects/lhy/tjroc/src/SyncFifo.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+|    read_ptr_reg     | Flip-flop |   2   |  Y  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+
+Inferred memory devices in process
+	in routine SyncFifo_00000020_00000004 line 68 in file
+		'/projects/lhy/tjroc/src/SyncFifo.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+|    fill_cnt_reg     | Flip-flop |   2   |  Y  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+
+Inferred memory devices in process
+	in routine SyncFifo_00000020_00000004 line 82 in file
+		'/projects/lhy/tjroc/src/SyncFifo.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+|      empty_reg      | Flip-flop |   1   |  N  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+
+Inferred memory devices in process
+	in routine SyncFifo_00000020_00000004 line 97 in file
+		'/projects/lhy/tjroc/src/SyncFifo.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+|       mem_reg       | Flip-flop |  128  |  Y  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+Statistics for MUX_OPs
+===================================================================
+|       block name/line         | Inputs | Outputs | # sel inputs |
+===================================================================
+| SyncFifo_00000020_00000004/44 |   4    |   32    |      2       |
+===================================================================
+Presto compilation completed successfully. (SyncFifo_00000020_00000004)
+Information: Building the design 'SeparableAllocator' instantiated from design 'SwAlloc' with
+	the parameters "N=5,M=5". (HDL-193)
+Presto compilation completed successfully. (SeparableAllocator_N5_M5)
+Information: Building the design 'RoundRobinArbitor' instantiated from design 'SeparableAllocator_N5_M5' with
+	the parameters "N=5". (HDL-193)
+
+Inferred memory devices in process
+	in routine RoundRobinArbitor_N5 line 35 in file
+		'/projects/lhy/tjroc/src/Arbitor.v'.
+===============================================================================
+|    Register Name    |   Type    | Width | Bus | MB | AR | AS | SR | SS | ST |
+===============================================================================
+|   last_state_reg    | Flip-flop |   5   |  Y  | N  | N  | N  | N  | N  | N  |
+===============================================================================
+Presto compilation completed successfully. (RoundRobinArbitor_N5)
+1
+dc_shell> create_clock -name clk -period 10 [get_ports clk]
+1
+dc_shell> set_input_delay -clock clk 2 [all_inputs]
+1
+dc_shell> set_output_delay -clock clk 2 [all_outputs]
+1
+dc_shell> compile
+Warning: The following synthetic libraries should be added to 
+	the list of link libraries: 
+	'dw_foundation.sldb'. (UISN-26)
+Information: Checking out the license 'DesignWare'. (SEC-104)
+Information: Evaluating DesignWare library utilization. (UISN-27)
+
+============================================================================
+| DesignWare Building Block Library  |         Version         | Available |
+============================================================================
+| Basic DW Building Blocks           | U-2022.12-DWBB_202212.0 |     *     |
+| Licensed DW Building Blocks        | U-2022.12-DWBB_202212.0 |     *     |
+============================================================================
+
+====================================================================================================
+| Flow Information                                                                                 |
+----------------------------------------------------------------------------------------------------
+| Flow         | Design Compiler                                                                   |
+====================================================================================================
+| Design Information                                      | Value                                  |
+====================================================================================================
+| Number of Scenarios                                     | 0                                      |
+| Leaf Cell Count                                         | 9866                                   |
+| Number of User Hierarchies                              | 61                                     |
+| Sequential Cell Count                                   | 4060                                   |
+| Macro Count                                             | 0                                      |
+| Number of Power Domains                                 | 0                                      |
+| Number of Path Groups                                   | 2                                      |
+| Number of VT Class                                      | 1                                      |
+| Number of Clocks                                        | 1                                      |
+| Number of Dont Touch Cells                              | 1380                                   |
+| Number of Dont Touch Nets                               | 0                                      |
+| Number of Size Only Cells                               | 0                                      |
+| Design with UPF Data                                    | false                                  |
+====================================================================================================
+
+Information: There are 114 potential problems in your design. Please run 'check_design' for more information. (LINT-99)
+
+
+
+  Beginning Pass 1 Mapping
+  ------------------------
+  Processing 'SmartSwTrav_00000020_00000004'
+  Processing 'LkAheadGen_00000020_0000000e'
+Information: The register 'reg_lookahead_e_reg[13]' is a constant and will be removed. (OPT-1206)
+Information: The register 'reg_lookahead_e_reg[12]' is a constant and will be removed. (OPT-1206)
+Information: The register 'reg_lookahead_s_reg[13]' is a constant and will be removed. (OPT-1206)
+Information: The register 'reg_lookahead_s_reg[12]' is a constant and will be removed. (OPT-1206)
+Information: The register 'reg_lookahead_l_reg[13]' is a constant and will be removed. (OPT-1206)
+Information: The register 'reg_lookahead_l_reg[12]' is a constant and will be removed. (OPT-1206)
+Information: The register 'reg_lookahead_n_reg[13]' is a constant and will be removed. (OPT-1206)
+Information: The register 'reg_lookahead_n_reg[12]' is a constant and will be removed. (OPT-1206)
+Information: The register 'reg_lookahead_w_reg[13]' is a constant and will be removed. (OPT-1206)
+Information: The register 'reg_lookahead_w_reg[12]' is a constant and will be removed. (OPT-1206)
+  Processing 'RoundRobinArbitor_N5_0'
+  Processing 'SeparableAllocator_N5_M5'
+  Processing 'SwAlloc'
+  Processing 'LkAheadRtrComp_0'
+  Processing 'LkAheadConflict_00000020_0000000e'
+  Processing 'RoundRobinArbitor_00000004_0'
+  Processing 'VcAllocNby_00000004'
+  Processing 'BypassMux_00000020_00000004_0'
+  Processing 'SyncFifo_00000020_00000004_0'
+  Processing 'BufferWrArb_00000020_00000004_00000004_0'
+  Processing 'SmartRouter'
+
+  Updating timing information
+Information: Updating design information... (UID-85)
+
+  Beginning Implementation Selection
+  ----------------------------------
+  Processing 'RoundRobinArbitor_N5_1_DW01_sub_0'
+  Processing 'RoundRobinArbitor_N5_2_DW01_sub_0_DW01_sub_1'
+  Processing 'RoundRobinArbitor_N5_3_DW01_sub_0_DW01_sub_2'
+  Processing 'RoundRobinArbitor_N5_4_DW01_sub_0_DW01_sub_3'
+  Processing 'RoundRobinArbitor_N5_5_DW01_sub_0_DW01_sub_4'
+  Processing 'RoundRobinArbitor_N5_6_DW01_sub_0_DW01_sub_5'
+  Processing 'RoundRobinArbitor_N5_7_DW01_sub_0_DW01_sub_6'
+  Processing 'RoundRobinArbitor_N5_8_DW01_sub_0_DW01_sub_7'
+  Processing 'RoundRobinArbitor_N5_9_DW01_sub_0_DW01_sub_8'
+  Processing 'RoundRobinArbitor_N5_0_DW01_sub_0_DW01_sub_9'
+  Processing 'LkAheadRtrComp_1_DW01_dec_0_DW01_dec_1'
+  Processing 'LkAheadRtrComp_1_DW01_dec_1_DW01_dec_2'
+  Processing 'LkAheadRtrComp_2_DW01_dec_0_DW01_dec_3'
+  Processing 'LkAheadRtrComp_2_DW01_dec_1_DW01_dec_4'
+  Processing 'LkAheadRtrComp_3_DW01_dec_0_DW01_dec_5'
+  Processing 'LkAheadRtrComp_3_DW01_dec_1_DW01_dec_6'
+  Processing 'LkAheadRtrComp_4_DW01_dec_0_DW01_dec_7'
+  Processing 'LkAheadRtrComp_4_DW01_dec_1_DW01_dec_8'
+  Processing 'LkAheadRtrComp_0_DW01_dec_0_DW01_dec_9'
+  Processing 'LkAheadRtrComp_0_DW01_dec_1_DW01_dec_10'
+  Processing 'RoundRobinArbitor_00000004_1_DW01_sub_0_DW01_sub_10'
+  Processing 'RoundRobinArbitor_00000004_2_DW01_sub_0_DW01_sub_11'
+  Processing 'RoundRobinArbitor_00000004_3_DW01_sub_0_DW01_sub_12'
+  Processing 'RoundRobinArbitor_00000004_4_DW01_sub_0_DW01_sub_13'
+  Processing 'RoundRobinArbitor_00000004_5_DW01_sub_0_DW01_sub_14'
+  Processing 'RoundRobinArbitor_00000004_6_DW01_sub_0_DW01_sub_15'
+  Processing 'RoundRobinArbitor_00000004_7_DW01_sub_0_DW01_sub_16'
+  Processing 'RoundRobinArbitor_00000004_8_DW01_sub_0_DW01_sub_17'
+  Processing 'RoundRobinArbitor_00000004_9_DW01_sub_0_DW01_sub_18'
+  Processing 'RoundRobinArbitor_00000004_0_DW01_sub_0_DW01_sub_19'
+Information: Command 'do_operand_isolation' is obsolete and is being ignored.  Please refer to the replacement command 'set power_enable_datapath_gating true' instead. (INFO-118)
+
+  Beginning Mapping Optimizations  (Medium effort)
+  -------------------------------
+
+                                  TOTAL                                      
+   ELAPSED            WORST NEG   SETUP    DESIGN                            
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT         
+  --------- --------- --------- --------- --------- -------------------------
+    0:00:11   29839.8      0.00       0.0      35.6                          
+    0:00:11   29839.8      0.00       0.0      35.6                          
+Information: Command 'do_operand_isolation' is obsolete and is being ignored.  Please refer to the replacement command 'set power_enable_datapath_gating true' instead. (INFO-118)
+    0:00:15   34370.3      0.00       0.0      35.6                          
+    0:00:15   34370.3      0.00       0.0      35.6                          
+    0:00:15   34370.3      0.00       0.0      35.6                          
+    0:00:16   34370.3      0.00       0.0      35.6                          
+    0:00:16   34370.3      0.00       0.0      35.6                          
+    0:00:22   15071.2      0.00       0.0      35.6                          
+    0:00:23   15071.1      0.00       0.0      35.6                          
+    0:00:25   15071.1      0.00       0.0      35.6                          
+    0:00:25   15071.1      0.00       0.0      35.6                          
+    0:00:25   15071.1      0.00       0.0      35.6                          
+    0:00:25   15071.1      0.00       0.0      35.6                          
+    0:00:25   15071.1      0.00       0.0      35.6                          
+    0:00:25   15071.1      0.00       0.0      35.6                          
+    0:00:25   15071.1      0.00       0.0      35.6                          
+
+
+
+  Beginning Delay Optimization Phase
+  ----------------------------------
+
+                                  TOTAL                                      
+   ELAPSED            WORST NEG   SETUP    DESIGN                            
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT         
+  --------- --------- --------- --------- --------- -------------------------
+    0:00:25   15071.1      0.00       0.0      35.6                          
+    0:00:25   15071.1      0.00       0.0      35.6                          
+    0:00:26   15046.0      0.00       0.0      35.6                          
+
+
+  Beginning Design Rule Fixing  (min_capacitance)
+  ----------------------------
+
+                                  TOTAL                                      
+   ELAPSED            WORST NEG   SETUP    DESIGN                            
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT         
+  --------- --------- --------- --------- --------- -------------------------
+    0:00:26   15046.0      0.00       0.0      35.6                          
+
+
+  Beginning Area-Recovery Phase  (cleanup)
+  -----------------------------
+
+                                  TOTAL                                      
+   ELAPSED            WORST NEG   SETUP    DESIGN                            
+    TIME      AREA      SLACK     COST    RULE COST         ENDPOINT         
+  --------- --------- --------- --------- --------- -------------------------
+    0:00:26   15046.0      0.00       0.0      35.6                          
+    0:00:26   15046.0      0.00       0.0      35.6                          
+    0:00:27   15023.2      0.00       0.0      35.6                          
+    0:00:28   15014.5      0.00       0.0      35.6                          
+    0:00:28   15012.5      0.00       0.0      35.6                          
+    0:00:28   15010.5      0.00       0.0      35.6                          
+    0:00:28   15008.1      0.00       0.0      35.6                          
+    0:00:28   15008.1      0.00       0.0      35.6                          
+    0:00:28   15008.1      0.00       0.0      35.6                          
+    0:00:28   15008.1      0.00       0.0      35.6                          
+    0:00:28   15008.1      0.00       0.0      35.6                          
+    0:00:28   15008.1      0.00       0.0      35.6                          
+    0:00:28   15008.1      0.00       0.0      35.6                          
+    0:00:28   15008.1      0.00       0.0      35.6                          
+    0:00:28   14999.0      0.00       0.0      35.6                          
+Loading db file '/projects/pdk/umc28/stdcell/DesignWare_logic_libs/umc28nlph/35hd/hdl/lvt/3.00a/liberty/logic_synth/um28nphllogl35hdl140f_ssgwc0p81v0c.db'
+
+
+Note: Symbol # after min delay cost means estimated hold TNS across all active scenarios 
+
+
+  Optimization Complete
+  ---------------------
+Warning: Design 'SmartRouter' contains 1 high-fanout nets. A fanout number of 1000 will be used for delay calculations involving these nets. (TIM-134)
+     Net 'SA_U/AllocU/genblk1[1].ArbN/clk': 4050 load(s), 1 driver(s)
+1
+dc_shell> report_area
+ 
+****************************************
+Report : area
+Design : SmartRouter
+Version: U-2022.12-SP3
+Date   : Mon Mar 17 11:42:39 2025
+****************************************
+
+Information: Updating design information... (UID-85)
+Warning: Design 'SmartRouter' contains 1 high-fanout nets. A fanout number of 1000 will be used for delay calculations involving these nets. (TIM-134)
+Library(s) Used:
+
+    um28nphllogl35hdl140f_ssgwc0p81v0c (File: /projects/pdk/umc28/stdcell/DesignWare_logic_libs/umc28nlph/35hd/hdl/lvt/3.00a/liberty/logic_synth/um28nphllogl35hdl140f_ssgwc0p81v0c.db)
+
+Number of ports:                         4599
+Number of nets:                         20367
+Number of cells:                        16174
+Number of combinational cells:          12063
+Number of sequential cells:              4050
+Number of macros/black boxes:               0
+Number of buf/inv:                       3971
+Number of references:                      35
+
+Combinational area:               7345.799946
+Buf/Inv area:                     1184.021997
+Noncombinational area:            7653.239955
+Macro/Black Box area:                0.000000
+Net Interconnect area:      undefined  (Wire load has zero net area)
+
+Total cell area:                 14999.039901
+Total area:                 undefined
