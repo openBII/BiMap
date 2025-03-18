@@ -9,6 +9,12 @@ color = {
     "SRAM_PIM_PIPE": "#9400d3",
 }
 
+hatch = {
+    "DRAM_PIM": "xxx",
+    "SRAM_PIM": "///",
+    "SRAM_PIM_PIPE": "\\\\\\",
+}
+
 # 读取CSV文件
 data = pd.read_csv('figs/CompAir/SRAMvsDRAM.report')
 
@@ -29,14 +35,14 @@ alpha = 0.5
 plt.grid(alpha=alpha)
 
 # 创建柱状图
-plt.bar(x - bar_width, dram_pim, width=bar_width, color=color['DRAM_PIM'], label='DRAM-PIM')
-plt.bar(x, sram_pim, width=bar_width, color=color['SRAM_PIM'], label='SRAM-PIM')
-plt.bar(x + bar_width, sram_pim_pipe, width=bar_width, color=color['SRAM_PIM_PIPE'], label='SRAM-PIM Pipe')
+plt.bar(x - bar_width, dram_pim, width=bar_width, color=color['DRAM_PIM'], hatch=hatch['DRAM_PIM'], edgecolor='white', label='DRAM-PIM')
+plt.bar(x, sram_pim, width=bar_width, color=color['SRAM_PIM'], hatch=hatch['SRAM_PIM'], edgecolor='white', label='SRAM-PIM')
+plt.bar(x + bar_width, sram_pim_pipe, width=bar_width, color=color['SRAM_PIM_PIPE'], hatch=hatch['SRAM_PIM_PIPE'], edgecolor='white', label='SRAM-PIM Pipe')
 
 # 设置x轴的刻度和标签
 plt.xticks(x, batch_sizes)
-plt.xlabel('Batch Size', fontsize=16)
-plt.ylabel('Value', fontsize=16)
+plt.xlabel('Batch Size', fontsize=14)
+plt.ylabel('Latency / ns', fontsize=14)
 plt.yscale('log')
 plt.title('Comparison of DRAM-PIM, SRAM-PIM for Different Batch Sizes', fontsize=16)
 
